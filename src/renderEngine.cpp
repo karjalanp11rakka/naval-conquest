@@ -13,19 +13,17 @@
 
 RenderEngine::RenderEngine()
 {
-    m_waterObj = MeshTools::generateGrid(16);
-    m_cubeObj = MeshTools::makeCube();
-
     std::string waterVPath {"../assets/shaders/vWater.glsl"};
     std::string waterFPath {"../assets/shaders/fWater.glsl"};
-    m_waterShader = new Shader {waterVPath, waterFPath};
-    shaders.push_back(m_waterShader);
-
+    m_waterShader = std::make_unique<Shader>(waterVPath, waterFPath);
     std::string basicVPath {"../assets/shaders/vBasic.glsl"};
     std::string basicFPath {"../assets/shaders/fBasic.glsl"};   
-    m_basicShader = new Shader {basicVPath, basicFPath};
-    shaders.push_back(m_basicShader);
+    m_basicShader = std::make_unique<Shader>(basicVPath, basicFPath);
 
+    Meshes& meshInstance = Meshes::getInstance();
+
+    m_waterObj = std::make_unique<Object>(meshInstance.getGrid(16), &*m_waterShader);
+    m_cubeObj = std::make_unique<Object>(meshInstance.getCube(), &*m_basicShader);
 
     glPolygonMode(GL_FRONT, GL_FILL);
     glEnable(GL_DEPTH_TEST); 
@@ -39,45 +37,37 @@ void RenderEngine::renderLoop()
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_waterShader->use();  
+    double time {glfwGetTime()};
 
-    glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::mat4(1.0f);
-
-    model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    
+    glm::mat4 view = glm::mat4(1.0f);    
     view  = glm::translate(view, glm::vec3(0.0f, -0.3f, -2.0f));
-    
-    float camX = static_cast<float>(sin(glfwGetTime() * cameraSpeed) * cameraRadius);
-    float camZ = static_cast<float>(cos(glfwGetTime() * cameraSpeed) * cameraRadius);
-
+    float camX = static_cast<float>(sin(time * cameraSpeed) * cameraRadius);
+    float camZ = static_cast<float>(cos(time * cameraSpeed) * cameraRadius);
     view = glm::lookAt(glm::vec3(camX, 1.8f, camZ), glm::vec3(.0f, .0f, .0f), glm::vec3(.0f, 1.0f, .0f));
     
+    glm::mat4 waterModel = glm::mat4(1.0f);
+    waterModel = glm::rotate(waterModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    m_waterObj->model = waterModel;
+    m_waterObj->use();
+    unsigned int viewLoc = glGetUniformLocation(m_waterObj->shader->getID(), "view");
+    unsigned int projectionLoc = glGetUniformLocation(m_waterObj->shader->getID(), "projection");
 
-    unsigned int modelLoc = glGetUniformLocation(m_waterShader->getID(), "model");
-    unsigned int viewLoc = glGetUniformLocation(m_waterShader->getID(), "view");
-    unsigned int projectionLoc = glGetUniformLocation(m_waterShader->getID(), "projection");
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(m_projection));
 
-    glBindVertexArray(m_waterObj.VAO);
-    glDrawElements(GL_TRIANGLES, m_waterObj.indiciesLength, GL_UNSIGNED_INT, 0);
+    m_waterObj->draw();
 
-    m_basicShader->use();
 
-    modelLoc = glGetUniformLocation(m_basicShader->getID(), "model");
+    glm::mat4 cubeModel = glm::mat4(1.0f);
+    cubeModel = glm::scale(cubeModel, glm::vec3(.1f, .1f, .1f));
+    cubeModel = glm::translate(cubeModel, glm::vec3(0.5f, 2.0f, .5f));
+    cubeModel = glm::rotate(cubeModel, glm::radians(static_cast<float>(cos(time) * 360.0f)), glm::vec3(1.0f, 1.0f, 1.0f));
+    m_cubeObj->model = cubeModel;
+    m_cubeObj->use();
+
     viewLoc = glGetUniformLocation(m_basicShader->getID(), "view");
     projectionLoc = glGetUniformLocation(m_basicShader->getID(), "projection");
 
-
-    model = glm::mat4(1.0f);
-    model = glm::scale(model, glm::vec3(.1f, .1f, .1f));
-    model = glm::translate(model, glm::vec3(0.5f, 2.0f, .5f));
-    model = glm::rotate(model, glm::radians(static_cast<float>(cos(glfwGetTime()) * 360.0f)), glm::vec3(1.0f, 1.0f, 1.0f));
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(m_projection));
 
@@ -85,10 +75,7 @@ void RenderEngine::renderLoop()
 
     glUniform3f(colorLoc, 1.0f, .4f, .3f);
 
-    glBindVertexArray(m_cubeObj.VAO);
-    glDrawElements(GL_TRIANGLES, m_cubeObj.indiciesLength, GL_UNSIGNED_INT, 0);
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    m_cubeObj->draw();
 }
 
 void RenderEngine::onWindowResize(int width, int height)

@@ -1,9 +1,92 @@
 #include <memory>
+#include <map>
 #include <stdexcept>
 
 #include <glad/glad.h>
 
 #include "meshManagement.h"
+
+Mesh Meshes::getCube()
+{
+    if(!m_tetrahedron)
+        m_tetrahedron = std::make_unique<Mesh>(MeshTools::makeCube());
+    return *m_tetrahedron;
+}
+
+Mesh Meshes::getTetrahedron()
+{
+    if(!m_tetrahedron)
+        m_tetrahedron = std::make_unique<Mesh>(MeshTools::makeTetrahedron());
+    return *m_tetrahedron;
+}
+
+Mesh Meshes::getGrid(int size)
+{
+    if(!m_grids[size])
+        m_grids[size] = std::make_unique<Mesh>(MeshTools::generateGrid(size));
+    return *m_grids[size];
+}
+
+unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength);
+
+Mesh MeshTools::makeCube()
+{
+    static constexpr float vertices[] 
+    {
+        1.0f, 1.0f, -1.0f,
+        -1.0f, 1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+
+        1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, 1.0f,
+    };
+    static constexpr unsigned int indices[]
+    {
+        0, 1, 2,
+        2, 3, 1,
+
+        4, 5, 6,
+        6, 7, 5,
+
+        0, 1, 4,
+        4, 5, 1,
+
+        2, 3, 6,
+        6, 7, 3,
+
+        0, 4, 6,
+        6, 2, 0,
+    
+        1, 5, 7,
+        7, 3, 1
+    };
+
+    return {generateVAO(vertices, std::ssize(vertices), indices, std::ssize(indices)), std::size(indices)};
+}
+
+Mesh MeshTools::makeTetrahedron()
+{
+    static constexpr float vertices[] 
+    {
+        1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+    };
+
+    static constexpr unsigned int indices[] 
+    {
+        0, 1, 2,
+        0, 1, 3,
+        0, 2, 3,
+        1, 2, 3 
+    };
+
+    return {generateVAO(vertices, std::ssize(vertices), indices, std::ssize(indices)), std::size(indices)};
+}
 
 Mesh MeshTools::generateGrid(int gridSize)
 {
@@ -44,62 +127,11 @@ Mesh MeshTools::generateGrid(int gridSize)
         }
     }
 
-    unsigned int EBO {}, VBO {}, VAO {};
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * verticesLength, vertices.get(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indicesLength, indices.get(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    return {VAO, indicesLength};
+    return {generateVAO(vertices.get(), verticesLength, indices.get(), indicesLength), indicesLength};
 }
 
-Mesh MeshTools::makeCube()
+unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength)
 {
-    static constexpr float vertices[] 
-    {
-        1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
-
-        1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
-    };
-    static constexpr unsigned int indices[]
-    {
-        0, 1, 2,
-        2, 3, 1,
-
-        4, 5, 6,
-        6, 7, 5,
-
-        0, 1, 4,
-        4, 5, 1,
-
-        2, 3, 6,
-        6, 7, 3,
-
-        0, 4, 6,
-        6, 2, 0,
-    
-        1, 5, 7,
-        7, 3, 1
-    };
-
     unsigned int EBO {}, VBO {}, VAO {};
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -107,10 +139,10 @@ Mesh MeshTools::makeCube()
     glGenBuffers(1, &EBO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * verticesLength, vertices, GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indicesLength, indices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     
@@ -118,51 +150,5 @@ Mesh MeshTools::makeCube()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-
-    return {VAO, std::size(indices)};
-}
-
-
-Mesh MeshTools::makeTetrahedron()
-{
-    static constexpr float vertices[] 
-    {
-        1.0f,  1.0f,  1.0f,
-        -1.0f, -1.0f,  1.0f,
-        -1.0f,  1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-    };
-
-    static constexpr int indices[] 
-    {
-        0, 1, 2,
-        0, 1, 3,
-        0, 2, 3,
-        1, 2, 3 
-    };
-
-    unsigned int EBO {}, VBO {}, VAO {};
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-
-    return {VAO, std::size(indices)};
+    return VAO;
 }

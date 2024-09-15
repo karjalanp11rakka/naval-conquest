@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -8,26 +9,18 @@
 
 #include "meshManagement.h"
 #include "shader.h"
+#include "objectManagement.h"
 
 class RenderEngine
 {
 private:
     int m_width {}, m_height {}; 
-    Mesh m_waterObj {}, m_cubeObj {};
-    Shader* m_waterShader, * m_basicShader;
-    std::vector<Shader*> shaders {};
+    std::unique_ptr<Object> m_waterObj {}, m_cubeObj {};
+    std::unique_ptr<Shader> m_waterShader {}, m_basicShader {};
 
     glm::mat4 m_projection {glm::mat4(1.0f)};
 
     RenderEngine();
-    ~RenderEngine()
-    {
-        for(auto& shader : shaders)
-        {
-            delete shader;
-        }
-    }
-
     RenderEngine(const RenderEngine&) = delete;
     RenderEngine& operator=(const RenderEngine& other) = delete;
 public:
