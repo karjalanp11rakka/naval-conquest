@@ -18,7 +18,7 @@ private:
     std::unique_ptr<Object> m_waterObj {}, m_cubeObj {};
     std::unique_ptr<Shader> m_waterShader {}, m_basicShader {};
 
-    glm::mat4 m_projection {glm::mat4(1.0f)};
+    glm::mat4 m_projection {}, m_view {};
 
     RenderEngine();
     RenderEngine(const RenderEngine&) = delete;
@@ -32,4 +32,6 @@ public:
 
     void onWindowResize(int width, int height);
     void renderLoop();
+    const glm::mat4& getProjection() {return m_projection;}
+    const glm::mat4& getView() {return m_view;}
 };

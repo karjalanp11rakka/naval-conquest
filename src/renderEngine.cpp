@@ -39,22 +39,16 @@ void RenderEngine::renderLoop()
 
     double time {glfwGetTime()};
 
-    glm::mat4 view = glm::mat4(1.0f);    
-    view  = glm::translate(view, glm::vec3(0.0f, -0.3f, -2.0f));
+    m_view = glm::mat4(1.0f);    
+    m_view  = glm::translate(m_view, glm::vec3(0.0f, -0.3f, -2.0f));
     float camX = static_cast<float>(sin(time * cameraSpeed) * cameraRadius);
     float camZ = static_cast<float>(cos(time * cameraSpeed) * cameraRadius);
-    view = glm::lookAt(glm::vec3(camX, 1.8f, camZ), glm::vec3(.0f, .0f, .0f), glm::vec3(.0f, 1.0f, .0f));
+    m_view = glm::lookAt(glm::vec3(camX, 1.8f, camZ), glm::vec3(.0f, .0f, .0f), glm::vec3(.0f, 1.0f, .0f));
     
     glm::mat4 waterModel = glm::mat4(1.0f);
     waterModel = glm::rotate(waterModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     m_waterObj->model = waterModel;
     m_waterObj->use();
-    unsigned int viewLoc = glGetUniformLocation(m_waterObj->shader->getID(), "view");
-    unsigned int projectionLoc = glGetUniformLocation(m_waterObj->shader->getID(), "projection");
-
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(m_projection));
-
     m_waterObj->draw();
 
 
@@ -65,14 +59,7 @@ void RenderEngine::renderLoop()
     m_cubeObj->model = cubeModel;
     m_cubeObj->use();
 
-    viewLoc = glGetUniformLocation(m_basicShader->getID(), "view");
-    projectionLoc = glGetUniformLocation(m_basicShader->getID(), "projection");
-
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(m_projection));
-
     unsigned colorLoc = glGetUniformLocation(m_basicShader->getID(), "color");
-
     glUniform3f(colorLoc, 1.0f, .4f, .3f);
 
     m_cubeObj->draw();
