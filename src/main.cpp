@@ -1,13 +1,14 @@
 #include <iostream>
 #include <cstdio> 
 #include <string> 
+#include <memory>
 #include <cmath>
 
 #include <glad/glad.h> // GLAD must be included before GLFW. Even though main.cpp does not directly use GLAD, it is included here for correct initialization order
 #include <GLFW/glfw3.h>
 
-#include "shader.h"
-#include "renderEngine.h"
+#include "engine/renderEngine.h"
+#include "game/gameController.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -47,7 +48,8 @@ int main()
     }
 
     RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    
+    GameController& gameControllerInstance {GameController::getInstance()};
+
     int width {}, height {};
     glfwGetFramebufferSize(window, &width, &height);
     renderEngineInstance.onWindowResize(width, height);
@@ -58,6 +60,7 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {        
+        gameControllerInstance.gameLoop();
         renderEngineInstance.renderLoop();
 
         float currentTime = glfwGetTime();

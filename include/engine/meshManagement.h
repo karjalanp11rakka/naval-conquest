@@ -10,7 +10,7 @@ struct Mesh
     unsigned int VAO {};
     unsigned int indiciesLength {};
 
-    void use()
+    void use() const
     {
         glBindVertexArray(VAO);
     }

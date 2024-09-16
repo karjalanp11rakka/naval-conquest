@@ -59,7 +59,7 @@ public:
         vShaderFile.close();
         fShaderFile.close();
         
-        vertexCode   = vShaderStream.str();
+        vertexCode = vShaderStream.str();
         fragmentCode = fShaderStream.str();
 
         const char* vShaderCode = vertexCode.c_str();
@@ -79,7 +79,7 @@ public:
         glAttachShader(m_ID, vertex);
         glAttachShader(m_ID, fragment);
         glLinkProgram(m_ID);
-        checkCompileErrors(fragment, "PROGRAM");
+        checkCompileErrors(m_ID, "PROGRAM");
 
         glDeleteShader(vertex);
         glDeleteShader(fragment);

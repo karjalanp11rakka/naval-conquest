@@ -4,7 +4,7 @@
 
 #include <glad/glad.h>
 
-#include "meshManagement.h"
+#include "engine/meshManagement.h"
 
 Mesh Meshes::getCube()
 {
