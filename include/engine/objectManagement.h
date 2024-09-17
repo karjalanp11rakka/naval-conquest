@@ -16,11 +16,11 @@ protected:
     virtual void onDraw() const {};
     Mesh m_mesh {};
 public:
-    std::shared_ptr<Shader> shader {};
+    Shader* shader {};
     glm::mat4 model {};
 
     Object() {}
-    Object(Mesh mesh, std::shared_ptr<Shader> shader)
+    Object(Mesh mesh, Shader* shader)
         : m_mesh(mesh), shader(shader) {}
 
     void draw() const;
@@ -33,13 +33,13 @@ protected:
     {
         return Meshes::getInstance().getCube();
     }
-    virtual std::shared_ptr<Shader> getShader() {return nullptr;};
+    virtual Shader* getShader() {return nullptr;};
     void initialize()
     {
         m_mesh = getMesh();
         shader = getShader();
     }
 public:
-    CustomObject(Mesh mesh, std::shared_ptr<Shader> shader) = delete;
+    CustomObject(Mesh mesh, Shader* shader) = delete;
     CustomObject() {}
 };

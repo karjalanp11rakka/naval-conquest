@@ -11,6 +11,7 @@
 #include "engine/renderEngine.h"
 #include "engine/objectManagement.h"
 #include "engine/meshManagement.h"
+#include "engine/shaderManagement.h"
 
 class CubeObject : public CustomObject
 {
@@ -26,11 +27,12 @@ protected:
     {
         return Meshes::getInstance().getCube();
     }
-    std::shared_ptr<Shader> getShader() override
+    Shader* getShader() override
     {
         std::string basicVPath {"../assets/shaders/vBasic.glsl"};
         std::string basicFPath {"../assets/shaders/fBasic.glsl"};
-        return std::make_shared<Shader>(basicVPath, basicFPath);
+
+        return Shaders::getInstance().getShader(basicVPath, basicFPath);
     }
 public:
     CubeObject()
@@ -46,7 +48,7 @@ GameController::GameController()
 
     std::string waterVPath {"../assets/shaders/vWater.glsl"};
     std::string waterFPath {"../assets/shaders/fWater.glsl"};
-    std::shared_ptr<Shader> waterShader = std::make_shared<Shader>(waterVPath, waterFPath);
+    Shader* waterShader = Shaders::getInstance().getShader(waterVPath, waterFPath);
 
     m_waterObj = std::make_unique<Object>(meshInstance.getGrid(16), waterShader);
     renderEngineInstance.addObject(&*m_waterObj);
