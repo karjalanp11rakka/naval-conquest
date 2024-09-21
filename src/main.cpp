@@ -7,8 +7,8 @@
 #include <glad/glad.h> // GLAD must be included before GLFW. Even though main.cpp does not directly use GLAD, it is included here for correct initialization order
 #include <GLFW/glfw3.h>
 
-#include "engine/renderEngine.h"
-#include "game/gameController.h"
+#include "engine/renderEngine.hpp"
+#include "game/gameController.hpp"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -20,7 +20,8 @@ int main()
 {
     if (!glfwInit())
     {
-        throw std::runtime_error("Failed to initialize GLFW");
+        std::cerr << "Failed to initialize GLFW\n";
+        return 1;
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -30,9 +31,9 @@ int main()
     GLFWwindow* window = glfwCreateWindow(800, 600, windowName, NULL, NULL);
     if (window == NULL)
     {
-        std::cout << "Failed to create GLFW window" << std::endl;
+        std::cerr << "Failed to create GLFW window\n"; 
         glfwTerminate();
-        return -1;
+        return 1;
     }
     glfwMakeContextCurrent(window);
     glfwMaximizeWindow(window);
@@ -42,9 +43,9 @@ int main()
     
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        glfwDestroyWindow(window);
+        std::cerr << "Failed to initialize GLAD\n"; 
         glfwTerminate();
-        throw std::runtime_error("Failed to initialize GLAD");
+        return 1;
     }
 
     RenderEngine& renderEngineInstance {RenderEngine::getInstance()};

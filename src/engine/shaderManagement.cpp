@@ -1,14 +1,15 @@
 #include <algorithm>
 
-#include "engine/shaderManagement.h"
+#include "engine/shaderManagement.hpp"
+#include "engine/shader.hpp"
 
-Shader* Shaders::getShader(std::string& vertexPath, std::string& fragmentPath)
+std::weak_ptr<Shader> Shaders::getShader(std::string& vertexPath, std::string& fragmentPath)
 {
     if (m_shaders.find(vertexPath + fragmentPath) == m_shaders.end())
     {
-        m_shaders[vertexPath + fragmentPath] = std::make_unique<Shader>(vertexPath, fragmentPath);
+        m_shaders[vertexPath + fragmentPath] = std::make_shared<Shader>(vertexPath, fragmentPath);
     }
-    return &*m_shaders[vertexPath + fragmentPath];
+    return m_shaders[vertexPath + fragmentPath];
 }
 
 void Shaders::removeShader(std::string& vertexPath, std::string& fragmentPath)
@@ -16,7 +17,7 @@ void Shaders::removeShader(std::string& vertexPath, std::string& fragmentPath)
     m_shaders.erase(m_shaders.find(vertexPath + fragmentPath));
 }
 
-void Shaders::removeShader(Shader* ptr)
+void Shaders::removeShader(const Shader* ptr)
 {
     auto shaderToRemove = std::find_if(m_shaders.begin(), m_shaders.end(),
     [ptr](const auto& pair) -> bool

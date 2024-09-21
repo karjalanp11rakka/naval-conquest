@@ -20,7 +20,8 @@ class Meshes
 {
 private:
     std::unique_ptr<Mesh> m_cube {}, m_tetrahedron {};
-    std::map<int, std::unique_ptr<Mesh>> m_grids{};
+    std::unique_ptr<Mesh> m_cubeNormals {}, m_tetrahedronNormals {};
+    std::map<int, std::unique_ptr<Mesh>> m_grids{}, m_gridsNormals{};
     Meshes() {}
 
     Meshes(const Meshes&) = delete;
@@ -28,18 +29,18 @@ private:
 public:
     static Meshes& getInstance()
     {
-        static Meshes instance {};
+        static Meshes instance = Meshes();
         return instance;
     }
 
-    Mesh getCube();
-    Mesh getTetrahedron();
-    Mesh getGrid(int size);
+    Mesh getCube(bool normals = true);
+    Mesh getTetrahedron(bool normals = true);
+    Mesh getGrid(int size, bool normals = true);
 };
 
 namespace MeshTools
 {
-    Mesh makeCube();
-    Mesh makeTetrahedron();
-    Mesh generateGrid(int gridSize);
+    Mesh makeCube(bool normals = true);
+    Mesh makeTetrahedron(bool normals = true);
+    Mesh generateGrid(int gridSize, bool normals = true);
 }

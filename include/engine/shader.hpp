@@ -4,7 +4,6 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <stdexcept>
 
 #include <glad/glad.h>
 
@@ -14,6 +13,6 @@ private:
     unsigned int m_ID {};
 public:
     Shader(std::string& vertexPath, std::string& fragmentPath);
-    auto getID() {return m_ID;};
-    void use() {glUseProgram(m_ID);};
+    auto getID() const {return m_ID;}
+    void use() const {glUseProgram(m_ID);}
 };
