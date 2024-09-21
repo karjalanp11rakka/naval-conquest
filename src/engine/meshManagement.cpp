@@ -1,73 +1,90 @@
 #include <memory>
 #include <map>
-#include <stdexcept>
+#include <vector>
+#include <algorithm>
 
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#include "engine/meshManagement.h"
+#include "engine/meshManagement.hpp"
 
-Mesh Meshes::getCube()
+Mesh Meshes::getCube(bool normals)
 {
-    if(!m_tetrahedron)
-        m_tetrahedron = std::make_unique<Mesh>(MeshTools::makeCube());
-    return *m_tetrahedron;
+    auto& cube {normals ? m_cubeNormals : m_cube};
+    if(!cube)
+        cube = std::make_unique<Mesh>(MeshTools::makeCube(normals));
+    return *cube;
 }
 
-Mesh Meshes::getTetrahedron()
+Mesh Meshes::getTetrahedron(bool normals)
 {
-    if(!m_tetrahedron)
-        m_tetrahedron = std::make_unique<Mesh>(MeshTools::makeTetrahedron());
-    return *m_tetrahedron;
+    auto& tetrahedron {normals ? m_tetrahedronNormals : m_tetrahedron};
+    if(!tetrahedron)
+        tetrahedron = std::make_unique<Mesh>(MeshTools::makeTetrahedron(normals));
+    return *tetrahedron;
 }
 
-Mesh Meshes::getGrid(int size)
+Mesh Meshes::getGrid(int size, bool normals)
 {
-    if(!m_grids[size])
-        m_grids[size] = std::make_unique<Mesh>(MeshTools::generateGrid(size));
-    return *m_grids[size];
+    auto& grids {normals ? m_gridsNormals : m_grids};
+    if(!grids[size])
+        grids[size] = std::make_unique<Mesh>(MeshTools::generateGrid(size, normals));
+    return *grids[size];
 }
 
-unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength);
+unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength, bool normals);
+void addNormals(std::unique_ptr<float[]>& vertices, int verticesLength, const unsigned int indices[], int indicesLength);
 
-Mesh MeshTools::makeCube()
+Mesh MeshTools::makeCube(bool normals)
 {
     static constexpr float vertices[] 
     {
-        1.0f, 1.0f, -1.0f,
-        -1.0f, 1.0f, -1.0f,
-        1.0f, -1.0f, -1.0f,
-        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+        1.0f, -1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
 
-        1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        1.0f, -1.0f, 1.0f,
-        -1.0f, -1.0f, 1.0f,
+        -1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+        1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
     };
-    static constexpr unsigned int indices[]
+
+    static constexpr unsigned int indices[] 
     {
         0, 1, 2,
-        2, 3, 1,
+        2, 3, 0,
 
         4, 5, 6,
-        6, 7, 5,
+        6, 7, 4,
 
-        0, 1, 4,
-        4, 5, 1,
+        0, 3, 7,
+        7, 4, 0,
 
-        2, 3, 6,
+        1, 5, 6,
+        6, 2, 1,
+
+        3, 2, 6,
         6, 7, 3,
 
-        0, 4, 6,
-        6, 2, 0,
-    
-        1, 5, 7,
-        7, 3, 1
+        0, 4, 5,
+        5, 1, 0
     };
 
-    return {generateVAO(vertices, std::ssize(vertices), indices, std::ssize(indices)), std::size(indices)};
-}
+    if(normals)
+    {
+        std::unique_ptr<float[]> verticesWithNormals = std::make_unique<float[]>(std::ssize(vertices));
+        std::copy(std::begin(vertices), std::end(vertices), verticesWithNormals.get());
+        addNormals(verticesWithNormals, std::ssize(vertices), indices, std::ssize(indices));
+        
+        return {generateVAO(verticesWithNormals.get(), std::ssize(vertices) * 2, indices, std::ssize(indices), normals), std::size(indices)};
+    }
 
-Mesh MeshTools::makeTetrahedron()
+    return {generateVAO(vertices, std::ssize(vertices), indices, std::ssize(indices), normals), std::size(indices)};
+}
+Mesh MeshTools::makeTetrahedron(bool normals)
 {
     static constexpr float vertices[] 
     {
@@ -85,15 +102,24 @@ Mesh MeshTools::makeTetrahedron()
         1, 2, 3 
     };
 
-    return {generateVAO(vertices, std::ssize(vertices), indices, std::ssize(indices)), std::size(indices)};
+    if(normals)
+    {
+        std::unique_ptr<float[]> verticesWithNormals = std::make_unique<float[]>(std::ssize(vertices));
+        std::copy(std::begin(vertices), std::end(vertices), verticesWithNormals.get());
+        addNormals(verticesWithNormals, std::ssize(vertices), indices, std::ssize(indices));
+        
+        return {generateVAO(verticesWithNormals.get(), std::ssize(vertices) * 2, indices, std::ssize(indices), normals), std::size(indices)};
+    }
+
+    return {generateVAO(vertices, std::ssize(vertices), indices, std::ssize(indices), normals), std::size(indices)};
 }
 
-Mesh MeshTools::generateGrid(int gridSize)
+Mesh MeshTools::generateGrid(int gridSize, bool normals)
 {
-    if(gridSize <= 0) throw std::invalid_argument("Grid size must be positive");
-    if(gridSize % 2 != 0) throw std::invalid_argument("Grid size can't be odd");
+    assert(gridSize > 0 && "Grid size must be positive");
+    assert(gridSize % 2 == 0 && "Grid size can't be odd");
 
-    const int verticesLength {(gridSize + 1) * (gridSize + 1) * 3};
+    const int verticesLength {(gridSize + 1) * (gridSize + 1) * 3 * (normals ? 2 : 1)};
     std::unique_ptr<float[]> vertices = std::make_unique<float[]>(verticesLength);
 
     int verticleIndex {};
@@ -104,6 +130,13 @@ Mesh MeshTools::generateGrid(int gridSize)
             vertices[verticleIndex++] = (static_cast<float>(x * 2) / gridSize);
             vertices[verticleIndex++] = (static_cast<float>(y * 2) / gridSize);
             vertices[verticleIndex++] = .0f;
+
+            if(normals)
+            {
+                vertices[verticleIndex++] = .0f;
+                vertices[verticleIndex++] = .0f;
+                vertices[verticleIndex++] = 1.f;
+            }
         }
     }
 
@@ -127,10 +160,10 @@ Mesh MeshTools::generateGrid(int gridSize)
         }
     }
 
-    return {generateVAO(vertices.get(), verticesLength, indices.get(), indicesLength), indicesLength};
+    return {generateVAO(vertices.get(), verticesLength, indices.get(), indicesLength, normals), indicesLength};
 }
 
-unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength)
+unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength, bool normals)
 {
     unsigned int EBO {}, VBO {}, VAO {};
     glGenVertexArrays(1, &VAO);
@@ -144,11 +177,68 @@ unsigned int generateVAO(const float vertices[], int verticesLength, const unsig
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indicesLength, indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    
+    //pos
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, (normals ? 6 : 3) * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // normals
+    if(normals)
+    {
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+    }
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     return VAO;
+}
+
+void addNormals(std::unique_ptr<float[]>& vertices, int verticesLength, const unsigned int indices[], int indicesLength)
+{
+    std::vector<glm::vec3> tempVertices(verticesLength / 3);
+    
+    for (int i = 0; i < verticesLength; i += 3)
+    {
+        tempVertices[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
+    }
+
+    std::vector<glm::vec3> normals(tempVertices.size(), glm::vec3(0.0f));
+
+    for (unsigned int i {}; i < indicesLength; i += 3)
+    {
+        unsigned int i0 {indices[i]};
+        unsigned int i1 {indices[i + 1]};
+        unsigned int i2 {indices[i + 2]};
+
+        glm::vec3 v1 = tempVertices[i1] - tempVertices[i0];
+        glm::vec3 v2 = tempVertices[i2] - tempVertices[i0];
+        glm::vec3 faceNormal = glm::cross(v1, v2);
+
+        if (glm::dot(faceNormal, glm::normalize(tempVertices[i0])) < 0)
+        {
+            faceNormal = -faceNormal;
+        }
+
+        normals[i0] += faceNormal;
+        normals[i1] += faceNormal;
+        normals[i2] += faceNormal;
+    }
+
+    for (auto& norm : normals)
+    {
+        norm = glm::normalize(norm);   
+    }
+
+    std::unique_ptr<float[]> newVertices = std::make_unique<float[]>(verticesLength * 2);
+    for (int i = 0, j = 0; i < verticesLength; i += 3, j += 6)
+    {
+        newVertices[j] = vertices[i];
+        newVertices[j + 1] = vertices[i + 1];
+        newVertices[j + 2] = vertices[i + 2];
+        newVertices[j + 3] = normals[i / 3].x;
+        newVertices[j + 4] = normals[i / 3].y;
+        newVertices[j + 5] = normals[i / 3].z;
+    }
+
+    vertices = std::move(newVertices);
 }

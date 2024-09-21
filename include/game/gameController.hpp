@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "engine/objectManagement.h"
+#include "engine/objectManagement.hpp"
 
 class GameController
 {
@@ -10,11 +10,11 @@ private:
     GameController();
     GameController(const GameController&) = delete;
     GameController& operator=(const GameController& other) = delete;
-    std::unique_ptr<Object> m_waterObj {}, m_cubeObj {};
+    std::shared_ptr<Object> m_waterObj {}, m_cubeObj {};
 public:
     static GameController& getInstance()
     {
-        static GameController instance {};
+        static GameController instance = GameController();
         return instance;
     }
 
