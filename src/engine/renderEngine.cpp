@@ -10,6 +10,7 @@
 #include "engine/renderEngine.hpp"
 #include "engine/objectManagement.hpp"
 #include "engine/lightManagement.hpp"
+#include "engine/constants.hpp"
 
 RenderEngine::RenderEngine()
 {
@@ -42,7 +43,7 @@ void RenderEngine::renderLoop()
     double time {glfwGetTime()};
 
     m_view = glm::mat4(1.0f);    
-    m_view  = glm::translate(m_view, glm::vec3(0.0f, -0.3f, -2.0f));
+    m_view = glm::translate(m_view, glm::vec3(0.0f, -0.3f, -2.0f));
     m_cameraPos.x = static_cast<float>(sin(time * cameraSpeed) * cameraRadius);
     m_cameraPos.z = static_cast<float>(cos(time * cameraSpeed) * cameraRadius);
     m_view = glm::lookAt(m_cameraPos, glm::vec3(.0f, .0f, .0f), glm::vec3(.0f, 1.0f, .0f));
@@ -60,5 +61,6 @@ void RenderEngine::onWindowResize(int width, int height)
 
     glViewport(0, 0, width, height);
     
-    m_projection = glm::perspective(glm::radians(50.0f), (float)width / (float)height, 0.1f, 100.0f);
+    m_projection = glm::perspective(glm::radians(50.0f), (float)width / (float)height,
+        1.f / Constants::METERS_TO_OPENGL_SCALE, 1000.f / Constants::METERS_TO_OPENGL_SCALE);
 }

@@ -28,10 +28,10 @@ public:
 
 struct Material
 {
-    glm::vec3 color;
-    float ambientStrength;
-    float shininess;
-    float specularStrength;
+    glm::vec3 color {};
+    float ambientStrength {};
+    float shininess {};
+    float specularStrength {};
 };
 
 class LitObject : public Object
