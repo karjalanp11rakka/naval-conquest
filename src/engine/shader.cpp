@@ -5,8 +5,10 @@
 #include <GLFW/glfw3.h>
 
 #include "engine/shader.hpp"
+#include "engine/lightManagement.hpp"
 
 void checkCompileErrors(unsigned int shader, std::string type);
+void addConstantsToShader(std::string& shaderString);
 
 Shader::Shader(std::string& vertexPath, std::string& fragmentPath)
 {
@@ -39,6 +41,7 @@ Shader::Shader(std::string& vertexPath, std::string& fragmentPath)
     vertexCode = vShaderStream.str();
     fragmentCode = fShaderStream.str();
 
+    addConstantsToShader(fragmentCode);
     const char* vShaderCode = vertexCode.c_str();
     const char* fShaderCode = fragmentCode.c_str();
 
@@ -84,4 +87,10 @@ void checkCompileErrors(unsigned int shader, std::string type)
             std::cerr << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
         }
     }
+}
+
+void addConstantsToShader(std::string& shaderString)
+{
+    size_t pos {shaderString.find('\n')};
+    shaderString.insert(pos + 1, ("#define MAX_POINT_LIGHTS_LENGTH " + std::to_string(MAX_POINT_LIGHTS_LENGTH) + '\n'));
 }

@@ -23,7 +23,7 @@ struct PointLight
     float linear;
     float quadratic;
 };
-uniform PointLight lights[10];
+uniform PointLight lights[MAX_POINT_LIGHTS_LENGTH];
 uniform int lightsCount;
 
 struct DirectionalLight 
