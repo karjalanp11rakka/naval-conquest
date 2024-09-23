@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+inline constexpr int MAX_POINT_LIGHTS_LENGTH {10};
 void interpolateCoefficients(float distance, float& linear, float& quadratic);
 
 struct PointLight

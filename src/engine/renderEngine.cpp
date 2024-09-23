@@ -10,14 +10,13 @@
 #include "engine/renderEngine.hpp"
 #include "engine/objectManagement.hpp"
 #include "engine/lightManagement.hpp"
-#include "engine/constants.hpp"
 
 RenderEngine::RenderEngine()
 {
     DirectionalLight defaultDirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
     m_defaultLighting = std::make_shared<SceneLighting>(defaultDirLight);
-    m_defaultLighting->addPointLight(PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), 7.f));
-    m_defaultLighting->addPointLight(PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 7.f));
+    m_defaultLighting->addPointLight(PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), .7f));
+    m_defaultLighting->addPointLight(PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
     m_lighting = m_defaultLighting;
     glPolygonMode(GL_FRONT, GL_FILL);
     glEnable(GL_DEPTH_TEST); 
@@ -25,7 +24,7 @@ RenderEngine::RenderEngine()
 
 void RenderEngine::removeObject(const Object* objPtr)
 {
-    m_objects.erase(std::remove_if(m_objects.begin(),m_objects.end(), 
+    m_objects.erase(std::remove_if(m_objects.begin(), m_objects.end(), 
     [objPtr](const auto& currObj) -> bool
     {
         return objPtr == currObj.lock().get();
@@ -61,6 +60,5 @@ void RenderEngine::onWindowResize(int width, int height)
 
     glViewport(0, 0, width, height);
     
-    m_projection = glm::perspective(glm::radians(50.0f), (float)width / (float)height,
-        1.f / Constants::METERS_TO_OPENGL_SCALE, 1000.f / Constants::METERS_TO_OPENGL_SCALE);
+    m_projection = glm::perspective(glm::radians(50.0f), (float)width / (float)height, .01f, 10.f);
 }

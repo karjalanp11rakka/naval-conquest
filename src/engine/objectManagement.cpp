@@ -10,7 +10,6 @@
 #include "engine/renderEngine.hpp"
 #include "engine/objectManagement.hpp"
 #include "engine/lightManagement.hpp"
-#include "engine/constants.hpp"
 
 void Object::draw() const
 {
@@ -21,9 +20,7 @@ void Object::draw() const
     unsigned int viewLoc = glGetUniformLocation(shader.lock()->getID(), "view");
     unsigned int projectionLoc = glGetUniformLocation(shader.lock()->getID(), "projection");
 
-    glm::mat4 scaleInverse = glm::scale(glm::mat4(1.f), glm::vec3(1.f / Constants::METERS_TO_OPENGL_SCALE));
-    
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(scaleInverse * model));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(renderEngineInstance.getView()));
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(renderEngineInstance.getProjection()));
     

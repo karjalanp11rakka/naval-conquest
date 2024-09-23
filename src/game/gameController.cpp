@@ -30,7 +30,6 @@ GameController::GameController()
     renderEngineInstance.addObject(m_cubeObj);
 
     glm::mat4 waterModel = glm::mat4(1.0f);
-    waterModel = glm::scale(waterModel, glm::vec3(10.f, 10.f, 10.f));
     waterModel = glm::rotate(waterModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     m_waterObj->model = waterModel;
 }
@@ -40,8 +39,9 @@ void GameController::gameLoop()
     double time {glfwGetTime()};
 
     glm::mat4 cubeModel = glm::mat4(1.0f);
-
-    cubeModel = glm::translate(cubeModel, glm::vec3(0.f, 2.f, 0.f));
+    
+    cubeModel = glm::translate(cubeModel, glm::vec3(.2f, .2f, .0f));
+    cubeModel = glm::scale(cubeModel, glm::vec3(.1f, .1f, .1f));
     cubeModel = glm::rotate(cubeModel, glm::radians(static_cast<float>(cos(time) * 360.0f)), glm::vec3(1.0f, 1.0f, 1.0f));
     m_cubeObj->model = cubeModel;
 }

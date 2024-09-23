@@ -5,11 +5,10 @@
 #include <cassert>
 
 #include "engine/lightManagement.hpp"
-#include "engine/constants.hpp"
 
 std::weak_ptr<PointLight> SceneLighting::addPointLight(const PointLight& light)
 {
-    assert(std::ssize(m_lights) < Constants::MAX_POINT_LIGHTS_LENGTH && "Max point lights exceeded");
+    assert(std::ssize(m_lights) < MAX_POINT_LIGHTS_LENGTH && "Max point lights exceeded");
     m_lights.push_back(std::make_shared<PointLight>(light));
     return m_lights.back();
 }
@@ -29,8 +28,8 @@ std::weak_ptr<DirectionalLight> SceneLighting::changeDirectionalLight(const Dire
 
 void interpolateCoefficients(float distance, float& linear, float& quadratic)
 {
-    assert(distance >= 7.f && "Distance has to be at least 7 meters");
-    assert(distance <= 3250.f && "Distance has to be less than 3250 meters");
+    assert(distance >= .7f && "Distance has to be at least 7 meters");
+    assert(distance <= 325.f && "Distance has to be less than 3250 meters");
     
     struct Sample
     {
@@ -40,18 +39,18 @@ void interpolateCoefficients(float distance, float& linear, float& quadratic)
     };
     static constexpr std::array<Sample, 12> samples //linear and quadratic attenuation coefficients from https://wiki.ogre3d.org/tiki-index.php?page=-Point+Light+Attenuation
     {{
-        {7.f, 0.7f, 1.8f},
-        {13.f, 0.35f, 0.44f},
-        {20.f, 0.22f, 0.20f},
-        {32.f, 0.14f, 0.07f},
-        {50.f, 0.09f, 0.032f},
-        {65.f, 0.07f, 0.017f},
-        {100.f, 0.045f, 0.0075f},
-        {160.f, 0.027f, 0.0028f},
-        {200.f, 0.022f, 0.0019f},
-        {325.f, 0.014f, 0.0007f},
-        {600.f, 0.007f, 0.0002f},
-        {3250.f, 0.0014f, 0.000007f}
+        {.7f, 0.7f, 1.8f},
+        {1.3f, 0.35f, 0.44f},
+        {2.0f, 0.22f, 0.20f},
+        {3.2f, 0.14f, 0.07f},
+        {5.0f, 0.09f, 0.032f},
+        {6.5f, 0.07f, 0.017f},
+        {10.0f, 0.045f, 0.0075f},
+        {16.0f, 0.027f, 0.0028f},
+        {20.0f, 0.022f, 0.0019f},
+        {32.5f, 0.014f, 0.0007f},
+        {60.0f, 0.007f, 0.0002f},
+        {325.0f, 0.0014f, 0.000007f}
     }};
 
     for (size_t i {}; i < samples.size() - 1; ++i)
