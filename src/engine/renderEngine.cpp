@@ -31,13 +31,14 @@ void RenderEngine::removeObject(const Object* objPtr)
     }), m_objects.end());
 }
 
-static constexpr float cameraRadius = 2.3f;
-static constexpr float cameraSpeed = .05f;
 void RenderEngine::renderLoop()
 {
     glClearColor(1.0f, .7f, .0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    static constexpr float cameraRadius = 2.3f;
+    static constexpr float cameraSpeed = .05f;
 
     double time {glfwGetTime()};
 
