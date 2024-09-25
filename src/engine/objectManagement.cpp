@@ -1,8 +1,9 @@
+#include <format>
+
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <format>
 
 #include "engine/meshManagement.hpp"
 #include "engine/shader.hpp"
@@ -25,7 +26,9 @@ void Object::draw() const
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(renderEngineInstance.getProjection()));
     
     m_mesh.use();
-    glDrawElements(GL_TRIANGLES, m_mesh.indiciesLength, GL_UNSIGNED_INT, 0);
+    if(m_mesh.indiciesLength)
+        glDrawElements(GL_TRIANGLES, m_mesh.indiciesLength, GL_UNSIGNED_INT, 0);
+    else glDrawArrays(GL_TRIANGLES, 0, m_mesh.vertexCount);
 }
 
 void LitObject::draw() const

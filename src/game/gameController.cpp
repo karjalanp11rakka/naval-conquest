@@ -16,19 +16,27 @@
 GameController::GameController()
 {
     RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    Meshes& meshInstance {Meshes::getInstance()};
+    MeshManager& meshInstance {MeshManager::getInstance()};
 
     std::string basicVPath {"../assets/shaders/vBasic.glsl"};
     std::string basicFPath {"../assets/shaders/fBasic.glsl"};
     std::weak_ptr<Shader> basicShader = Shaders::getInstance().getShader(basicVPath, basicFPath);
 
-    m_waterObj = std::make_shared<Object>(meshInstance.getGrid(16), basicShader.lock());
+    m_waterObj = std::make_shared<Object>(meshInstance.getGrid(16, NormalMode::flat), basicShader.lock());
     renderEngineInstance.addObject(m_waterObj);
 
     Material cubeMaterial {glm::vec3(.9f, .6f, .2f), .2f, 150.f, .5f};
-    m_cubeObj = std::make_shared<LitObject>(meshInstance.getCube(), basicShader.lock(), cubeMaterial);
+    m_cubeObj = std::make_shared<LitObject>(meshInstance.getMesh(MeshType::cube, NormalMode::smooth), basicShader.lock(), cubeMaterial);
     renderEngineInstance.addObject(m_cubeObj);
 
+    m_tetrahedronObj = std::make_shared<LitObject>(meshInstance.getMesh(MeshType::tetrahedron, NormalMode::flat), basicShader.lock(), cubeMaterial);
+    renderEngineInstance.addObject(m_tetrahedronObj);
+
+    glm::mat4 tetrahedronModel = glm::mat4(1.0f);
+    tetrahedronModel = glm::translate(tetrahedronModel, glm::vec3(-.4f, .2f, -.4f));
+    tetrahedronModel = glm::scale(tetrahedronModel, glm::vec3(.1f, .1f, .1f));
+    m_tetrahedronObj->model = tetrahedronModel;
+    
     glm::mat4 waterModel = glm::mat4(1.0f);
     waterModel = glm::rotate(waterModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     m_waterObj->model = waterModel;

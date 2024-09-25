@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <map>
+#include <unordered_map>
 
 #include <glad/glad.h>
 
@@ -9,6 +9,7 @@ struct Mesh
 {
     unsigned int VAO {};
     unsigned int indiciesLength {};
+    unsigned int vertexCount {};
 
     void use() const
     {
@@ -16,31 +17,48 @@ struct Mesh
     }
 };
 
-class Meshes
+enum class MeshType
+{
+    cube,
+    tetrahedron,
+    grid
+};
+enum class NormalMode
+{
+    none,
+    smooth,
+    flat
+};
+
+class MeshManager
 {
 private:
-    std::unique_ptr<Mesh> m_cube {}, m_tetrahedron {};
-    std::unique_ptr<Mesh> m_cubeNormals {}, m_tetrahedronNormals {};
-    std::map<int, std::unique_ptr<Mesh>> m_grids{}, m_gridsNormals{};
-    Meshes() {}
-
-    Meshes(const Meshes&) = delete;
-    Meshes& operator=(const Meshes& other) = delete;
-public:
-    static Meshes& getInstance()
+    struct MeshVariations
     {
-        static Meshes instance = Meshes();
+        std::unique_ptr<Mesh> noNormalsMesh {};
+        std::unique_ptr<Mesh> smoothNormalsMesh {};
+        std::unique_ptr<Mesh> flatNormalsMesh {};
+    };
+    std::unordered_map<MeshType, MeshVariations> m_meshes {};
+    std::unordered_map<int, MeshVariations> m_gridMeshes {};
+    MeshManager() {}
+
+    MeshManager(const MeshManager&) = delete;
+    MeshManager& operator=(const MeshManager& other) = delete;
+public:
+    static MeshManager& getInstance()
+    {
+        static MeshManager instance = MeshManager();
         return instance;
     }
 
-    Mesh getCube(bool normals = true);
-    Mesh getTetrahedron(bool normals = true);
-    Mesh getGrid(int size, bool normals = true);
+    Mesh getMesh(MeshType meshType, NormalMode normalMode);
+    Mesh getGrid(int size, NormalMode normals);
 };
 
-namespace MeshTools
+namespace meshtools
 {
-    Mesh makeCube(bool normals = true);
-    Mesh makeTetrahedron(bool normals = true);
-    Mesh generateGrid(int gridSize, bool normals = true);
+    Mesh makeCube(NormalMode normalMode);
+    Mesh makeTetrahedron(NormalMode normalMode);
+    Mesh generateGrid(int gridSize, bool normals);
 }

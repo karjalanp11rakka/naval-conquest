@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 class Shader;
@@ -12,7 +12,7 @@ private:
     Shaders() {}
     Shaders(const Shaders&) = delete;
     Shaders& operator=(const Shaders& other) = delete;
-    std::map<std::string, std::shared_ptr<Shader>> m_shaders {};
+    std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders {};
 public:
     static Shaders& getInstance()
     {

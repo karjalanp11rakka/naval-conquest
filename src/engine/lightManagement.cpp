@@ -2,13 +2,18 @@
 #include <array>
 #include <algorithm>
 #include <memory>
-#include <cassert>
 
 #include "engine/lightManagement.hpp"
 
+using namespace lights;
+
 std::weak_ptr<PointLight> SceneLighting::addPointLight(const PointLight& light)
 {
-    assert(std::ssize(m_lights) < MAX_POINT_LIGHTS_LENGTH && "Max point lights exceeded");
+    if(std::ssize(m_lights) == (MAX_POINT_LIGHTS_LENGTH -1))
+    {
+        std::cerr << "Max point lights size exceeded. Cannot add new light.\n";
+        return {};
+    }
     m_lights.push_back(std::make_shared<PointLight>(light));
     return m_lights.back();
 }
@@ -28,8 +33,16 @@ std::weak_ptr<DirectionalLight> SceneLighting::changeDirectionalLight(const Dire
 
 void interpolateCoefficients(float distance, float& linear, float& quadratic)
 {
-    assert(distance >= .7f && "Distance has to be at least 7 meters");
-    assert(distance <= 325.f && "Distance has to be less than 3250 meters");
+    if(distance < .7f)
+    {
+        std::cerr << "Minimum distance for coefficent generation is 7 meters";
+        return;
+    }
+    if(distance > 325.f)
+    {
+        std::cerr << "Maximum distance for coefficent generation is 3250 meters";
+        return;
+    }
     
     struct Sample
     {

@@ -15,7 +15,7 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
     RenderEngine::getInstance().onWindowResize(width, height);
 }  
-static constexpr char windowName[] = "3dProject";
+static constexpr char WINDOW_NAME[] = "3dProject";
 int main()
 {
     if (!glfwInit())
@@ -28,8 +28,8 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, windowName, NULL, NULL);
-    if (window == NULL)
+    GLFWwindow* window = glfwCreateWindow(800, 600, WINDOW_NAME, nullptr, nullptr);
+    if (window == nullptr)
     {
         std::cerr << "Failed to create GLFW window\n"; 
         glfwTerminate();
@@ -73,7 +73,7 @@ int main()
             float fps = 1.0f / deltaTime;
             char fpsText[15];
             std::sprintf(fpsText, "FPS: %.2f", fps);
-            std::string title = std::string(windowName) + ' ' + fpsText;
+            std::string title = std::string(WINDOW_NAME) + ' ' + fpsText;
             glfwSetWindowTitle(window, title.c_str());
         }
         lastTime = currentTime;

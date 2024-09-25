@@ -13,10 +13,10 @@
 
 RenderEngine::RenderEngine()
 {
-    DirectionalLight defaultDirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
+    lights::DirectionalLight defaultDirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
     m_defaultLighting = std::make_shared<SceneLighting>(defaultDirLight);
-    m_defaultLighting->addPointLight(PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), .7f));
-    m_defaultLighting->addPointLight(PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
+    m_defaultLighting->addPointLight(lights::PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), .7f));
+    m_defaultLighting->addPointLight(lights::PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
     m_lighting = m_defaultLighting;
     glPolygonMode(GL_FRONT, GL_FILL);
     glEnable(GL_DEPTH_TEST); 
