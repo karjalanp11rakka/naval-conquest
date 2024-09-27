@@ -13,6 +13,8 @@
 #include "engine/shader.hpp"
 #include "engine/objectManagement.hpp"
 
+#include "engine/fileLoader.hpp"
+
 GameController::GameController()
 {
     RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
@@ -29,7 +31,7 @@ GameController::GameController()
     m_cubeObj = std::make_shared<LitObject>(meshInstance.getMesh(MeshType::cube, NormalMode::smooth), basicShader.lock(), cubeMaterial);
     renderEngineInstance.addObject(m_cubeObj);
 
-    m_tetrahedronObj = std::make_shared<LitObject>(meshInstance.getMesh(MeshType::tetrahedron, NormalMode::flat), basicShader.lock(), cubeMaterial);
+    m_tetrahedronObj = std::make_shared<LitObject>(meshtools::loadFromOBJ(loadFile("../assets/models/sphereSmooth.obj")), basicShader.lock(), cubeMaterial);
     renderEngineInstance.addObject(m_tetrahedronObj);
 
     glm::mat4 tetrahedronModel = glm::mat4(1.0f);

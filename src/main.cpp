@@ -1,6 +1,6 @@
 #include <iostream>
-#include <cstdio> 
-#include <string> 
+#include <iomanip>
+#include <string>
 #include <memory>
 #include <cmath>
 
@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 
 #include "engine/renderEngine.hpp"
+#include "engine/fileLoader.hpp"
 #include "game/gameController.hpp"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
@@ -71,9 +72,9 @@ int main()
         {
             timeToUpdateFPS = .2f;
             float fps = 1.0f / deltaTime;
-            char fpsText[15];
-            std::sprintf(fpsText, "FPS: %.2f", fps);
-            std::string title = std::string(WINDOW_NAME) + ' ' + fpsText;
+            std::stringstream fpsText;
+            fpsText << std::fixed << std::setprecision(2) << fps;
+            std::string title = std::string(WINDOW_NAME) + ' ' + fpsText.str();
             glfwSetWindowTitle(window, title.c_str());
         }
         lastTime = currentTime;

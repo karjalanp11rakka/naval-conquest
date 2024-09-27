@@ -1,7 +1,10 @@
 #include <memory>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <cassert>
+#include <string>
+#include <sstream>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -223,6 +226,97 @@ Mesh meshtools::generateGrid(int gridSize, bool normals)
     return {generateVAO(vertices.get(), verticesLength, indices.get(), indicesLength, normals), indicesLength};
 }
 
+//this loader is not complete and only works when elements are in specific order
+Mesh meshtools::loadFromOBJ(const std::string& objString)
+{
+    auto addVerticePositions {[](const std::string& line, std::vector<float>& positions) -> void
+    {
+        size_t startIndex {};
+        for(int i {}; i < 3; ++i)
+        {
+            startIndex = line.substr(startIndex, line.size() - startIndex).find(' ') + startIndex + 1;
+            size_t decimalLength = line.substr(startIndex, line.size() - startIndex - 1).find(' ');
+            std::istringstream valueStream(line.substr(startIndex, decimalLength));
+
+            float position;
+            valueStream >> position;
+            positions.push_back(position);
+        }
+    }};
+    std::istringstream fileStream(objString);
+    std::string line {};
+    std::vector<float> vertices {};
+    std::vector<float> normals {};
+    std::vector<float> returnVertices {};
+    std::vector<unsigned int> indices {};
+    while (std::getline(fileStream, line))
+    {
+        line.erase(0, line.find_first_not_of(' '));
+        if(line.empty() || line[0] == '#')
+            continue;
+        if(line.substr(0, 2) == "v ")
+        {
+            addVerticePositions(line, vertices);
+        }
+        if(line.size() > 3 && line.substr(0, 3) == "vn ")
+        {
+            addVerticePositions(line, normals);
+        }
+        if(line.substr(0, 2) == "f ")
+        {
+            bool useNormals {line.find("//") != std::string::npos};
+            std::array<unsigned int, 4> squareIndices {}; 
+            size_t startIndex {};
+            for(int i {}; i < 4; ++i)
+            {
+                startIndex = line.substr(startIndex, line.size() - startIndex).find(' ') + startIndex + 1;
+
+                size_t numberLength = line.substr(startIndex, line.size() - startIndex - 1).find(useNormals ? "//" : " ");
+                if(i == 3 && !useNormals) numberLength = line.size() - startIndex;
+                
+                std::istringstream vertexPositionStream(line.substr(startIndex, numberLength));
+                unsigned int positionIndex {};
+                vertexPositionStream >> positionIndex;
+                --positionIndex;
+                
+                float vertex[6] = {vertices[positionIndex * 3], vertices[positionIndex * 3 + 1], vertices[positionIndex * 3 + 2]};
+
+                if(useNormals)
+                {
+                    size_t normalStartIndex = startIndex + numberLength + 2;
+                    size_t normalNumberLength = line.substr(normalStartIndex, line.size() - startIndex - 1).find(' ');
+                    std::istringstream normalIndexStream(line.substr(normalStartIndex, normalNumberLength));
+                    unsigned int normalIndex {};
+                    normalIndexStream >> normalIndex;
+                    --normalIndex;
+
+                    vertex[3] = normals[normalIndex * 3];
+                    vertex[4] = normals[normalIndex * 3 + 1];
+                    vertex[5] = normals[normalIndex * 3 + 2];
+                }
+
+                auto returnVerticesIterator = std::search(returnVertices.begin(), returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
+                size_t index {}; 
+                if(returnVerticesIterator != returnVertices.end() 
+                    && std::distance(returnVertices.begin(), returnVerticesIterator) % (useNormals ? 6 : 3) == 0)
+                    index = std::distance(returnVertices.begin(), returnVerticesIterator) / (useNormals ? 6 : 3);
+                else
+                {
+                    index = returnVertices.size() / (useNormals ? 6 : 3);
+                    returnVertices.insert(returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
+                }
+                squareIndices[i] = index;
+            }
+            indices.push_back(squareIndices[0]);
+            indices.push_back(squareIndices[1]);
+            indices.push_back(squareIndices[2]);
+            indices.push_back(squareIndices[0]);
+            indices.push_back(squareIndices[2]);
+            indices.push_back(squareIndices[3]);
+        }
+    }
+    return {generateVAO(returnVertices.data(), returnVertices.size(), indices.data(), indices.size(), normals.size()), static_cast<unsigned int>(indices.size())};
+}
 
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals)
 {

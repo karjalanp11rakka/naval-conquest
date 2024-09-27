@@ -6,41 +6,15 @@
 
 #include "engine/shader.hpp"
 #include "engine/lightManagement.hpp"
+#include "engine/fileLoader.hpp"
 
 void checkCompileErrors(unsigned int shader, std::string type);
 void addConstantsToShader(std::string& shaderString);
 
-Shader::Shader(std::string& vertexPath, std::string& fragmentPath)
+Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
 {
-    std::string vertexCode;
-    std::string fragmentCode;
-    std::ifstream vShaderFile;
-    std::ifstream fShaderFile;
-
-    vShaderFile.open(vertexPath);
-    fShaderFile.open(fragmentPath);
-
-    if (!vShaderFile.is_open())
-    {
-        std::cerr << "ERROR: Failed to open vertex shader file at path: " << vertexPath << std::endl;
-        return;
-    }
-    if (!fShaderFile.is_open())
-    {
-        std::cerr << "ERROR: Failed to open fragment shader file at path: " << vertexPath << std::endl;
-        return;
-    }
-    std::stringstream vShaderStream, fShaderStream;
-
-    vShaderStream << vShaderFile.rdbuf();
-    fShaderStream << fShaderFile.rdbuf();
-
-    vShaderFile.close();
-    fShaderFile.close();
-    
-    vertexCode = vShaderStream.str();
-    fragmentCode = fShaderStream.str();
-
+    std::string vertexCode {loadFile(vertexPath).c_str()};
+    std::string fragmentCode {loadFile(fragmentPath).c_str()};
     addConstantsToShader(fragmentCode);
     const char* vShaderCode = vertexCode.c_str();
     const char* fShaderCode = fragmentCode.c_str();

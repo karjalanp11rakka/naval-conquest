@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <string_view>
 
 #include <glad/glad.h>
 
@@ -61,4 +62,5 @@ namespace meshtools
     Mesh makeCube(NormalMode normalMode);
     Mesh makeTetrahedron(NormalMode normalMode);
     Mesh generateGrid(int gridSize, bool normals);
+    Mesh loadFromOBJ(const std::string& objString);
 }

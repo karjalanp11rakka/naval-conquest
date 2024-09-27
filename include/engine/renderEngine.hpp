@@ -40,5 +40,5 @@ public:
     const glm::vec3& getCameraPos() const {return m_cameraPos;}
     const glm::mat4& getProjection() const {return m_projection;}
     const glm::mat4& getView() const {return m_view;}
-    auto getLighting() const {return m_lighting;}
+    auto& getLighting() const {return m_lighting;}
 };
