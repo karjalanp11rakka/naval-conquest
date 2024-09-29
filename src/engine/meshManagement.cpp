@@ -226,7 +226,7 @@ Mesh meshtools::generateGrid(int gridSize, bool normals)
     return {generateVAO(vertices.get(), verticesLength, indices.get(), indicesLength, normals), indicesLength};
 }
 
-//this loader is not complete and only works when elements are in specific order
+//this loader is incomplete and only works when elements are in specific order
 Mesh meshtools::loadFromOBJ(const std::string& objString)
 {
     auto addVerticePositions {[](const std::string& line, std::vector<float>& positions) -> void
@@ -252,6 +252,7 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
     while (std::getline(fileStream, line))
     {
         line.erase(0, line.find_first_not_of(' '));
+        line.erase(line.find_last_not_of(' ') + 1);
         if(line.empty() || line[0] == '#')
             continue;
         if(line.substr(0, 2) == "v ")
@@ -264,16 +265,19 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
         }
         if(line.substr(0, 2) == "f ")
         {
-            bool useNormals {line.find("//") != std::string::npos};
-            std::array<unsigned int, 4> squareIndices {}; 
+            //get vertices
+            bool useTextures {line[line.find('/') + 1] != '/'};
+            bool useNormals {normals.size() != 0};
             size_t startIndex {};
-            for(int i {}; i < 4; ++i)
+            std::vector<unsigned int> polygonIndices {}; 
+            while(true)
             {
-                startIndex = line.substr(startIndex, line.size() - startIndex).find(' ') + startIndex + 1;
-
-                size_t numberLength = line.substr(startIndex, line.size() - startIndex - 1).find(useNormals ? "//" : " ");
-                if(i == 3 && !useNormals) numberLength = line.size() - startIndex;
+                auto spacePos = line.substr(startIndex, line.size() - startIndex).find(' ');
+ 
+                if(spacePos == std::string::npos) break;
+                startIndex = spacePos + startIndex + 1;
                 
+                size_t numberLength = line.substr(startIndex, line.size() - startIndex).find(useNormals ? '/' : ' ');
                 std::istringstream vertexPositionStream(line.substr(startIndex, numberLength));
                 unsigned int positionIndex {};
                 vertexPositionStream >> positionIndex;
@@ -283,8 +287,14 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
 
                 if(useNormals)
                 {
-                    size_t normalStartIndex = startIndex + numberLength + 2;
-                    size_t normalNumberLength = line.substr(normalStartIndex, line.size() - startIndex - 1).find(' ');
+                    size_t normalStartIndex {};
+                    if(useTextures)
+                    {
+                        size_t textureStartIndex = startIndex + numberLength + 1;
+                        normalStartIndex = line.substr(textureStartIndex, line.size() - textureStartIndex).find('/') + textureStartIndex + 1;
+                    }
+                    else normalStartIndex = startIndex + numberLength + 2;
+                    size_t normalNumberLength = line.substr(normalStartIndex, line.size() - normalStartIndex).find(' ');
                     std::istringstream normalIndexStream(line.substr(normalStartIndex, normalNumberLength));
                     unsigned int normalIndex {};
                     normalIndexStream >> normalIndex;
@@ -305,14 +315,17 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
                     index = returnVertices.size() / (useNormals ? 6 : 3);
                     returnVertices.insert(returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
                 }
-                squareIndices[i] = index;
+                polygonIndices.push_back(index);
             }
-            indices.push_back(squareIndices[0]);
-            indices.push_back(squareIndices[1]);
-            indices.push_back(squareIndices[2]);
-            indices.push_back(squareIndices[0]);
-            indices.push_back(squareIndices[2]);
-            indices.push_back(squareIndices[3]);
+            //polygon triangulation
+            indices.reserve(indices.size() + (polygonIndices.size() - 2) * 3);
+
+            for (size_t i = 1; i < polygonIndices.size() - 1; ++i)
+            {
+                indices.push_back(polygonIndices[0]);
+                indices.push_back(polygonIndices[i]);
+                indices.push_back(polygonIndices[i + 1]);
+            }
         }
     }
     return {generateVAO(returnVertices.data(), returnVertices.size(), indices.data(), indices.size(), normals.size()), static_cast<unsigned int>(indices.size())};

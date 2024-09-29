@@ -14,7 +14,7 @@ std::weak_ptr<PointLight> SceneLighting::addPointLight(const PointLight& light)
         std::cerr << "Max point lights size exceeded. Cannot add new light.\n";
         return {};
     }
-    m_lights.push_back(std::make_shared<PointLight>(light));
+    m_lights.emplace_back(std::make_shared<PointLight>(light));
     return m_lights.back();
 }
 void SceneLighting::removePointLight(const PointLight* lightPtr)
