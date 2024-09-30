@@ -10,7 +10,7 @@ private:
     GameController();
     GameController(const GameController&) = delete;
     GameController& operator=(const GameController& other) = delete;
-    std::shared_ptr<Object> m_waterObj {}, m_cubeObj {}, m_tetrahedronObj {};
+    std::shared_ptr<Object> m_waterObj {}, m_cubeObj {}, m_loadedObj {};
 public:
     static GameController& getInstance()
     {

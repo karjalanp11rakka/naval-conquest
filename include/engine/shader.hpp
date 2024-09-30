@@ -7,7 +7,7 @@ class Shader
 private:
     unsigned int m_ID {};
 public:
-    Shader(const std::string& vertexPath, const std::string& fragmentPath);
+    Shader(std::string vertexString, std::string fragmentString);
     auto getID() const {return m_ID;}
     void use() const {glUseProgram(m_ID);}
 };

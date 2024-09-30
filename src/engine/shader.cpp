@@ -6,18 +6,16 @@
 
 #include "engine/shader.hpp"
 #include "engine/lightManagement.hpp"
-#include "engine/fileLoader.hpp"
 
 void checkCompileErrors(unsigned int shader, std::string type);
 void addConstantsToShader(std::string& shaderString);
 
-Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
+Shader::Shader(std::string vertexString, std::string fragmentString)
 {
-    std::string vertexCode {loadFile(vertexPath).c_str()};
-    std::string fragmentCode {loadFile(fragmentPath).c_str()};
-    addConstantsToShader(fragmentCode);
-    const char* vShaderCode = vertexCode.c_str();
-    const char* fShaderCode = fragmentCode.c_str();
+    addConstantsToShader(vertexString);
+    addConstantsToShader(fragmentString);
+    const char* vShaderCode = vertexString.c_str();
+    const char* fShaderCode = fragmentString.c_str();
 
     unsigned int vertex {glCreateShader(GL_VERTEX_SHADER)};
     glShaderSource(vertex, 1, &vShaderCode, nullptr);

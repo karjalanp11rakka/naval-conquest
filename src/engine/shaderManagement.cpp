@@ -2,12 +2,14 @@
 
 #include "engine/shaderManagement.hpp"
 #include "engine/shader.hpp"
+#include "engine/fileLoader.hpp"
 
 std::weak_ptr<Shader> Shaders::getShader(std::string& vertexPath, std::string& fragmentPath)
 {
     if (m_shaders.find(vertexPath + fragmentPath) == m_shaders.end())
     {
-        m_shaders[vertexPath + fragmentPath] = std::make_shared<Shader>(vertexPath, fragmentPath);
+        std::string vertexString {loadFile(vertexPath)}, fragmentString {loadFile(fragmentPath)};
+        m_shaders[vertexPath + fragmentPath] = std::make_shared<Shader>(vertexString, fragmentString);
     }
     return m_shaders[vertexPath + fragmentPath];
 }

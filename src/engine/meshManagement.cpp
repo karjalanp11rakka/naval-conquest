@@ -12,6 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "engine/meshManagement.hpp"
+#include "engine/fileLoader.hpp"
 
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {
@@ -26,10 +27,10 @@ Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
         switch (meshType)
         {
         case MeshType::cube:
-            meshPtr = std::make_unique<Mesh>(meshtools::makeCube(normalMode));
+            meshPtr = std::make_unique<Mesh>(meshtools::generateCube(normalMode));
             break;
         case MeshType::tetrahedron:
-            meshPtr = std::make_unique<Mesh>(meshtools::makeTetrahedron(normalMode));
+            meshPtr = std::make_unique<Mesh>(meshtools::generateTetrahedron(normalMode));
             break;
         }
     }
@@ -49,6 +50,14 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
     return *gridPtr;
 }
 
+Mesh MeshManager::getFromOBJ(const std::string& path)
+{
+    if (m_loadedMeshes.find(path) == m_loadedMeshes.end())
+        m_loadedMeshes[path] = meshtools::loadFromOBJ(loadFile(path));
+
+    return m_loadedMeshes[path];
+}
+
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals);
 unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength, bool normals);
 std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, int& verticesLength);
@@ -58,7 +67,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength);
 template <const float* vertices, int length>
 Mesh makeMesh(NormalMode normals);
 
-Mesh meshtools::makeCube(NormalMode normalMode)
+Mesh meshtools::generateCube(NormalMode normalMode)
 {
     static constexpr float vertices[] 
     {
@@ -115,7 +124,7 @@ Mesh meshtools::makeCube(NormalMode normalMode)
     return makeMesh<vertices, length>(normalMode);
 }
 
-Mesh meshtools::makeTetrahedron(NormalMode normalMode)
+Mesh meshtools::generateTetrahedron(NormalMode normalMode)
 {
     static constexpr float vertices[]
     {

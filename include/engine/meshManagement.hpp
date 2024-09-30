@@ -42,6 +42,7 @@ private:
     };
     std::unordered_map<MeshType, MeshVariations> m_meshes {};
     std::unordered_map<int, MeshVariations> m_gridMeshes {};
+    std::unordered_map<std::string, Mesh> m_loadedMeshes {};
     MeshManager() {}
 
     MeshManager(const MeshManager&) = delete;
@@ -55,12 +56,13 @@ public:
 
     Mesh getMesh(MeshType meshType, NormalMode normalMode);
     Mesh getGrid(int size, NormalMode normals);
+    Mesh getFromOBJ(const std::string& path);
 };
 
 namespace meshtools
 {
-    Mesh makeCube(NormalMode normalMode);
-    Mesh makeTetrahedron(NormalMode normalMode);
+    Mesh generateCube(NormalMode normalMode);
+    Mesh generateTetrahedron(NormalMode normalMode);
     Mesh generateGrid(int gridSize, bool normals);
     Mesh loadFromOBJ(const std::string& objString);
 }

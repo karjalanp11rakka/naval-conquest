@@ -8,7 +8,6 @@
 #include <GLFW/glfw3.h>
 
 #include "engine/renderEngine.hpp"
-#include "engine/fileLoader.hpp"
 #include "game/gameController.hpp"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
