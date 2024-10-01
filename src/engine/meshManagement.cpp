@@ -32,6 +32,7 @@ Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
         case MeshType::tetrahedron:
             meshPtr = std::make_unique<Mesh>(meshtools::generateTetrahedron(normalMode));
             break;
+        default: break;
         }
     }
     return *meshPtr;
