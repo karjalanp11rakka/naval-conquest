@@ -2,10 +2,9 @@
 #include <string>
 
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
-#include "engine/shader.hpp"
-#include "engine/lightManagement.hpp"
+#include <engine/shader.hpp>
+#include <engine/lightManagement.hpp>
 
 void checkCompileErrors(unsigned int shader, std::string type);
 void addConstantsToShader(std::string& shaderString);

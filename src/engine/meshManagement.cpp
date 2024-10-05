@@ -9,10 +9,9 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
-#include "engine/meshManagement.hpp"
-#include "engine/fileLoader.hpp"
+#include <engine/meshManagement.hpp>
+#include <engine/fileLoader.hpp>
 
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {
@@ -170,7 +169,8 @@ Mesh makeMesh(NormalMode normalMode)
         int tempLength {length};
         addNormals(verticesPtr, tempLength, &indices[0], std::ssize(indices));
         
-        return {generateVAO(verticesPtr.get(), verticesForIndicesLength * 2, &indices[0], std::ssize(indices), true), static_cast<unsigned int>(indices.size())};
+        return {generateVAO(verticesPtr.get(), verticesForIndicesLength * 2,
+             &indices[0], std::ssize(indices), true), static_cast<unsigned int>(indices.size())};
     }
     if(normalMode == NormalMode::flat)
     {
@@ -180,10 +180,12 @@ Mesh makeMesh(NormalMode normalMode)
         int tempLength {length};
         addNormals(verticesPtr, tempLength);
 
-        return {.VAO = generateVAO(verticesPtr.get(), tempLength, true), .vertexCount = static_cast<unsigned int>(tempLength)};
+        return {.VAO = generateVAO(verticesPtr.get(), tempLength, true), 
+            .vertexCount = static_cast<unsigned int>(tempLength)};
     }
 
-    return {generateVAO(verticesForIndices.get(), verticesForIndicesLength, &indices[0], std::ssize(indices), false), static_cast<unsigned int>(indices.size())};
+    return {generateVAO(verticesForIndices.get(), verticesForIndicesLength, &indices[0],
+        std::ssize(indices), false), static_cast<unsigned int>(indices.size())};
 }
 
 Mesh meshtools::generateGrid(int gridSize, bool normals)
@@ -194,20 +196,20 @@ Mesh meshtools::generateGrid(int gridSize, bool normals)
     const int verticesLength {(gridSize + 1) * (gridSize + 1) * 3 * (normals ? 2 : 1)};
     std::unique_ptr<float[]> vertices = std::make_unique<float[]>(verticesLength);
 
-    int verticleIndex {};
+    int vertexIndex {};
     for(int x {-(gridSize / 2)}; x <= (gridSize / 2); ++x)
     {
         for(int y {-(gridSize / 2)}; y <= (gridSize / 2); ++y)
         {
-            vertices[verticleIndex++] = (static_cast<float>(x * 2) / gridSize);
-            vertices[verticleIndex++] = (static_cast<float>(y * 2) / gridSize);
-            vertices[verticleIndex++] = .0f;
+            vertices[vertexIndex++] = (static_cast<float>(x * 2) / gridSize);
+            vertices[vertexIndex++] = (static_cast<float>(y * 2) / gridSize);
+            vertices[vertexIndex++] = .0f;
 
             if(normals)
             {
-                vertices[verticleIndex++] = .0f;
-                vertices[verticleIndex++] = .0f;
-                vertices[verticleIndex++] = 1.f;
+                vertices[vertexIndex++] = .0f;
+                vertices[vertexIndex++] = .0f;
+                vertices[vertexIndex++] = 1.f;
             }
         }
     }
@@ -337,7 +339,17 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
             }
         }
     }
-    return {generateVAO(returnVertices.data(), returnVertices.size(), indices.data(), indices.size(), normals.size()), static_cast<unsigned int>(indices.size())};
+    return {generateVAO(returnVertices.data(), returnVertices.size(), indices.data(), 
+        indices.size(), normals.size()), static_cast<unsigned int>(indices.size())};
+}
+
+Mesh meshtools::generateMesh(const float vertices[], int verticesLength)
+{
+    std::unique_ptr<float[]> verticesPtr {std::make_unique<float[]>(verticesLength)};
+    std::copy(vertices, vertices + verticesLength, verticesPtr.get());
+    auto indices {generateIndices(verticesPtr, verticesLength)};
+    return {generateVAO(verticesPtr.get(), verticesLength,
+        indices.data(), std::ssize(indices), false), static_cast<unsigned int>(indices.size())};
 }
 
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals)
@@ -419,7 +431,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const u
     assert(verticesLength % 3 == 0 && "The number of vertices must be divisible by three");
     std::vector<glm::vec3> tempVertices(verticesLength / 3);
     
-    for (int i = 0; i < verticesLength; i += 3)
+    for (int i {}; i < verticesLength; i += 3)
     {
         tempVertices[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
     }

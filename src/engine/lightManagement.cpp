@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <memory>
 
-#include "engine/lightManagement.hpp"
+#include <engine/lightManagement.hpp>
 
 using namespace lights;
 

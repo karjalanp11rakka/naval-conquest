@@ -20,7 +20,7 @@ public:
         return instance;
     }
 
-    std::weak_ptr<Shader> getShader(std::string& vertexPath, std::string& fragmentPath);
+    std::weak_ptr<Shader> getShader(const std::string& vertexPath, const std::string& fragmentPath);
     void removeShader(std::string& vertexPath, std::string& fragmentPath);
     void removeShader(const Shader* ptr);
 };
