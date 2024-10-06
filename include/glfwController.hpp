@@ -1,17 +1,23 @@
 #pragma once
 
+#include <functional>
+#include <forward_list>
+
 struct GLFWwindow;
 
 class GLFWController
 {
+public:
+    using inputCallBackFunc = std::function<void(int)>; 
 private:
     GLFWController();
     ~GLFWController();
     GLFWController(const GLFWController&) = delete;
     GLFWController& operator=(const GLFWController& other) = delete;
-    float m_deltaTime {}, m_lastTime {}, timeToUpdateFPS {};
+    float m_deltaTime {}, m_currentTime {}, m_lastTime {}, timeToUpdateFPS {};
     GLFWwindow* m_window {};
     int m_width {}, m_height {};
+    std::forward_list<inputCallBackFunc> m_inputCallbacks {};
 public:
     static GLFWController& getInstance()
     {
@@ -20,9 +26,12 @@ public:
     }
     void update();
     void terminate();
-    bool shouldClose();
-    auto getWidth() {return m_width;};
-    auto getHeight() {return m_height;};
+    bool shouldClose() const;
+    void addInputCallback(inputCallBackFunc func);
+    auto getWidth() const {return m_width;};
+    auto getHeight() const {return m_height;};
+    auto getTime() const {return m_currentTime;};
     float getDeltaTime() {return m_deltaTime;};
-    void onWindowResize(int width, int height);
+    friend void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    friend void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 };

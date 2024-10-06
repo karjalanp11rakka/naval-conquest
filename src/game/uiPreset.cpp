@@ -1,6 +1,6 @@
 #include <iostream>
 #include <algorithm>
-#include <type_traits>
+#include <cstddef>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -8,6 +8,7 @@
 #define GLT_MANUAL_VIEWPORT
 #define GLT_IMPLEMENTATION
 #include <glText-master/gltext.h>
+#include <GLFW/glfw3.h> //for input
 
 #include <game/uiPreset.hpp>
 #include <glfwController.hpp>
@@ -15,39 +16,101 @@
 #include <engine/meshManagement.hpp>
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManagement.hpp>
+#include <engine/shader.hpp>
 
-constexpr static float TEXT_SIZE_MULTIPLIER {.002f};
+constexpr float TEXT_SIZE_MULTIPLIER {.002f};
+constexpr float OUTLINE_THICKNESS {.25f};
+
+void InteractableObject::configureShaders() const 
+{
+    auto lockedShader {shader.lock()};
+    unsigned int colorLoc = glGetUniformLocation(lockedShader->getID(), "color");
+    unsigned int modelLoc = glGetUniformLocation(lockedShader->getID(), "model");
+
+    glUniform3fv(colorLoc, 1, glm::value_ptr(m_outlineColor));
+    
+    //calculate outline size
+    glm::vec2 originalScale {glm::vec2(
+        glm::length(glm::vec3(model[0])),
+        glm::length(glm::vec3(model[1]))
+    )};
+    auto outlineModel {glm::scale(model, glm::vec3(
+        1.f + (originalScale.y / originalScale.x) * OUTLINE_THICKNESS,
+        1.f + (originalScale.x / originalScale.y) * OUTLINE_THICKNESS,
+        .0f
+    ))};
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(outlineModel));
+}
+
+void InteractableObject::draw() const
+{
+    if(m_useOutline)
+    {
+        shader.lock()->use();
+        InteractableObject::configureShaders();
+        drawMesh();
+    }
+    Object2D::draw();
+}
+
 void UIPreset::initialize()
 {
-    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
 
-    auto shader {Shaders::getInstance().getShader("../assets/shaders/v2D.glsl", 
+    static auto uiElementShader {Shaders::getInstance().getShader("../assets/shaders/v2D.glsl", 
         "../assets/shaders/fSimpleUnlit.glsl").lock()};
 
     static constexpr float vertices[]
     {
-        -1.f, 1.f, .1f,
-        1.f, 1.f, .1f,
-        1.f, -1.f, .1f,
+        -1.f, 1.f, 0.f,
+        1.f, 1.f, 0.f,
+        1.f, -1.f, 0.f,
 
-        -1.f, 1.f, .1f,
-        1.f, -1.f, .1f,
-        -1.f, -1.f, .1f
+        -1.f, 1.f, 0.f,
+        1.f, -1.f, 0.f,
+        -1.f, -1.f, 0.f
     };
+    static Mesh uiElementMesh {meshtools::generateMesh(vertices, std::size(vertices))};
     
-    for(int i {}; i < m_size; ++i)
+    for(size_t i {}; i < m_size; ++i)
     {
-        m_elements[i].second = std::make_shared<Object2D>(meshtools::generateMesh(vertices, std::size(vertices)), shader, 
+        m_elements[i].second = m_elements[i].first.interactable ? 
+            //interactive elements
+            std::make_shared<InteractableObject>(uiElementMesh, uiElementShader,
+            glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z), glm::vec3(0.5f, .6f, 1.f))
+            :
+            //noninteractive elements
+            std::make_shared<Object2D>(uiElementMesh, uiElementShader, 
             glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z));
         
         RenderEngine::getInstance().addObject(m_elements[i].second);
     }
+
+    //sort the elements to be iterable correctly for keyboard input
+    std::sort(m_elements.get(), m_elements.get() + m_size, [](auto a, auto b) -> bool
+    {
+        if(!a.first.interactable) return false;
+        if(!b.first.interactable) return true;
+        float yDifference {a.first.position.y - b.first.position.y};
+        if(yDifference > .01f)
+            return true;
+        else if(yDifference < -.01f)
+            return false;
+        else return (a.first.position.x - b.first.position.x) < .0f;
+    });
+    m_interactableElements = std::span<UIElement>(m_elements.get(), 
+        std::count_if(m_elements.get(), m_elements.get() + m_size, [](auto element)
+        {
+            return element.first.interactable;
+        }));
+
+    dynamic_cast<InteractableObject*>(m_interactableElements[0].second.get())->setUseOutline(true);
     updateBackgroundUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 }
 void UIPreset::updateBackgroundUniforms(int width, int height)
 {
     GLTtext* text = gltCreateText();
-    for(int i {}; i < m_size; ++i)
+    for(size_t i {}; i < m_size; ++i)
     {
         float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER * m_elements[i].first.backgroundScale};
         glm::mat4 backgroundModel(1.f);
@@ -59,8 +122,25 @@ void UIPreset::updateBackgroundUniforms(int width, int height)
 
         backgroundModel = glm::translate(backgroundModel, glm::vec3(m_elements[i].first.position.x, m_elements[i].first.position.y, 0.f));
         backgroundModel = glm::scale(backgroundModel, glm::vec3(textWidth * sizeMultiplier, textHeight * sizeMultiplier, 0.f));
-        m_elements[i].second->model = backgroundModel;
+        m_elements[i].second->setModel(backgroundModel);
     }
+}
+void UIPreset::changeFocusedElment(bool moveToNext)
+{
+    dynamic_cast<InteractableObject*>(m_interactableElements[m_focusedElementIndex].second.get())->setUseOutline(false);
+
+    if(moveToNext)
+    {
+        if(++m_focusedElementIndex == m_interactableElements.size())
+            m_focusedElementIndex = 0;
+    }
+    else
+    {
+        if(m_focusedElementIndex == 0)
+            m_focusedElementIndex = m_interactableElements.size() - 1;
+        else --m_focusedElementIndex;
+    }
+    dynamic_cast<InteractableObject*>(m_interactableElements[m_focusedElementIndex].second.get())->setUseOutline(true);
 }
 void UIPreset::initializeGLT()
 {
@@ -73,7 +153,7 @@ void UIPreset::initializeGLT()
 
 void UIPreset::update()
 {
-    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     gltBeginDraw();
     int width {glfwControllerInstance.getWidth()}, height {glfwControllerInstance.getHeight()};
     float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER};
@@ -95,6 +175,23 @@ void UIPreset::update()
     gltEndDraw();
 }
 
+void UIPreset::processInput(int key)
+{
+    switch (key)
+    {
+    case GLFW_KEY_RIGHT:
+    case GLFW_KEY_UP:
+        changeFocusedElment(true);
+        break;
+    case GLFW_KEY_LEFT:
+    case GLFW_KEY_DOWN:
+        changeFocusedElment(false);
+    case GLFW_KEY_ENTER:
+    case GLFW_KEY_SPACE:
+        break;
+    default: break;
+    }
+}
 
 void UIPreset::onWindowResize(int width, int height)
 {

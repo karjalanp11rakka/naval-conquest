@@ -10,15 +10,18 @@
 #include <engine/renderEngine.hpp>
 #include <engine/objectManagement.hpp>
 #include <engine/lightManagement.hpp>
+#include <glfwController.hpp>
 
 RenderEngine::RenderEngine()
 {
+    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cerr << "Failed to initialize GLAD\n"; 
-        glfwTerminate();
+        glfwControllerInstance.terminate();
         return;
     }
+    onWindowResize(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 
     lights::DirectionalLight defaultDirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
     m_defaultLighting = std::make_shared<SceneLighting>(defaultDirLight);
@@ -26,7 +29,6 @@ RenderEngine::RenderEngine()
     m_defaultLighting->addPointLight(lights::PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
     m_lighting = m_defaultLighting;
     glPolygonMode(GL_FRONT, GL_FILL);
-
 }
 
 void RenderEngine::update()
@@ -38,7 +40,7 @@ void RenderEngine::update()
     static constexpr float cameraRadius = 2.3f;
     static constexpr float cameraSpeed = .05f;
 
-    double time {glfwGetTime()};
+    double time {GLFWController::getInstance().getTime()};
 
     m_view = glm::mat4(1.0f);    
     m_view = glm::translate(m_view, glm::vec3(0.0f, -0.3f, -2.0f));

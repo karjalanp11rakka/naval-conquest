@@ -3,7 +3,6 @@
 #include <string>
 
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -12,15 +11,20 @@
 #include <engine/shaderManagement.hpp>
 #include <engine/shader.hpp>
 #include <engine/objectManagement.hpp>
+#include <glfwController.hpp>
 #include <game/uiPreset.hpp>
+
+void inputCallback(int key);
 
 GameController::GameController()
 {
     RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     MeshManager& meshManagerInstance {MeshManager::getInstance()};
 
     UIElementData element1
     {
+        .interactable = true,
         .text = "hello",
         .position = {-.5f, .0f},
         .textColor = {.8f, .4f, .3f},
@@ -30,6 +34,17 @@ GameController::GameController()
     };
     UIElementData element2
     {
+        .interactable = true,
+        .text = "!!",
+        .position = {.7f, -.4f},
+        .textColor = {.2f, .9f, .2f},
+        .scale = 1.1f,
+        .backgroundColor = {1.f, .1f, .1f},
+        .backgroundScale = 1.2f
+    };
+    UIElementData element3
+    {
+        .interactable = true,
         .text = "world",
         .position = {.7f, .4f},
         .textColor = {.2f, .9f, .2f},
@@ -37,8 +52,10 @@ GameController::GameController()
         .backgroundColor = {1.f, .9f, .0f},
         .backgroundScale = 1.f
     };
-    m_menuUI = std::make_unique<UIPreset>(element1, element2);
+    m_menuUI = std::make_unique<UIPreset>(element1, element2, element3);
     renderEngineInstance.setRenderCallback([this](){m_currentUI->update();});
+
+    glfwControllerInstance.addInputCallback(inputCallback);
 
     std::string basicVPath {"../assets/shaders/vBasic.glsl"};
     std::string basicFPath {"../assets/shaders/fBasic.glsl"};
@@ -57,11 +74,11 @@ GameController::GameController()
     glm::mat4 tetrahedronModel(1.0f);
     tetrahedronModel = glm::translate(tetrahedronModel, glm::vec3(-.4f, .2f, -.4f));
     tetrahedronModel = glm::scale(tetrahedronModel, glm::vec3(.1f, .1f, .1f));
-    m_loadedObj->model = tetrahedronModel;
+    m_loadedObj->setModel(tetrahedronModel);
     
     glm::mat4 waterModel(1.0f);
     waterModel = glm::rotate(waterModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    m_waterObj->model = waterModel;
+    m_waterObj->setModel(waterModel);
 }
 
 GameController::~GameController()
@@ -71,17 +88,23 @@ GameController::~GameController()
 
 void GameController::update()
 {   
-    double time {glfwGetTime()};
+    double time {GLFWController::getInstance().getTime()};
 
     glm::mat4 cubeModel(1.0f);
     
     cubeModel = glm::translate(cubeModel, glm::vec3(.2f, .2f, .0f));
     cubeModel = glm::scale(cubeModel, glm::vec3(.1f, .1f, .1f));
     cubeModel = glm::rotate(cubeModel, glm::radians(static_cast<float>(cos(time) * 360.0f)), glm::vec3(1.0f, 1.0f, 1.0f));
-    m_cubeObj->model = cubeModel;
+    m_cubeObj->setModel(cubeModel);
 }
 
 void GameController::onWindowResize(int width, int height)
 {
     m_currentUI->onWindowResize(width, height);
+}
+
+void inputCallback(int key)
+{
+    static GameController& gameControllerInstance {GameController::getInstance()};
+    gameControllerInstance.m_currentUI->processInput(key);
 }

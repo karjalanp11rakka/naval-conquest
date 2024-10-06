@@ -395,7 +395,7 @@ std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, in
     assert(verticesLength % 3 == 0 && "The number of vertices must be divisible by three");
 
     std::vector<glm::vec3> oldVerticePositions(verticesLength / 3);
-    for (int i {}; i < verticesLength; i += 3)
+    for (size_t i {}; i < verticesLength; i += 3)
     {
         oldVerticePositions[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
     }
@@ -432,14 +432,14 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const u
     assert(verticesLength % 3 == 0 && "The number of vertices must be divisible by three");
     std::vector<glm::vec3> tempVertices(verticesLength / 3);
     
-    for (int i {}; i < verticesLength; i += 3)
+    for (size_t i {}; i < verticesLength; i += 3)
     {
         tempVertices[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
     }
 
     std::vector<glm::vec3> normals(tempVertices.size(), glm::vec3(0.0f));
 
-    for (unsigned int i {}; i < indicesLength; i += 3)
+    for (size_t i {}; i < indicesLength; i += 3)
     {
         unsigned int i0 {indices[i]};
         unsigned int i1 {indices[i + 1]};
@@ -465,7 +465,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const u
     }
 
     std::unique_ptr<float[]> newVertices = std::make_unique<float[]>(verticesLength * 2);
-    for (int i {}, j {}; i < verticesLength; i += 3, j += 6)
+    for (size_t i {}, j {}; i < verticesLength; i += 3, j += 6)
     {
         newVertices[j] = vertices[i];
         newVertices[j + 1] = vertices[i + 1];
@@ -485,7 +485,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength)
     std::unique_ptr<float[]> newVertices {std::make_unique<float[]>(verticesLength * 2)};
     std::vector<glm::vec3> normals {};
 
-    for (int i {}; i < verticesLength; i += 9)
+    for (size_t i {}; i < verticesLength; i += 9)
     {
         glm::vec3 v0(vertices[i], vertices[i + 1], vertices[i + 2]);
         glm::vec3 v1(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
@@ -499,7 +499,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength)
     }
 
     int normalIndex {};
-    for(int i {}, j {}; i < (verticesLength * 2); i += 6, j += 3)
+    for(size_t i {}, j {}; i < (verticesLength * 2); i += 6, j += 3)
     {
         newVertices[i] = vertices[j];
         newVertices[i + 1] = vertices[j + 1];

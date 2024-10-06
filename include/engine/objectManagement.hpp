@@ -15,11 +15,14 @@ protected:
     Mesh m_mesh {};
     void drawMesh() const;
     virtual void configureShaders() const {}; 
+    glm::mat4 model {};
 public:
     std::weak_ptr<Shader> shader {};
     Object() {}
     Object(Mesh mesh, std::shared_ptr<Shader> shader)
         : m_mesh(mesh), shader(shader) {}
+
+    void setModel(const glm::mat4& mat4) {model = mat4;};
     virtual void draw() const = 0;
 };
 
@@ -28,8 +31,6 @@ class Object3D : public Object
 protected:
     void configureShaders() const override;
 public:
-    glm::mat4 model {};
-
     Object3D() {}
     Object3D(Mesh mesh, std::shared_ptr<Shader> shader)
         : Object(mesh, shader) {}
@@ -51,7 +52,7 @@ protected:
     Material m_material {};
     void configureShaders() const override;
 public:
-    LitObject(Mesh mesh, std::shared_ptr<Shader> shader, Material material) 
+    LitObject(Mesh mesh, std::shared_ptr<Shader> shader, const Material& material) 
         : Object3D(mesh, shader), m_material(material) {}
     void draw() const override;
 };
@@ -64,7 +65,7 @@ protected:
     glm::vec3 m_color {};
     void configureShaders() const override;
 public:
-    UnlitObject(Mesh mesh, glm::vec3 color) : Object3D(mesh, getShader().lock()), m_color(color) {}
+    UnlitObject(Mesh mesh, const glm::vec3& color) : Object3D(mesh, getShader().lock()), m_color(color) {}
     void draw() const override;
 };
 
@@ -89,9 +90,8 @@ protected:
     glm::vec3 m_color {1.f, 1.f, 1.f};
     void configureShaders() const override; 
 public:
-    glm::mat4 model {};
     Object2D() {};
-    Object2D(Mesh mesh, std::shared_ptr<Shader> shader, glm::vec3 color)
+    Object2D(Mesh mesh, std::shared_ptr<Shader> shader, const glm::vec3& color)
         : Object(mesh, shader), m_color(color) {}
     void draw() const override;
 };

@@ -1,4 +1,5 @@
 #include <format>
+#include <cstddef>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -35,7 +36,7 @@ void Object3D::configureShaders() const
 void Object3D::draw() const
 {
     shader.lock()->use();
-    configureShaders();
+    Object3D::configureShaders();
     drawMesh();
 }
 
@@ -44,7 +45,7 @@ void LitObject::configureShaders() const
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     auto lockedShader {shader.lock()};
     unsigned int colorLoc = glGetUniformLocation(lockedShader->getID(), "material.color");
-    glUniform3f(colorLoc, m_material.color.x, m_material.color.y, m_material.color.z);
+    glUniform3fv(colorLoc, 1, glm::value_ptr(m_material.color));
     unsigned int ambientStengthLoc = glGetUniformLocation(lockedShader->getID(), "material.ambientStrength");
     glUniform1f(ambientStengthLoc, m_material.ambientStrength);
     unsigned int shininessLoc = glGetUniformLocation(lockedShader->getID(), "material.shininess");
@@ -65,7 +66,7 @@ void LitObject::configureShaders() const
     //point lights
     auto lights {renderEngineInstance.getLighting().lock()->getPointLights()};
     auto lightsSize {std::ssize(lights)};
-    for(int i {}; i < lightsSize; ++i)
+    for(size_t i {}; i < lightsSize; ++i)
     {
         unsigned int lightColorLoc = glGetUniformLocation(lockedShader->getID(), std::format("lights[{}].color", i).c_str());
         glUniform3fv(lightColorLoc, 1, glm::value_ptr(lights[i]->color));
@@ -89,7 +90,7 @@ void LitObject::configureShaders() const
 void LitObject::draw() const
 {
     shader.lock()->use();
-    configureShaders();
+    LitObject::configureShaders();
     Object3D::configureShaders();
     drawMesh();
 }
@@ -108,7 +109,7 @@ void UnlitObject::configureShaders() const
 void UnlitObject::draw() const
 {
     shader.lock()->use();
-    configureShaders();
+    UnlitObject::configureShaders();
     Object3D::configureShaders();
     drawMesh();
 }
@@ -125,6 +126,6 @@ void Object2D::configureShaders() const
 void Object2D::draw() const
 {
     shader.lock()->use();
-    configureShaders();
+    Object2D::configureShaders();
     drawMesh();
 }

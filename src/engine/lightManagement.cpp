@@ -2,6 +2,7 @@
 #include <array>
 #include <algorithm>
 #include <memory>
+#include <cstddef>
 
 #include <engine/lightManagement.hpp>
 

@@ -9,8 +9,9 @@
 #include <engine/renderEngine.hpp>
 #include <game/gameController.hpp>
 
-static constexpr char WINDOW_NAME[] = "3dProject";
+constexpr char WINDOW_NAME[] = "3dProject";
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 GLFWController::GLFWController()
 {
@@ -37,10 +38,9 @@ GLFWController::GLFWController()
 
     glfwSwapInterval(0);
 
-    RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-
     glfwGetFramebufferSize(m_window, &m_width, &m_height);
-    renderEngineInstance.onWindowResize(m_width, m_height);
+
+    glfwSetKeyCallback(m_window, inputCallback);
 }
 GLFWController::~GLFWController()
 {
@@ -49,8 +49,8 @@ GLFWController::~GLFWController()
 
 void GLFWController::update()
 {
-    float currentTime = glfwGetTime();
-    m_deltaTime = currentTime - m_lastTime;
+    m_currentTime = glfwGetTime();
+    m_deltaTime = m_currentTime - m_lastTime;
     timeToUpdateFPS -= m_deltaTime;
     if(timeToUpdateFPS < 0)
     {
@@ -61,7 +61,7 @@ void GLFWController::update()
         std::string title = std::string(WINDOW_NAME) + ' ' + fpsText.str();
         glfwSetWindowTitle(m_window, title.c_str());
     }
-    m_lastTime = currentTime;
+    m_lastTime = m_currentTime;
 
     glfwSwapBuffers(m_window);
     glfwPollEvents();
@@ -72,21 +72,39 @@ void GLFWController::terminate()
     glfwTerminate();
 }
 
-bool GLFWController::shouldClose()
+bool GLFWController::shouldClose() const
 {
     return glfwWindowShouldClose(m_window);
 }
 
-void GLFWController::onWindowResize(int width, int height)
+void GLFWController::addInputCallback(inputCallBackFunc func)
 {
-    m_width = width;
-    m_height = height;
+    m_inputCallbacks.push_front(func);
+}
+void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if(action == GLFW_RELEASE)
+    {
+        static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+        if(key == GLFW_KEY_ESCAPE)
+        {
+            glfwSetWindowShouldClose(glfwControllerInstance.m_window, true);
+            return;
+        }
+
+        for(auto& func : glfwControllerInstance.m_inputCallbacks)
+            func(key);
+    }
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-    GLFWController::getInstance().onWindowResize(width, height);
+
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    glfwControllerInstance.m_width = width;
+    glfwControllerInstance.m_height = height;
+
     GameController::getInstance().onWindowResize(width, height);
     RenderEngine::getInstance().onWindowResize(width, height);
 }

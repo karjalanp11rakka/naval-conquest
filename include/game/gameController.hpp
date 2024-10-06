@@ -26,4 +26,5 @@ public:
 
     void update();
     void onWindowResize(int width, int height);
+    friend void inputCallback(int key);
 };
