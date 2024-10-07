@@ -15,8 +15,6 @@
 
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {
-    assert(meshType != MeshType::grid && "Cannot use getMesh method to get a grid. Use getGridMesh method instead");
-
     auto& meshVariations {m_meshes[meshType]};
     auto& meshPtr = normalMode == NormalMode::flat ? 
         meshVariations.flatNormalsMesh : (normalMode == NormalMode::smooth ? meshVariations.smoothNormalsMesh : meshVariations.noNormalsMesh);
@@ -31,7 +29,6 @@ Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
         case MeshType::tetrahedron:
             meshPtr = std::make_unique<Mesh>(meshtools::generateTetrahedron(normalMode));
             break;
-        default: break;
         }
     }
     return *meshPtr;

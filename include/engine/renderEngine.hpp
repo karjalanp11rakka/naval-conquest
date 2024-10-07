@@ -27,7 +27,7 @@ private:
 public:
     static RenderEngine& getInstance()
     {
-        static RenderEngine instance = RenderEngine();
+        static RenderEngine instance {RenderEngine()};
         return instance;
     }
 

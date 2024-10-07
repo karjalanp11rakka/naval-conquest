@@ -18,8 +18,8 @@
 #include <engine/shaderManagement.hpp>
 #include <engine/shader.hpp>
 
-constexpr float TEXT_SIZE_MULTIPLIER {.002f};
-constexpr float OUTLINE_THICKNESS {.25f};
+static constexpr float TEXT_SIZE_MULTIPLIER {.002f};
+static constexpr float OUTLINE_THICKNESS {.25f};
 
 void InteractableObject::configureShaders() const 
 {
@@ -55,9 +55,11 @@ void InteractableObject::draw() const
 
 void UIPreset::initialize()
 {
+    m_text = gltCreateText();
+
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
 
-    static auto uiElementShader {Shaders::getInstance().getShader("../assets/shaders/v2D.glsl", 
+    static auto uiElementShader {ShaderManager::getInstance().getShader("../assets/shaders/v2D.glsl", 
         "../assets/shaders/fSimpleUnlit.glsl").lock()};
 
     static constexpr float vertices[]
@@ -105,20 +107,19 @@ void UIPreset::initialize()
         }));
 
     dynamic_cast<InteractableObject*>(m_interactableElements[0].second.get())->setUseOutline(true);//supposing every UIPreset has at least one interactable element
-    updateBackgroundUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
+    updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 }
-void UIPreset::updateBackgroundUniforms(int width, int height)
+void UIPreset::updateBackgroundsUniforms(int width, int height)
 {
-    GLTtext* text = gltCreateText();
     for(size_t i {}; i < m_size; ++i)
     {
         float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER * m_elements[i].first.backgroundScale};
         glm::mat4 backgroundModel(1.f);
 
-        gltSetText(text, m_elements[i].first.text.c_str());
+        gltSetText(m_text, m_elements[i].first.text.c_str());
         
-        auto textWidth {gltGetTextWidth(text, m_elements[i].first.scale) / (float)width};
-        auto textHeight {gltGetTextHeight(text, m_elements[i].first.scale) / (float)height};
+        auto textWidth {gltGetTextWidth(m_text, m_elements[i].first.scale) / (float)width};
+        auto textHeight {gltGetTextHeight(m_text, m_elements[i].first.scale) / (float)height};
 
         backgroundModel = glm::translate(backgroundModel, glm::vec3(m_elements[i].first.position.x, m_elements[i].first.position.y, 0.f));
         backgroundModel = glm::scale(backgroundModel, glm::vec3(textWidth * sizeMultiplier, textHeight * sizeMultiplier, 0.f));
@@ -144,11 +145,17 @@ void UIPreset::changeFocusedElment(bool moveToNext)
 }
 void UIPreset::initializeGLT()
 {
+    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     if (!gltInit())
     {
         std::cerr << "Failed to initialize glText\n";
-        GLFWController::getInstance().terminate();
+        glfwControllerInstance.terminate();
     }
+    gltViewport(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
+}
+UIPreset::~UIPreset()
+{
+    gltDeleteText(m_text);
 }
 
 void UIPreset::update()
@@ -158,13 +165,12 @@ void UIPreset::update()
     int width {glfwControllerInstance.getWidth()}, height {glfwControllerInstance.getHeight()};
     float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER};
 
-    GLTtext* text = gltCreateText();
     for(size_t i {}; i < m_size; ++i)
     {
         gltColor(m_elements[i].first.textColor.x, 
             m_elements[i].first.textColor.y, m_elements[i].first.textColor.z, 1.f);    
-        gltSetText(text, m_elements[i].first.text.c_str());
-        gltDrawText2DAligned(text,
+        gltSetText(m_text, m_elements[i].first.text.c_str());
+        gltDrawText2DAligned(m_text,
             (GLfloat)(width / 2.f) + (m_elements[i].first.position.x / 2 * width),
             (GLfloat)(height / 2.f) + (m_elements[i].first.position.y / 2 * -height),
             m_elements[i].first.scale * sizeMultiplier,
@@ -196,7 +202,7 @@ void UIPreset::processInput(int key)
 void UIPreset::onWindowResize(int width, int height)
 {
     gltViewport(width, height);
-    updateBackgroundUniforms(width, height);
+    updateBackgroundsUniforms(width, height);
 }
 void UIPreset::terminate()
 {
