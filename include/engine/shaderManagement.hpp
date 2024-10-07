@@ -6,21 +6,21 @@
 
 class Shader;
 
-class Shaders
+class ShaderManager
 {
 private:
-    Shaders() {}
-    Shaders(const Shaders&) = delete;
-    Shaders& operator=(const Shaders& other) = delete;
+    ShaderManager() {}
+    ShaderManager(const ShaderManager&) = delete;
+    ShaderManager& operator=(const ShaderManager& other) = delete;
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders {};
 public:
-    static Shaders& getInstance()
+    static ShaderManager& getInstance()
     {
-        static Shaders instance = Shaders();
+        static ShaderManager instance {ShaderManager()};
         return instance;
     }
 
     std::weak_ptr<Shader> getShader(const std::string& vertexPath, const std::string& fragmentPath);
-    void removeShader(std::string& vertexPath, std::string& fragmentPath);
+    void removeShader(const std::string& vertexPath, const std::string& fragmentPath);
     void removeShader(const Shader* ptr);
 };

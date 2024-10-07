@@ -59,7 +59,7 @@ GameController::GameController()
 
     std::string basicVPath {"../assets/shaders/vBasic.glsl"};
     std::string basicFPath {"../assets/shaders/fBasic.glsl"};
-    std::weak_ptr<Shader> basicShader = Shaders::getInstance().getShader(basicVPath, basicFPath);
+    std::weak_ptr<Shader> basicShader = ShaderManager::getInstance().getShader(basicVPath, basicFPath);
 
     m_waterObj = std::make_shared<Object3D>(meshManagerInstance.getGrid(16, NormalMode::flat), basicShader.lock());
     renderEngineInstance.addObject(m_waterObj);

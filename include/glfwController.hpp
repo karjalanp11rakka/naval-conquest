@@ -21,7 +21,7 @@ private:
 public:
     static GLFWController& getInstance()
     {
-        static GLFWController instance = GLFWController();
+        static GLFWController instance {GLFWController()};
         return instance;
     }
     void update();

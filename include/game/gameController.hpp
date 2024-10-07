@@ -20,7 +20,7 @@ private:
 public:
     static GameController& getInstance()
     {
-        static GameController instance = GameController();
+        static GameController instance {GameController()};
         return instance;
     }
 

@@ -80,9 +80,6 @@ void RenderEngine::removeObject(const Object* objPtr)
 
 void RenderEngine::onWindowResize(int width, int height)
 {
-    m_width = width;
-    m_height = height;
-
     glViewport(0, 0, width, height);
     
     m_projection = glm::perspective(glm::radians(50.0f), (float)width / (float)height, .01f, 10.f);

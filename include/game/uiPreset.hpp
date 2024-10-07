@@ -34,6 +34,7 @@ struct UIElementData
     float backgroundScale {1.f};
 };
 
+struct GLTtext;
 class Object2D;
 
 class UIPreset
@@ -45,8 +46,9 @@ private:
     std::unique_ptr<UIElement[]> m_elements {};
     std::span<UIElement> m_interactableElements {};
     size_t m_focusedElementIndex {};
+    GLTtext* m_text {};
     void initialize(); //Template constructor has to be defined in the header. Hence the separate initialize func
-    void updateBackgroundUniforms(int width, int height);
+    void updateBackgroundsUniforms(int width, int height);
     void changeFocusedElment(bool moveToNext);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
     static void initializeGLT();
 public:
@@ -65,6 +67,7 @@ public:
         ((m_elements[index++].first = std::forward<Args>(elements)), ...);
         initialize();
     }
+    ~UIPreset();
 
     void update();
     void processInput(int key);

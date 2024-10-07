@@ -98,7 +98,7 @@ std::weak_ptr<Shader> UnlitObject::getShader()
 {
     std::string basicVPath {"../assets/shaders/vSimple.glsl"};
     std::string basicFPath {"../assets/shaders/fSimpleUnlit.glsl"};
-    return Shaders::getInstance().getShader(basicVPath, basicFPath);
+    return ShaderManager::getInstance().getShader(basicVPath, basicFPath);
 }
 
 void UnlitObject::configureShaders() const

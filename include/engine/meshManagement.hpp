@@ -21,8 +21,7 @@ struct Mesh
 enum class MeshType
 {
     cube,
-    tetrahedron,
-    grid
+    tetrahedron
 };
 enum class NormalMode
 {

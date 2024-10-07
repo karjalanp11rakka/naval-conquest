@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <sstream>
 
 #include <glad/glad.h> // GLAD must be included before GLFW. Even though glfwController.cpp does not directly use GLAD, it is included here for correct initialization order
 #include <GLFW/glfw3.h>
@@ -9,7 +10,7 @@
 #include <engine/renderEngine.hpp>
 #include <game/gameController.hpp>
 
-constexpr char WINDOW_NAME[] = "3dProject";
+static constexpr char WINDOW_NAME[] = "3dProject";
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -99,8 +100,6 @@ void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mo
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
-    glViewport(0, 0, width, height);
-
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     glfwControllerInstance.m_width = width;
     glfwControllerInstance.m_height = height;
