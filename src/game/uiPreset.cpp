@@ -70,7 +70,7 @@ void UIPreset::initialize()
         1.f, -1.f, 0.f,
         -1.f, -1.f, 0.f
     };
-    static Mesh uiElementMesh {meshtools::generateMesh(vertices, std::size(vertices))};
+    static Mesh uiElementMesh {meshtools::generateMesh(vertices, std::ssize(vertices))};
     
     for(size_t i {}; i < m_size; ++i)
     {
@@ -104,7 +104,7 @@ void UIPreset::initialize()
             return element.first.interactable;
         }));
 
-    dynamic_cast<InteractableObject*>(m_interactableElements[0].second.get())->setUseOutline(true);
+    dynamic_cast<InteractableObject*>(m_interactableElements[0].second.get())->setUseOutline(true);//supposing every UIPreset has at least one interactable element
     updateBackgroundUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 }
 void UIPreset::updateBackgroundUniforms(int width, int height)
