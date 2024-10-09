@@ -33,6 +33,10 @@ enum class NormalMode
 class MeshManager
 {
 private:
+    MeshManager() {}
+    MeshManager(const MeshManager&) = delete;
+    MeshManager& operator=(const MeshManager& other) = delete;
+
     struct MeshVariations
     {
         std::unique_ptr<Mesh> noNormalsMesh {};
@@ -42,14 +46,10 @@ private:
     std::unordered_map<MeshType, MeshVariations> m_meshes {};
     std::unordered_map<int, MeshVariations> m_gridMeshes {};
     std::unordered_map<std::string, Mesh> m_loadedMeshes {};
-    MeshManager() {}
-
-    MeshManager(const MeshManager&) = delete;
-    MeshManager& operator=(const MeshManager& other) = delete;
 public:
     static MeshManager& getInstance()
     {
-        static MeshManager instance = MeshManager();
+        static MeshManager instance {MeshManager()};
         return instance;
     }
 

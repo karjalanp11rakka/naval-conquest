@@ -10,8 +10,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <engine/meshManagement.hpp>
-#include <engine/fileLoader.hpp>
+#include <engine/meshManager.hpp>
+#include <engine/fileLoading.hpp>
 
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {

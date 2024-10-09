@@ -14,6 +14,7 @@ private:
     ~GLFWController();
     GLFWController(const GLFWController&) = delete;
     GLFWController& operator=(const GLFWController& other) = delete;
+
     float m_deltaTime {}, m_currentTime {}, m_lastTime {}, timeToUpdateFPS {};
     GLFWwindow* m_window {};
     int m_width {}, m_height {};
@@ -27,7 +28,7 @@ public:
     void update();
     void terminate();
     bool shouldClose() const;
-    void addInputCallback(inputCallBackFunc func);
+    void addInputCallback(const inputCallBackFunc& callback);
     auto getWidth() const {return m_width;};
     auto getHeight() const {return m_height;};
     auto getTime() const {return m_currentTime;};

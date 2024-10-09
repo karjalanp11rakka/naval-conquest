@@ -4,6 +4,7 @@
 #include <utility>
 #include <string>
 #include <span>
+#include <functional>
 
 #include <glm/glm.hpp>
 #include <engine/objectManagement.hpp>
@@ -25,17 +26,16 @@ public:
 
 struct UIElementData
 {
-    bool interactable {true};
     std::string text {};
     glm::vec2 position {};
     glm::vec3 textColor {};
     float scale {1.f};
     glm::vec3 backgroundColor {}; 
     float backgroundScale {1.f};
+    std::function<void()> callback {nullptr}; //set to nullptr if noninteractive
 };
 
 struct GLTtext;
-class Object2D;
 
 class UIPreset
 {

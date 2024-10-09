@@ -2,9 +2,8 @@
 
 #include <memory>
 
-#include "engine/objectManagement.hpp"
-
-class UIPreset;
+class Object3D;
+class UIManager;
 
 class GameController
 {
@@ -13,10 +12,8 @@ private:
     ~GameController();
     GameController(const GameController&) = delete;
     GameController& operator=(const GameController& other) = delete;
+    std::unique_ptr<UIManager> m_uiManager {};
     std::shared_ptr<Object3D> m_waterObj {}, m_cubeObj {}, m_loadedObj {};
-
-    std::unique_ptr<UIPreset> m_menuUI {};
-    const std::unique_ptr<UIPreset>& m_currentUI {m_menuUI};
 public:
     static GameController& getInstance()
     {

@@ -1,8 +1,8 @@
 #include <algorithm>
 
-#include <engine/shaderManagement.hpp>
+#include <engine/shaderManager.hpp>
 #include <engine/shader.hpp>
-#include <engine/fileLoader.hpp>
+#include <engine/fileLoading.hpp>
 
 std::weak_ptr<Shader> ShaderManager::getShader(const std::string& vertexPath, const std::string& fragmentPath)
 {

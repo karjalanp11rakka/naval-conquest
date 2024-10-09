@@ -8,11 +8,11 @@
 
 #include <game/gameController.hpp>
 #include <engine/renderEngine.hpp>
-#include <engine/shaderManagement.hpp>
+#include <engine/shaderManager.hpp>
 #include <engine/shader.hpp>
 #include <engine/objectManagement.hpp>
 #include <glfwController.hpp>
-#include <game/uiPreset.hpp>
+#include <game/uiManager.hpp>
 
 void inputCallback(int key);
 
@@ -22,39 +22,8 @@ GameController::GameController()
     GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     MeshManager& meshManagerInstance {MeshManager::getInstance()};
 
-    UIElementData element1
-    {
-        .interactable = true,
-        .text = "hello",
-        .position = {-.5f, .0f},
-        .textColor = {.8f, .4f, .3f},
-        .scale = 1.f,
-        .backgroundColor = {1.f, .9f, 1.f},
-        .backgroundScale = 3.f
-    };
-    UIElementData element2
-    {
-        .interactable = true,
-        .text = "!!",
-        .position = {.7f, -.4f},
-        .textColor = {.2f, .9f, .2f},
-        .scale = 1.1f,
-        .backgroundColor = {1.f, .1f, .1f},
-        .backgroundScale = 1.2f
-    };
-    UIElementData element3
-    {
-        .interactable = true,
-        .text = "world",
-        .position = {.7f, .4f},
-        .textColor = {.2f, .9f, .2f},
-        .scale = .8f,
-        .backgroundColor = {1.f, .9f, .0f},
-        .backgroundScale = 1.f
-    };
-    m_menuUI = std::make_unique<UIPreset>(element1, element2, element3);
-    renderEngineInstance.setRenderCallback([this](){m_currentUI->update();});
-
+    m_uiManager = std::make_unique<UIManager>();
+    
     glfwControllerInstance.addInputCallback(inputCallback);
 
     std::string basicVPath {"../assets/shaders/vBasic.glsl"};
@@ -81,10 +50,7 @@ GameController::GameController()
     m_waterObj->setModel(waterModel);
 }
 
-GameController::~GameController()
-{
-    UIPreset::terminate();
-}
+GameController::~GameController() {}
 
 void GameController::update()
 {   
@@ -100,11 +66,11 @@ void GameController::update()
 
 void GameController::onWindowResize(int width, int height)
 {
-    m_currentUI->onWindowResize(width, height);
+    m_uiManager->onWindowResize(width, height);
 }
 
 void inputCallback(int key)
 {
     static GameController& gameControllerInstance {GameController::getInstance()};
-    gameControllerInstance.m_currentUI->processInput(key);
+    gameControllerInstance.m_uiManager->processInput(key);
 }

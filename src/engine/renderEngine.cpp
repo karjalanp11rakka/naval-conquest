@@ -58,8 +58,8 @@ void RenderEngine::update()
     {
         object.lock()->draw();
     }
-    if(m_renderCallback)
-        m_renderCallback();
+    for(auto& callback : m_renderCallbacks)
+        callback();
 }
 
 void RenderEngine::addObject(std::shared_ptr<Object> obj)
@@ -76,6 +76,16 @@ void RenderEngine::removeObject(const Object* objPtr)
     {
         return objPtr == currObj.lock().get();
     }), objects.end());
+}
+
+void RenderEngine::resetLighting()
+{
+    m_lighting = m_defaultLighting;
+}
+
+void RenderEngine::addRenderCallback(const renderCallbackFunc& callback)
+{
+    m_renderCallbacks.push_front(callback);
 }
 
 void RenderEngine::onWindowResize(int width, int height)

@@ -13,13 +13,13 @@
 #include <game/uiPreset.hpp>
 #include <glfwController.hpp>
 #include <engine/objectManagement.hpp>
-#include <engine/meshManagement.hpp>
+#include <engine/meshManager.hpp>
 #include <engine/renderEngine.hpp>
-#include <engine/shaderManagement.hpp>
+#include <engine/shaderManager.hpp>
 #include <engine/shader.hpp>
 
 static constexpr float TEXT_SIZE_MULTIPLIER {.002f};
-static constexpr float OUTLINE_THICKNESS {.25f};
+static constexpr float OUTLINE_THICKNESS {.55f};
 
 void InteractableObject::configureShaders() const 
 {
@@ -29,15 +29,18 @@ void InteractableObject::configureShaders() const
 
     glUniform3fv(colorLoc, 1, glm::value_ptr(m_outlineColor));
     
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    float windowWidth = glfwControllerInstance.getWidth();
+    float windowHeight = glfwControllerInstance.getHeight();
+
     //calculate outline size
-    glm::vec2 originalScale {glm::vec2(
-        glm::length(glm::vec3(model[0])),
-        glm::length(glm::vec3(model[1]))
-    )};
+    float originalSizeX {glm::length((glm::vec3(model[0])) * windowWidth)};
+    float originalSizeY {glm::length((glm::vec3(model[1])) * windowHeight)};
+
     auto outlineModel {glm::scale(model, glm::vec3(
-        1.f + (originalScale.y / originalScale.x) * OUTLINE_THICKNESS,
-        1.f + (originalScale.x / originalScale.y) * OUTLINE_THICKNESS,
-        .0f
+        1.f + OUTLINE_THICKNESS * (originalSizeY / originalSizeX),
+        1.f + OUTLINE_THICKNESS,
+        1.f
     ))};
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(outlineModel));
 }
@@ -58,6 +61,7 @@ void UIPreset::initialize()
     m_text = gltCreateText();
 
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
 
     static auto uiElementShader {ShaderManager::getInstance().getShader("../assets/shaders/v2D.glsl", 
         "../assets/shaders/fSimpleUnlit.glsl").lock()};
@@ -76,7 +80,7 @@ void UIPreset::initialize()
     
     for(size_t i {}; i < m_size; ++i)
     {
-        m_elements[i].second = m_elements[i].first.interactable ? 
+        m_elements[i].second = m_elements[i].first.callback ? 
             //interactive elements
             std::make_shared<InteractableObject>(uiElementMesh, uiElementShader,
             glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z), glm::vec3(0.5f, .6f, 1.f))
@@ -85,14 +89,14 @@ void UIPreset::initialize()
             std::make_shared<Object2D>(uiElementMesh, uiElementShader, 
             glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z));
         
-        RenderEngine::getInstance().addObject(m_elements[i].second);
+        renderEngineInstance.addObject(m_elements[i].second);
     }
 
     //sort the elements to be iterable correctly for keyboard input
     std::sort(m_elements.get(), m_elements.get() + m_size, [](auto a, auto b) -> bool
     {
-        if(!a.first.interactable) return false;
-        if(!b.first.interactable) return true;
+        if(!a.first.callback) return false;
+        if(!b.first.callback) return true;
         float yDifference {a.first.position.y - b.first.position.y};
         if(yDifference > .01f)
             return true;
@@ -103,23 +107,23 @@ void UIPreset::initialize()
     m_interactableElements = std::span<UIElement>(m_elements.get(), 
         std::count_if(m_elements.get(), m_elements.get() + m_size, [](auto element)
         {
-            return element.first.interactable;
+            return element.first.callback;
         }));
 
     dynamic_cast<InteractableObject*>(m_interactableElements[0].second.get())->setUseOutline(true);//supposing every UIPreset has at least one interactable element
     updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 }
-void UIPreset::updateBackgroundsUniforms(int width, int height)
+void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
 {
     for(size_t i {}; i < m_size; ++i)
     {
-        float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER * m_elements[i].first.backgroundScale};
+        float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_elements[i].first.backgroundScale};
         glm::mat4 backgroundModel(1.f);
 
         gltSetText(m_text, m_elements[i].first.text.c_str());
         
-        auto textWidth {gltGetTextWidth(m_text, m_elements[i].first.scale) / (float)width};
-        auto textHeight {gltGetTextHeight(m_text, m_elements[i].first.scale) / (float)height};
+        auto textWidth {gltGetTextWidth(m_text, m_elements[i].first.scale) / (float)windowWidth};
+        auto textHeight {gltGetTextHeight(m_text, m_elements[i].first.scale) / (float)windowHeight};
 
         backgroundModel = glm::translate(backgroundModel, glm::vec3(m_elements[i].first.position.x, m_elements[i].first.position.y, 0.f));
         backgroundModel = glm::scale(backgroundModel, glm::vec3(textWidth * sizeMultiplier, textHeight * sizeMultiplier, 0.f));

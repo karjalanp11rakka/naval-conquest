@@ -78,9 +78,9 @@ bool GLFWController::shouldClose() const
     return glfwWindowShouldClose(m_window);
 }
 
-void GLFWController::addInputCallback(inputCallBackFunc func)
+void GLFWController::addInputCallback(const inputCallBackFunc& callback)
 {
-    m_inputCallbacks.push_front(func);
+    m_inputCallbacks.push_front(callback);
 }
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {

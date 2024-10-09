@@ -12,6 +12,7 @@ private:
     ShaderManager() {}
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager& operator=(const ShaderManager& other) = delete;
+
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders {};
 public:
     static ShaderManager& getInstance()

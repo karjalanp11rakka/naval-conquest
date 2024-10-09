@@ -5,7 +5,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-#include <engine/meshManagement.hpp>
+#include <engine/meshManager.hpp>
 
 class Shader;
 

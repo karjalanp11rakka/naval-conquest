@@ -5,9 +5,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <engine/meshManagement.hpp>
+#include <engine/meshManager.hpp>
 #include <engine/shader.hpp>
-#include <engine/shaderManagement.hpp>
+#include <engine/shaderManager.hpp>
 #include <engine/renderEngine.hpp>
 #include <engine/objectManagement.hpp>
 #include <engine/lightManagement.hpp>

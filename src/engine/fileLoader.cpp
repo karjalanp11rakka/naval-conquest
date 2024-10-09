@@ -1,8 +1,8 @@
-#include "engine/fileLoader.hpp"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
+#include <engine/fileLoading.hpp>
 
 std::string loadFile(const std::string& filePath)
 {
