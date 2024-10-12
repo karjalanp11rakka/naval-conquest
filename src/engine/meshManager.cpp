@@ -5,6 +5,7 @@
 #include <cassert>
 #include <string>
 #include <sstream>
+#include <cstddef>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -240,11 +241,11 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
 {
     auto addVerticePositions {[](const std::string& line, std::vector<float>& positions) -> void
     {
-        size_t startIndex {};
+        std::size_t startIndex {};
         for(int i {}; i < 3; ++i)
         {
             startIndex = line.substr(startIndex, line.size() - startIndex).find(' ') + startIndex + 1;
-            size_t decimalLength = line.substr(startIndex, line.size() - startIndex - 1).find(' ');
+            std::size_t decimalLength = line.substr(startIndex, line.size() - startIndex - 1).find(' ');
             std::istringstream valueStream(line.substr(startIndex, decimalLength));
 
             float position;
@@ -277,16 +278,15 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
             //get vertices
             bool useTextures {line[line.find('/') + 1] != '/'};
             bool useNormals {normals.size() != 0};
-            size_t startIndex {};
+            std::size_t startIndex {};
             std::vector<unsigned int> polygonIndices {}; 
-            while(true)
+
+            auto spacePos = line.substr(startIndex, line.size() - startIndex).find(' ');
+            while(spacePos != std::string::npos)
             {
-                auto spacePos = line.substr(startIndex, line.size() - startIndex).find(' ');
- 
-                if(spacePos == std::string::npos) break;
                 startIndex = spacePos + startIndex + 1;
                 
-                size_t numberLength = line.substr(startIndex, line.size() - startIndex).find(useNormals ? '/' : ' ');
+                std::size_t numberLength = line.substr(startIndex, line.size() - startIndex).find(useNormals ? '/' : ' ');
                 std::istringstream vertexPositionStream(line.substr(startIndex, numberLength));
                 unsigned int positionIndex {};
                 vertexPositionStream >> positionIndex;
@@ -296,14 +296,14 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
 
                 if(useNormals)
                 {
-                    size_t normalStartIndex {};
+                    std::size_t normalStartIndex {};
                     if(useTextures)
                     {
-                        size_t textureStartIndex = startIndex + numberLength + 1;
+                        std::size_t textureStartIndex = startIndex + numberLength + 1;
                         normalStartIndex = line.substr(textureStartIndex, line.size() - textureStartIndex).find('/') + textureStartIndex + 1;
                     }
                     else normalStartIndex = startIndex + numberLength + 2;
-                    size_t normalNumberLength = line.substr(normalStartIndex, line.size() - normalStartIndex).find(' ');
+                    std::size_t normalNumberLength = line.substr(normalStartIndex, line.size() - normalStartIndex).find(' ');
                     std::istringstream normalIndexStream(line.substr(normalStartIndex, normalNumberLength));
                     unsigned int normalIndex {};
                     normalIndexStream >> normalIndex;
@@ -315,7 +315,7 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
                 }
 
                 auto returnVerticesIterator = std::search(returnVertices.begin(), returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
-                size_t index {}; 
+                std::size_t index {}; 
                 if(returnVerticesIterator != returnVertices.end() 
                     && std::distance(returnVertices.begin(), returnVerticesIterator) % (useNormals ? 6 : 3) == 0)
                     index = std::distance(returnVertices.begin(), returnVerticesIterator) / (useNormals ? 6 : 3);
@@ -325,11 +325,13 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
                     returnVertices.insert(returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
                 }
                 polygonIndices.push_back(index);
+
+                spacePos = line.substr(startIndex, line.size() - startIndex).find(' ');
             }
             //polygon triangulation
             indices.reserve(indices.size() + (polygonIndices.size() - 2) * 3);
 
-            for (size_t i = 1; i < polygonIndices.size() - 1; ++i)
+            for (std::size_t i = 1; i < polygonIndices.size() - 1; ++i)
             {
                 indices.push_back(polygonIndices[0]);
                 indices.push_back(polygonIndices[i]);
@@ -392,7 +394,7 @@ std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, in
     assert(verticesLength % 3 == 0 && "The number of vertices must be divisible by three");
 
     std::vector<glm::vec3> oldVerticePositions(verticesLength / 3);
-    for (size_t i {}; i < verticesLength; i += 3)
+    for (std::size_t i {}; i < verticesLength; i += 3)
     {
         oldVerticePositions[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
     }
@@ -400,7 +402,7 @@ std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, in
     std::vector<glm::vec3> newVerticePositions {};
     std::vector<unsigned int> indices {};
 
-    for(size_t i {}; i < std::ssize(oldVerticePositions); ++i)
+    for(std::size_t i {}; i < std::ssize(oldVerticePositions); ++i)
     {
         auto iterator = std::find(newVerticePositions.begin(), newVerticePositions.end(), oldVerticePositions[i]);
         if (iterator == newVerticePositions.end())
@@ -414,7 +416,7 @@ std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, in
 
     verticesLength = newVerticePositions.size() * 3;
     std::unique_ptr<float[]> newVertices = std::make_unique<float[]>(verticesLength); 
-    for(size_t i {}; i < verticesLength; i += 3)
+    for(std::size_t i {}; i < verticesLength; i += 3)
     {
         newVertices[i] = newVerticePositions[i / 3].x;
         newVertices[i + 1] = newVerticePositions[i / 3].y;
@@ -429,14 +431,14 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const u
     assert(verticesLength % 3 == 0 && "The number of vertices must be divisible by three");
     std::vector<glm::vec3> tempVertices(verticesLength / 3);
     
-    for (size_t i {}; i < verticesLength; i += 3)
+    for (std::size_t i {}; i < verticesLength; i += 3)
     {
         tempVertices[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
     }
 
     std::vector<glm::vec3> normals(tempVertices.size(), glm::vec3(0.0f));
 
-    for (size_t i {}; i < indicesLength; i += 3)
+    for (std::size_t i {}; i < indicesLength; i += 3)
     {
         unsigned int i0 {indices[i]};
         unsigned int i1 {indices[i + 1]};
@@ -462,7 +464,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const u
     }
 
     std::unique_ptr<float[]> newVertices = std::make_unique<float[]>(verticesLength * 2);
-    for (size_t i {}, j {}; i < verticesLength; i += 3, j += 6)
+    for (std::size_t i {}, j {}; i < verticesLength; i += 3, j += 6)
     {
         newVertices[j] = vertices[i];
         newVertices[j + 1] = vertices[i + 1];
@@ -482,7 +484,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength)
     std::unique_ptr<float[]> newVertices {std::make_unique<float[]>(verticesLength * 2)};
     std::vector<glm::vec3> normals {};
 
-    for (size_t i {}; i < verticesLength; i += 9)
+    for (std::size_t i {}; i < verticesLength; i += 9)
     {
         glm::vec3 v0(vertices[i], vertices[i + 1], vertices[i + 2]);
         glm::vec3 v1(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
@@ -496,7 +498,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength)
     }
 
     int normalIndex {};
-    for(size_t i {}, j {}; i < (verticesLength * 2); i += 6, j += 3)
+    for(std::size_t i {}, j {}; i < (verticesLength * 2); i += 6, j += 3)
     {
         newVertices[i] = vertices[j];
         newVertices[i + 1] = vertices[j + 1];

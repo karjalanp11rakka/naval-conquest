@@ -5,6 +5,7 @@
 #include <string>
 #include <span>
 #include <functional>
+#include <cstddef>
 
 #include <glm/glm.hpp>
 #include <engine/objectManagement.hpp>
@@ -33,6 +34,16 @@ struct UIElementData
     glm::vec3 backgroundColor {}; 
     float backgroundScale {1.f};
     std::function<void()> callback {nullptr}; //set to nullptr if noninteractive
+
+    bool operator==(const UIElementData& other)
+    {
+        return position == other.position
+            && text == other.text
+            && textColor == other.textColor
+            && scale == other.scale
+            && backgroundColor == other.backgroundColor
+            && backgroundScale == other.backgroundScale;
+    }
 };
 
 struct GLTtext;
@@ -41,19 +52,30 @@ class UIPreset
 {
 public:
     using UIElement = std::pair<UIElementData, std::shared_ptr<Object2D>>;
+    using ElementIndices = std::pair<std::size_t, std::size_t>;
 private:
-    const size_t m_size {};
+    enum class FocusMoveDirections
+    {
+        up,
+        down,
+        right,
+        left
+    };
+    const std::size_t m_size {};
     std::unique_ptr<UIElement[]> m_elements {};
-    std::span<UIElement> m_interactableElements {};
-    size_t m_focusedElementIndex {};
+    std::vector<std::span<UIElement>> m_interactableElements {};
+    ElementIndices m_focusIndicies {}, m_defaultFocusIndices {};
+    glm::vec3 m_highlightColor {};
     GLTtext* m_text {};
     void initialize(); //Template constructor has to be defined in the header. Hence the separate initialize func
     void updateBackgroundsUniforms(int width, int height);
-    void changeFocusedElment(bool moveToNext);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
+    void setFocusedElement(ElementIndices elementIndices);
+    void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
     static void initializeGLT();
 public:
     template<typename... Args>
-    UIPreset(Args&&... elements) : m_size(sizeof...(elements))
+    UIPreset(const glm::vec3& highlightColor,
+        Args&&... elements) : m_size(sizeof...(elements)), m_highlightColor(highlightColor)
     {
         static bool initialized {};
         if(!initialized)
@@ -63,12 +85,13 @@ public:
         }
         
         m_elements = std::make_unique<UIElement[]>(m_size);
-        size_t index {};
+        std::size_t index {};
         ((m_elements[index++].first = std::forward<Args>(elements)), ...);
         initialize();
     }
     ~UIPreset();
-
+    void enable();
+    void disable();
     void update();
     void processInput(int key);
     void onWindowResize(int width, int height);

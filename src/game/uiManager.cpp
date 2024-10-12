@@ -1,43 +1,72 @@
 #include <engine/renderEngine.hpp>
 #include <game/uiManager.hpp>
 #include <game/uiPreset.hpp>
+#include <glfwController.hpp>
+
+void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
+{
+    m_currentUI->get()->disable();
+    m_currentUI = &newUI;
+    m_currentUI->get()->enable();
+}
 
 UIManager::UIManager()
 {  
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.addRenderCallback([this](){m_currentUI->update();});
+    renderEngineInstance.addRenderCallback([this](){m_currentUI->get()->update();});
 
-    UIElementData element1
+    UIElementData playButton
     {
-        .text = "hello",
-        .position = {-.5f, .0f},
-        .textColor = {.8f, .4f, .3f},
+        .text = "PLAY",
+        .position = {0.f, .3f},
+        .textColor = {.7f, .9f, .9f},
         .scale = 1.f,
-        .backgroundColor = {1.f, .9f, 1.f},
-        .backgroundScale = 3.f,
-        .callback = [](){}
+        .backgroundColor = {1.f, .6f, .1f},
+        .backgroundScale = 2.6f,
+        .callback = [this]()
+        {
+            this->changeCurrentUI(m_gameUI);
+        }
     };
-    UIElementData element2
+    UIElementData settingsButton
     {
-        .text = "!!",
-        .position = {.7f, -.4f},
-        .textColor = {.2f, .9f, .2f},
-        .scale = 1.1f,
-        .backgroundColor = {1.f, .1f, .1f},
-        .backgroundScale = 1.2f,
+        .text = "SETTINGS",
+        .position = {0., -0.f},
+        .textColor = {.7f, .9f, .9f},
+        .scale = 1.f,
+        .backgroundColor = {1.f, .6f, .1f},
+        .backgroundScale = 2.6f,
         .callback = [](){}
     };
-    UIElementData element3
+    UIElementData infoButton
     {
-        .text = "world",
-        .position = {.7f, .4f},
-        .textColor = {.2f, .9f, .2f},
-        .scale = .8f,
-        .backgroundColor = {1.f, .9f, .0f},
-        .backgroundScale = 1.f,
+        .text = "INFO",
+        .position = {0., -.3f},
+        .textColor = {.7f, .9f, .9f},
+        .scale = 1.f,
+        .backgroundColor = {1.f, .6f, .1f},
+        .backgroundScale = 2.6f,
         .callback = [](){}
     };
-    m_menuUI = std::make_unique<UIPreset>(element1, element2, element3);
+    UIElementData exitButton
+    {
+        .text = "EXIT",
+        .position = {-.9, .9f},
+        .textColor = {.7f, .9f, .9f},
+        .scale = 1.f,
+        .backgroundColor = {1.f, .4f, .1f},
+        .backgroundScale = 1.4f,
+        .callback = []()
+        {
+            GLFWController::getInstance().close();
+        }
+    };
+  
+    glm::vec3 highlightColor(.1f, .2f, .9f);
+    m_menuUI = std::make_unique<UIPreset>(highlightColor, playButton, settingsButton, infoButton, exitButton);
+    m_gameUI = std::make_unique<UIPreset>(highlightColor, exitButton);
+
+    m_currentUI->get()->enable();
 }
 
 UIManager::~UIManager()
@@ -47,10 +76,10 @@ UIManager::~UIManager()
 
 void UIManager::processInput(int key)
 {
-    m_currentUI->processInput(key);
+    m_currentUI->get()->processInput(key);
 }
 
 void UIManager::onWindowResize(int width, int height)
 {
-    m_currentUI->onWindowResize(width, height);
+    m_currentUI->get()->onWindowResize(width, height);
 }

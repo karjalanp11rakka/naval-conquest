@@ -67,7 +67,7 @@ void interpolateCoefficients(float distance, float& linear, float& quadratic)
         {325.0f, 0.0014f, 0.000007f}
     }};
 
-    for (size_t i {}; i < samples.size() - 1; ++i)
+    for (std::size_t i {}; i < samples.size() - 1; ++i)
     {
         if (distance >= samples[i].distance && distance <= samples[i + 1].distance)
         {

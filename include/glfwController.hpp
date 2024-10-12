@@ -26,6 +26,7 @@ public:
         return instance;
     }
     void update();
+    void close();
     void terminate();
     bool shouldClose() const;
     void addInputCallback(const inputCallBackFunc& callback);

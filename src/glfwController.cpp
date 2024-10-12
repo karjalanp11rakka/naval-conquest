@@ -68,6 +68,12 @@ void GLFWController::update()
     glfwPollEvents();
 }
 
+void GLFWController::close()
+{
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    glfwSetWindowShouldClose(glfwControllerInstance.m_window, true);
+}
+
 void GLFWController::terminate()
 {
     glfwTerminate();
@@ -84,15 +90,9 @@ void GLFWController::addInputCallback(const inputCallBackFunc& callback)
 }
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     if(action == GLFW_RELEASE)
     {
-        static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
-        if(key == GLFW_KEY_ESCAPE)
-        {
-            glfwSetWindowShouldClose(glfwControllerInstance.m_window, true);
-            return;
-        }
-
         for(auto& func : glfwControllerInstance.m_inputCallbacks)
             func(key);
     }

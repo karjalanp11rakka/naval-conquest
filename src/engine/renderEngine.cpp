@@ -33,7 +33,7 @@ RenderEngine::RenderEngine()
 
 void RenderEngine::update()
 {
-    glClearColor(1.0f, .7f, .0f, 1.0f);
+    glClearColor(0.2f, 0.8f, 1.f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -44,8 +44,8 @@ void RenderEngine::update()
 
     m_view = glm::mat4(1.0f);    
     m_view = glm::translate(m_view, glm::vec3(0.0f, -0.3f, -2.0f));
-    m_cameraPos.x = static_cast<float>(sin(time * cameraSpeed) * cameraRadius);
-    m_cameraPos.z = static_cast<float>(cos(time * cameraSpeed) * cameraRadius);
+    m_cameraPos.x = static_cast<float>(std::sin(time * cameraSpeed) * cameraRadius);
+    m_cameraPos.z = static_cast<float>(std::cos(time * cameraSpeed) * cameraRadius);
     m_view = glm::lookAt(m_cameraPos, glm::vec3(.0f, .0f, .0f), glm::vec3(.0f, 1.0f, .0f));
     
     glEnable(GL_DEPTH_TEST); 

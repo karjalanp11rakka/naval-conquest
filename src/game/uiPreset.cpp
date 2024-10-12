@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include <algorithm>
 #include <cstddef>
 
@@ -20,6 +21,7 @@
 
 static constexpr float TEXT_SIZE_MULTIPLIER {.002f};
 static constexpr float OUTLINE_THICKNESS {.55f};
+static constexpr float SAME_ROW_EPSILON {.01f};
 
 void InteractableObject::configureShaders() const 
 {
@@ -60,9 +62,6 @@ void UIPreset::initialize()
 {
     m_text = gltCreateText();
 
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-
     static auto uiElementShader {ShaderManager::getInstance().getShader("../assets/shaders/v2D.glsl", 
         "../assets/shaders/fSimpleUnlit.glsl").lock()};
 
@@ -77,45 +76,98 @@ void UIPreset::initialize()
         -1.f, -1.f, 0.f
     };
     static Mesh uiElementMesh {meshtools::generateMesh(vertices, std::ssize(vertices))};
-    
-    for(size_t i {}; i < m_size; ++i)
+
+    bool hasInteractiveElements {};
+    for(std::size_t i {}; i < m_size; ++i)
     {
-        m_elements[i].second = m_elements[i].first.callback ? 
-            //interactive elements
-            std::make_shared<InteractableObject>(uiElementMesh, uiElementShader,
-            glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z), glm::vec3(0.5f, .6f, 1.f))
-            :
-            //noninteractive elements
-            std::make_shared<Object2D>(uiElementMesh, uiElementShader, 
-            glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z));
+        //interactive elements
+        if(m_elements[i].first.callback)
+        {
+            m_elements[i].second =  
+                std::make_shared<InteractableObject>(uiElementMesh, uiElementShader,
+                glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z), m_highlightColor);
         
-        renderEngineInstance.addObject(m_elements[i].second);
+            if(!hasInteractiveElements)
+                hasInteractiveElements = true;
+        }
+        //noninteractive elements
+        else
+        {
+            m_elements[i].second =
+                std::make_shared<Object2D>(uiElementMesh, uiElementShader, 
+                glm::vec3(m_elements[i].first.backgroundColor.x, m_elements[i].first.backgroundColor.y, m_elements[i].first.backgroundColor.z));
+        }
     }
+    if(!hasInteractiveElements) return;
+    
+    //save the first interactable argument's position because the first argument is meant to be focused by default.
+    auto defaultFocusElementPos {
+        std::find_if(m_elements.get(), m_elements.get() + m_size, [](const auto& element)
+        {
+            return element.first.callback;
+        })->first.position};
 
     //sort the elements to be iterable correctly for keyboard input
-    std::sort(m_elements.get(), m_elements.get() + m_size, [](auto a, auto b) -> bool
+    std::sort(m_elements.get(), m_elements.get() + m_size, [](const auto& a, const auto& b) -> bool
     {
         if(!a.first.callback) return false;
         if(!b.first.callback) return true;
         float yDifference {a.first.position.y - b.first.position.y};
-        if(yDifference > .01f)
+        if(yDifference > SAME_ROW_EPSILON)
             return true;
-        else if(yDifference < -.01f)
+        else if(yDifference < -SAME_ROW_EPSILON)
             return false;
         else return (a.first.position.x - b.first.position.x) < .0f;
     });
-    m_interactableElements = std::span<UIElement>(m_elements.get(), 
-        std::count_if(m_elements.get(), m_elements.get() + m_size, [](auto element)
-        {
-            return element.first.callback;
-        }));
 
-    dynamic_cast<InteractableObject*>(m_interactableElements[0].second.get())->setUseOutline(true);//supposing every UIPreset has at least one interactable element
-    updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
+    //divide interactable elements into rows and get the default focus elements position
+    auto isSameRow = [](const UIElement& element1, const UIElement& element2) -> bool
+    {
+        return std::fabs(element1.first.position.y - element2.first.position.y) < SAME_ROW_EPSILON;
+    };
+
+    bool foundDefaultFocusElement {};
+    for(std::size_t i {0}; m_elements[i].first.callback;)
+    {
+        bool lastRange {true};
+        std::size_t rangeLength {1};
+        while((i + rangeLength) != m_size || m_elements[i + rangeLength].first.callback)
+        {
+            if(!isSameRow(m_elements[i + rangeLength - 1], m_elements[i + rangeLength]))
+            {
+                lastRange = false;
+                break;
+            }
+            ++rangeLength;
+        }
+
+        m_interactableElements.push_back(std::span<UIElement>(m_elements.get() + i, rangeLength));
+
+        if(!foundDefaultFocusElement)
+        {
+            auto it = std::find_if(m_interactableElements.back().begin(), 
+                m_interactableElements.back().end(), [&](const auto& element)
+                {
+                    return element.first.position == defaultFocusElementPos;
+                });
+                
+            if(it != m_interactableElements.back().end())
+            {
+                foundDefaultFocusElement = true;
+                m_defaultFocusIndices = ElementIndices(i, 
+                    std::distance(m_interactableElements.back().begin(), it));
+            }
+        }
+
+        if(lastRange)
+            break;
+
+        i += rangeLength;
+    }
 }
 void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
 {
-    for(size_t i {}; i < m_size; ++i)
+    for(std::size_t i {}; i < m_size; ++i)
     {
         float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_elements[i].first.backgroundScale};
         glm::mat4 backgroundModel(1.f);
@@ -130,22 +182,70 @@ void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
         m_elements[i].second->setModel(backgroundModel);
     }
 }
-void UIPreset::changeFocusedElment(bool moveToNext)
-{
-    dynamic_cast<InteractableObject*>(m_interactableElements[m_focusedElementIndex].second.get())->setUseOutline(false);
 
-    if(moveToNext)
+void UIPreset::setFocusedElement(ElementIndices elementIndices)
+{
+    dynamic_cast<InteractableObject*>(m_interactableElements[m_focusIndicies.first][m_focusIndicies.second].second.get())->setUseOutline(false);
+    m_focusIndicies = elementIndices;
+    dynamic_cast<InteractableObject*>(m_interactableElements[m_focusIndicies.first][m_focusIndicies.second].second.get())->setUseOutline(true);
+}
+
+void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
+{
+    ElementIndices newElementIndices {};
+    auto moveUp = [&]()
     {
-        if(++m_focusedElementIndex == m_interactableElements.size())
-            m_focusedElementIndex = 0;
-    }
-    else
+        if(m_focusIndicies.first == 0)
+        {
+            newElementIndices.first = m_interactableElements.size() - 1;
+        }
+        else newElementIndices.first = m_focusIndicies.first - 1;
+        newElementIndices.second = m_interactableElements[newElementIndices.first].size() - 1;
+    };
+
+    auto moveDown = [&]()
     {
-        if(m_focusedElementIndex == 0)
-            m_focusedElementIndex = m_interactableElements.size() - 1;
-        else --m_focusedElementIndex;
+        if(m_focusIndicies.first == (m_interactableElements.size() - 1))
+        {
+            newElementIndices.first = 0;
+        }
+        else newElementIndices.first = m_focusIndicies.first + 1;
+        newElementIndices.second = 0;
+    };
+
+    switch (focusMoveDirection)
+    {
+    case FocusMoveDirections::up:
+        moveUp();
+        break;
+    case FocusMoveDirections::down:
+        moveDown();
+        break;
+    case FocusMoveDirections::right:
+        if(m_focusIndicies.second == (m_interactableElements[m_focusIndicies.first].size() - 1))
+        {
+            moveDown();
+        }
+        else
+        {
+            newElementIndices.first = m_focusIndicies.first;
+            newElementIndices.second = m_focusIndicies.second + 1;
+        }
+        break;
+    case FocusMoveDirections::left:
+        if(m_focusIndicies.second == 0)
+        {
+            moveUp();
+        }
+        else 
+        {
+            newElementIndices.first = m_focusIndicies.first;
+            newElementIndices.second = m_focusIndicies.second - 1;
+        };
+        break;
     }
-    dynamic_cast<InteractableObject*>(m_interactableElements[m_focusedElementIndex].second.get())->setUseOutline(true);
+
+    setFocusedElement(newElementIndices);
 }
 void UIPreset::initializeGLT()
 {
@@ -162,6 +262,24 @@ UIPreset::~UIPreset()
     gltDeleteText(m_text);
 }
 
+void UIPreset::enable()
+{ 
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+
+    updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
+    setFocusedElement(m_defaultFocusIndices);
+    for(std::size_t i {0}; i < m_size; ++i)
+        renderEngineInstance.addObject(m_elements[i].second);
+}
+
+void UIPreset::disable()
+{
+    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    for(std::size_t i {0}; i < m_size; ++i)
+        renderEngineInstance.removeObject(m_elements[i].second.get());
+}
+
 void UIPreset::update()
 {
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
@@ -169,7 +287,7 @@ void UIPreset::update()
     int width {glfwControllerInstance.getWidth()}, height {glfwControllerInstance.getHeight()};
     float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER};
 
-    for(size_t i {}; i < m_size; ++i)
+    for(std::size_t i {}; i < m_size; ++i)
     {
         gltColor(m_elements[i].first.textColor.x, 
             m_elements[i].first.textColor.y, m_elements[i].first.textColor.z, 1.f);    
@@ -189,15 +307,22 @@ void UIPreset::processInput(int key)
 {
     switch (key)
     {
-    case GLFW_KEY_RIGHT:
-    case GLFW_KEY_UP:
-        changeFocusedElment(true);
-        break;
-    case GLFW_KEY_LEFT:
-    case GLFW_KEY_DOWN:
-        changeFocusedElment(false);
     case GLFW_KEY_ENTER:
     case GLFW_KEY_SPACE:
+        m_interactableElements[m_focusIndicies.first][m_focusIndicies.second].first.callback();
+        break;
+
+    case GLFW_KEY_UP:
+        moveFocusedElement(FocusMoveDirections::up);
+        break;
+    case GLFW_KEY_RIGHT:
+        moveFocusedElement(FocusMoveDirections::right);
+        break;
+    case GLFW_KEY_DOWN:
+        moveFocusedElement(FocusMoveDirections::down);
+        break;
+    case GLFW_KEY_LEFT:
+        moveFocusedElement(FocusMoveDirections::left);
         break;
     default: break;
     }

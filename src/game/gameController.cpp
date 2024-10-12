@@ -46,7 +46,7 @@ GameController::GameController()
     m_loadedObj->setModel(tetrahedronModel);
     
     glm::mat4 waterModel(1.0f);
-    waterModel = glm::rotate(waterModel, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    waterModel = glm::rotate(waterModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
     m_waterObj->setModel(waterModel);
 }
 

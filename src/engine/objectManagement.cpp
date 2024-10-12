@@ -66,7 +66,7 @@ void LitObject::configureShaders() const
     //point lights
     auto lights {renderEngineInstance.getLighting().lock()->getPointLights()};
     auto lightsSize {std::ssize(lights)};
-    for(size_t i {}; i < lightsSize; ++i)
+    for(std::size_t i {}; i < lightsSize; ++i)
     {
         unsigned int lightColorLoc = glGetUniformLocation(lockedShader->getID(), std::format("lights[{}].color", i).c_str());
         glUniform3fv(lightColorLoc, 1, glm::value_ptr(lights[i]->color));

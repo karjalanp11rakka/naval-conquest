@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <cstddef>
 
 #include <glad/glad.h>
 
@@ -62,6 +63,6 @@ void checkCompileErrors(unsigned int shader, std::string type)
 
 void addConstantsToShader(std::string& shaderString)
 {
-    size_t pos {shaderString.find('\n')};
+    std::size_t pos {shaderString.find('\n')};
     shaderString.insert(pos + 1, ("#define MAX_POINT_LIGHTS_LENGTH " + std::to_string(MAX_POINT_LIGHTS_LENGTH) + '\n'));
 }
