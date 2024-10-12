@@ -7,8 +7,9 @@ class UIPreset;
 class UIManager
 {
 private:
-    std::unique_ptr<UIPreset> m_menuUI {}, m_gameUI {};
+    std::unique_ptr<UIPreset> m_menuUI {}, m_gameUI {}, m_settingsUI {};
     std::unique_ptr<UIPreset>* m_currentUI {&m_menuUI};
+    bool darkBackgroundEnabled {};
     void changeCurrentUI(std::unique_ptr<UIPreset>& newUI);
 public:
     UIManager();

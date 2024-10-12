@@ -11,6 +11,7 @@
 #include <game/gameController.hpp>
 
 static constexpr char WINDOW_NAME[] = "3dProject";
+static constexpr int DEFAULT_WINDOW_WIDTH {800}, DEFAULT_WINDOW_HEIGHT {600};
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -26,7 +27,7 @@ GLFWController::GLFWController()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    m_window = glfwCreateWindow(800, 600, WINDOW_NAME, nullptr, nullptr);
+    m_window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, WINDOW_NAME, nullptr, nullptr);
     if (!m_window)
     {
         std::cerr << "Failed to create GLFW window\n"; 
@@ -68,6 +69,15 @@ void GLFWController::update()
     glfwPollEvents();
 }
 
+void GLFWController::maximize()
+{
+    glfwMaximizeWindow(m_window);
+}
+void GLFWController::unmaximize()
+{
+    glfwSetWindowSize(m_window, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+}
+
 void GLFWController::close()
 {
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
@@ -103,6 +113,7 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     glfwControllerInstance.m_width = width;
     glfwControllerInstance.m_height = height;
+    glfwControllerInstance.m_isMaximised = glfwGetWindowAttrib(glfwControllerInstance.m_window, GLFW_MAXIMIZED);
 
     GameController::getInstance().onWindowResize(width, height);
     RenderEngine::getInstance().onWindowResize(width, height);

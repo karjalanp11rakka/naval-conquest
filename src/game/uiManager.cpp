@@ -1,3 +1,9 @@
+#include <string>
+#include <utility>
+#include <cstddef>
+
+#include <glm/glm.hpp>
+
 #include <engine/renderEngine.hpp>
 #include <game/uiManager.hpp>
 #include <game/uiPreset.hpp>
@@ -13,9 +19,10 @@ void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
 UIManager::UIManager()
 {  
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     renderEngineInstance.addRenderCallback([this](){m_currentUI->get()->update();});
 
-    UIElementData playButton
+    TextData playButtonTextData
     {
         .text = "PLAY",
         .position = {0.f, .3f},
@@ -23,12 +30,10 @@ UIManager::UIManager()
         .scale = 1.f,
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.6f,
-        .callback = [this]()
-        {
-            this->changeCurrentUI(m_gameUI);
-        }
     };
-    UIElementData settingsButton
+    UIElement playButton(playButtonTextData, [this](){changeCurrentUI(m_gameUI);});
+    
+    TextData settingsButtonTextData
     {
         .text = "SETTINGS",
         .position = {0., -0.f},
@@ -36,9 +41,10 @@ UIManager::UIManager()
         .scale = 1.f,
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.6f,
-        .callback = [](){}
     };
-    UIElementData infoButton
+    UIElement settingsButton(settingsButtonTextData, [this](){changeCurrentUI(m_settingsUI);});
+    
+    TextData infoButtonTextData
     {
         .text = "INFO",
         .position = {0., -.3f},
@@ -46,9 +52,10 @@ UIManager::UIManager()
         .scale = 1.f,
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.6f,
-        .callback = [](){}
     };
-    UIElementData exitButton
+    UIElement infoButton(infoButtonTextData, [](){});
+
+    TextData exitButtonTextData
     {
         .text = "EXIT",
         .position = {-.9, .9f},
@@ -56,15 +63,40 @@ UIManager::UIManager()
         .scale = 1.f,
         .backgroundColor = {1.f, .4f, .1f},
         .backgroundScale = 1.4f,
-        .callback = []()
-        {
-            GLFWController::getInstance().close();
-        }
     };
-  
+    UIElement exitButton(exitButtonTextData, [&](){glfwControllerInstance.close();});
+
+    TextData backButtonTextData
+    {
+        .text = "BACK",
+        .position = {-.9, .9f},
+        .textColor = {.7f, .9f, .9f},
+        .scale = 1.f,
+        .backgroundColor = {1.f, .4f, .1f},
+        .backgroundScale = 1.4f,
+    };
+    UIElement backButton(backButtonTextData, [this](){changeCurrentUI(m_menuUI);});
+
+    TextData darkBackgroundButtonTextData
+    {
+        .text = "DARK BACKGROUND (ON)",
+        .position = {.0f, .3f},
+        .textColor = {.7f, .9f, .9f},
+        .scale = 1.f,
+        .backgroundColor = {1.f, .6f, .1f},
+        .backgroundScale = 2.1f,
+    };
+
+    SettingUIElement darkBackgroundButton(darkBackgroundButtonTextData, [&]()
+    {
+        renderEngineInstance.setBackgroundColor(darkBackgroundEnabled ? glm::vec3(1.f) : glm::vec3(0.f));
+    }, "DARK BACKGROUND (OFF)", &darkBackgroundEnabled);
+
+
     glm::vec3 highlightColor(.1f, .2f, .9f);
     m_menuUI = std::make_unique<UIPreset>(highlightColor, playButton, settingsButton, infoButton, exitButton);
     m_gameUI = std::make_unique<UIPreset>(highlightColor, exitButton);
+    m_settingsUI = std::make_unique<UIPreset>(highlightColor, backButton, darkBackgroundButton);
 
     m_currentUI->get()->enable();
 }

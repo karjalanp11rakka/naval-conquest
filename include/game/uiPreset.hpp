@@ -3,15 +3,17 @@
 #include <memory>
 #include <utility>
 #include <string>
+#include <vector>
 #include <span>
 #include <functional>
 #include <cstddef>
+#include <type_traits>
 
 #include <glm/glm.hpp>
 #include <engine/objectManagement.hpp>
 
 //InteractableObject2D is specifically designed for UIElement. Therefore, it's defined here
-class InteractableObject : public Object2D
+class InteractableObjectBackground : public Object2D
 {
 private:
     bool m_useOutline {};
@@ -19,31 +21,47 @@ protected:
     glm::vec3 m_outlineColor {};
     void configureShaders() const override;
 public:
-    InteractableObject(Mesh mesh, std::shared_ptr<Shader> shader, const glm::vec3& color, const glm::vec3& outlineColor)
+    InteractableObjectBackground(Mesh mesh, std::shared_ptr<Shader> shader, const glm::vec3& color, const glm::vec3& outlineColor)
         : Object2D(mesh, shader, color), m_outlineColor(outlineColor) {}
-    void setUseOutline(bool value) {m_useOutline = value;};
+    void setUseOutline(bool value) {m_useOutline = value;}
     void draw() const override;
 };
 
-struct UIElementData
+struct TextData
 {
     std::string text {};
     glm::vec2 position {};
     glm::vec3 textColor {};
-    float scale {1.f};
+    float scale {};
     glm::vec3 backgroundColor {}; 
-    float backgroundScale {1.f};
-    std::function<void()> callback {nullptr}; //set to nullptr if noninteractive
+    float backgroundScale {};
+};
 
-    bool operator==(const UIElementData& other)
-    {
-        return position == other.position
-            && text == other.text
-            && textColor == other.textColor
-            && scale == other.scale
-            && backgroundColor == other.backgroundColor
-            && backgroundScale == other.backgroundScale;
-    }
+class UIElement
+{
+private:
+    std::shared_ptr<Object2D> m_backgroundObject {};
+protected:
+    TextData m_textData {};
+    std::function<void()> m_callback {}; //set to nullptr if noninteractive
+    virtual void trigger();
+    virtual std::string getText();
+public:
+    UIElement(const TextData& textData, std::function<void()> callback)
+        : m_textData(textData), m_callback(std::move(callback)) {}
+    friend class UIPreset;
+};
+class SettingUIElement : public UIElement
+{
+private:
+    std::string m_enabledText {};
+    bool* m_isEnabled;
+    void trigger() override;
+    std::string getText() override;
+public:
+    SettingUIElement(const TextData& textData, std::function<void()> callback,
+    const std::string& enabledText, bool* enabled) 
+        : UIElement(textData, callback), m_enabledText(enabledText), m_isEnabled(enabled) {}
 };
 
 struct GLTtext;
@@ -51,7 +69,6 @@ struct GLTtext;
 class UIPreset
 {
 public:
-    using UIElement = std::pair<UIElementData, std::shared_ptr<Object2D>>;
     using ElementIndices = std::pair<std::size_t, std::size_t>;
 private:
     enum class FocusMoveDirections
@@ -61,9 +78,8 @@ private:
         right,
         left
     };
-    const std::size_t m_size {};
-    std::unique_ptr<UIElement[]> m_elements {};
-    std::vector<std::span<UIElement>> m_interactableElements {};
+    std::vector<std::unique_ptr<UIElement>> m_elements {};
+    std::vector<std::span<std::unique_ptr<UIElement>>> m_interactableElements {};
     ElementIndices m_focusIndicies {}, m_defaultFocusIndices {};
     glm::vec3 m_highlightColor {};
     GLTtext* m_text {};
@@ -75,7 +91,7 @@ private:
 public:
     template<typename... Args>
     UIPreset(const glm::vec3& highlightColor,
-        Args&&... elements) : m_size(sizeof...(elements)), m_highlightColor(highlightColor)
+        Args&&... elements) : m_highlightColor(highlightColor)
     {
         static bool initialized {};
         if(!initialized)
@@ -84,9 +100,9 @@ public:
             initialized = true;
         }
         
-        m_elements = std::make_unique<UIElement[]>(m_size);
         std::size_t index {};
-        ((m_elements[index++].first = std::forward<Args>(elements)), ...);
+        m_elements.reserve(sizeof...(elements));
+        (m_elements.push_back(std::make_unique<std::decay_t<Args>>(std::forward<Args>(elements))), ...);
         initialize();
     }
     ~UIPreset();

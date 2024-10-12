@@ -24,7 +24,8 @@ private:
     std::vector<std::weak_ptr<Object>> m_objects {};
     std::vector<std::weak_ptr<Object>> m_2dObjects {}; //seperation to make rendering 2D-objects last easier 
     glm::mat4 m_projection {}, m_view {};
-    glm::vec3 m_cameraPos = glm::vec3(0.0f, 1.8f, 0.0f);
+    glm::vec3 m_cameraPos {glm::vec3(0.f, 1.8f, 0.f)};
+    glm::vec3 m_backgroundColor {glm::vec3(0.f, 0.f, 0.)};
     std::shared_ptr<SceneLighting> m_defaultLighting {}; 
     std::weak_ptr<SceneLighting> m_lighting {};
     std::forward_list<renderCallbackFunc> m_renderCallbacks {};
@@ -39,6 +40,7 @@ public:
 
     void addObject(std::shared_ptr<Object> obj);
     void removeObject(const Object* objPtr);
+    void setBackgroundColor(const glm::vec3& color) {m_backgroundColor = color;}
     void resetLighting();
     void addRenderCallback(const renderCallbackFunc& callback);
 
