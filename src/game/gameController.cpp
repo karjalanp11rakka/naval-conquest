@@ -13,6 +13,7 @@
 #include <engine/objectManagement.hpp>
 #include <glfwController.hpp>
 #include <game/uiManager.hpp>
+#include <assets.hpp>
 
 void inputCallback(int key);
 
@@ -26,9 +27,7 @@ GameController::GameController()
     
     glfwControllerInstance.addInputCallback(inputCallback);
 
-    std::string basicVPath {"../assets/shaders/vBasic.glsl"};
-    std::string basicFPath {"../assets/shaders/fBasic.glsl"};
-    std::weak_ptr<Shader> basicShader = ShaderManager::getInstance().getShader(basicVPath, basicFPath);
+    std::weak_ptr<Shader> basicShader = ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL);
 
     m_waterObj = std::make_shared<Object3D>(meshManagerInstance.getGrid(16, NormalMode::flat), basicShader.lock());
     renderEngineInstance.addObject(m_waterObj);
@@ -37,7 +36,7 @@ GameController::GameController()
     m_cubeObj = std::make_shared<LitObject>(meshManagerInstance.getMesh(MeshType::cube, NormalMode::smooth), basicShader.lock(), cubeMaterial);
     renderEngineInstance.addObject(m_cubeObj);
 
-    m_loadedObj = std::make_shared<LitObject>(meshManagerInstance.getFromOBJ("../assets/models/sphereMixed.obj"), basicShader.lock(), cubeMaterial);
+    m_loadedObj = std::make_shared<LitObject>(meshManagerInstance.getFromOBJ(assets::MODELS_SPHEREMIXED_OBJ), basicShader.lock(), cubeMaterial);
     renderEngineInstance.addObject(m_loadedObj);
 
     glm::mat4 tetrahedronModel(1.0f);

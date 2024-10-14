@@ -18,6 +18,7 @@
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManager.hpp>
 #include <engine/shader.hpp>
+#include <assets.hpp>
 
 static constexpr float TEXT_SIZE_MULTIPLIER {.002f};
 static constexpr float OUTLINE_THICKNESS {.55f};
@@ -81,8 +82,8 @@ void UIPreset::initialize()
 {
     m_text = gltCreateText();
 
-    static auto uiElementShader {ShaderManager::getInstance().getShader("../assets/shaders/v2D.glsl", 
-        "../assets/shaders/fSimpleUnlit.glsl").lock()};
+    static auto uiElementShader {ShaderManager::getInstance().getShader(
+        assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL).lock()};
 
     static constexpr float vertices[]
     {

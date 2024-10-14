@@ -69,21 +69,6 @@ public:
     void draw() const override;
 };
 
-class CustomObject : public Object3D
-{
-protected:
-    virtual Mesh getMesh() const = 0;
-    virtual std::weak_ptr<Shader> getShader() const = 0;
-    void initialize()
-    {
-        m_mesh = getMesh();
-        shader = getShader();
-    }
-public:
-    CustomObject() {}
-};
-
-
 class Object2D : public Object
 {
 protected:

@@ -31,5 +31,5 @@ FetchContent_MakeAvailable(glfw glm)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/lib)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/lib ${CMAKE_SOURCE_DIR}/assets)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw glm glad)
