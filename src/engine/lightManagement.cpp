@@ -3,20 +3,26 @@
 #include <algorithm>
 #include <memory>
 #include <cstddef>
+#include <utility>
 
 #include <engine/lightManagement.hpp>
 
 using namespace lights;
 
-std::weak_ptr<PointLight> SceneLighting::addPointLight(const PointLight& light)
+SceneLighting::SceneLighting(DirectionalLight&& directionalLight)
+{
+    m_dirLight = std::make_unique<DirectionalLight>(std::move(directionalLight));
+}
+
+PointLight* SceneLighting::addPointLight(PointLight&& light)
 {
     if(std::ssize(m_lights) == (MAX_POINT_LIGHTS_LENGTH -1))
     {
         std::cerr << "Max point lights size exceeded. Cannot add new light.\n";
         return {};
     }
-    m_lights.emplace_back(std::make_shared<PointLight>(light));
-    return m_lights.back();
+    m_lights.emplace_back(std::make_unique<PointLight>(std::move(light)));
+    return m_lights.back().get();
 }
 void SceneLighting::removePointLight(const PointLight* lightPtr)
 {
@@ -26,10 +32,11 @@ void SceneLighting::removePointLight(const PointLight* lightPtr)
         return lightPtr == currLight.get();
     }), m_lights.end());
 }
-std::weak_ptr<DirectionalLight> SceneLighting::changeDirectionalLight(const DirectionalLight& light)
+
+DirectionalLight& SceneLighting::changeDirectionalLight(DirectionalLight&& light)
 {
-    m_dirLight = std::make_shared<DirectionalLight>(light);
-    return m_dirLight;
+    m_dirLight = std::make_unique<DirectionalLight>(std::move(light));
+    return *m_dirLight;
 }
 
 void interpolateCoefficients(float distance, float& linear, float& quadratic)

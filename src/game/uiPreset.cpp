@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <utility>
 #include <algorithm>
 #include <cstddef>
 
@@ -25,9 +26,8 @@ static constexpr float SAME_ROW_EPSILON {.01f};
 
 void InteractableObjectBackground::configureShaders() const 
 {
-    auto lockedShader {shader.lock()};
-    unsigned int colorLoc = glGetUniformLocation(lockedShader->getID(), "color");
-    unsigned int modelLoc = glGetUniformLocation(lockedShader->getID(), "model");
+    unsigned int colorLoc = glGetUniformLocation(shader->getID(), "color");
+    unsigned int modelLoc = glGetUniformLocation(shader->getID(), "model");
 
     glUniform3fv(colorLoc, 1, glm::value_ptr(m_outlineColor));
     
@@ -36,10 +36,10 @@ void InteractableObjectBackground::configureShaders() const
     float windowHeight = glfwControllerInstance.getHeight();
 
     //calculate outline size
-    float originalSizeX {glm::length((glm::vec3(model[0])) * windowWidth)};
-    float originalSizeY {glm::length((glm::vec3(model[1])) * windowHeight)};
+    float originalSizeX {glm::length((glm::vec3(m_model[0])) * windowWidth)};
+    float originalSizeY {glm::length((glm::vec3(m_model[1])) * windowHeight)};
 
-    auto outlineModel {glm::scale(model, glm::vec3(
+    auto outlineModel {glm::scale(m_model, glm::vec3(
         1.f + OUTLINE_THICKNESS * (originalSizeY / originalSizeX),
         1.f + OUTLINE_THICKNESS,
         1.f
@@ -51,7 +51,7 @@ void InteractableObjectBackground::draw() const
 {
     if(m_useOutline)
     {
-        shader.lock()->use();
+        shader->use();
         InteractableObjectBackground::configureShaders();
         drawMesh();
     }
@@ -72,6 +72,19 @@ void SettingUIElement::trigger()
     *m_isEnabled = !*m_isEnabled;
     UIElement::trigger();
 }
+
+UIElement& UIElement::operator=(const UIElement& other) noexcept
+{
+    if(&other != this)
+    {
+        if(other.m_backgroundObject)
+            m_backgroundObject = std::make_unique<Object2D>(*other.m_backgroundObject);
+        else m_backgroundObject = nullptr;
+        m_textData = other.m_textData;
+        m_callback = other.m_callback;
+    }
+    return *this;
+}
 std::string SettingUIElement::getText()
 {
     return *m_isEnabled ? m_enabledText : m_textData.text;
@@ -82,7 +95,7 @@ void UIPreset::initialize()
     m_text = gltCreateText();
 
     static auto uiElementShader {ShaderManager::getInstance().getShader("../assets/shaders/v2D.glsl", 
-        "../assets/shaders/fSimpleUnlit.glsl").lock()};
+        "../assets/shaders/fSimpleUnlit.glsl")};
 
     static constexpr float vertices[]
     {
@@ -102,10 +115,10 @@ void UIPreset::initialize()
         //interactive elements
         if(m_elements[i]->m_callback)
         {
-            m_elements[i]->m_backgroundObject =  
-                std::make_shared<InteractableObjectBackground>(uiElementMesh, uiElementShader,
+            m_elements[i]->m_backgroundObject =
+                std::make_unique<InteractableObjectBackground>(uiElementMesh, uiElementShader,
                 glm::vec3(m_elements[i]->m_textData.backgroundColor.x, m_elements[i]->m_textData.backgroundColor.y, m_elements[i]->m_textData.backgroundColor.z), m_highlightColor);
-        
+
             if(!hasInteractiveElements)
                 hasInteractiveElements = true;
         }
@@ -113,7 +126,7 @@ void UIPreset::initialize()
         else
         {
             m_elements[i]->m_backgroundObject =
-                std::make_shared<Object2D>(uiElementMesh, uiElementShader, 
+                std::make_unique<Object2D>(uiElementMesh, uiElementShader, 
                 glm::vec3(m_elements[i]->m_textData.backgroundColor.x, m_elements[i]->m_textData.backgroundColor.y, m_elements[i]->m_textData.backgroundColor.z));
         }
     }
@@ -198,7 +211,7 @@ void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
 
         backgroundModel = glm::translate(backgroundModel, glm::vec3(m_elements[i]->m_textData.position.x, m_elements[i]->m_textData.position.y, 0.f));
         backgroundModel = glm::scale(backgroundModel, glm::vec3(textWidth * sizeMultiplier, textHeight * sizeMultiplier, 0.f));
-        m_elements[i]->m_backgroundObject->setModel(backgroundModel);
+        m_elements[i]->m_backgroundObject->setModel(std::move(backgroundModel));
     }
 }
 
@@ -290,7 +303,7 @@ void UIPreset::enable()
     updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
     setFocusedElement(m_defaultFocusIndices);
     for(std::size_t i {0}; i < m_elements.size(); ++i)
-        renderEngineInstance.addObject(m_elements[i]->m_backgroundObject);
+        renderEngineInstance.addObject(m_elements[i]->m_backgroundObject.get());
 }
 
 void UIPreset::disable()

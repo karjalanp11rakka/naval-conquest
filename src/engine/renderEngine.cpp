@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <utility>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -23,13 +24,9 @@ RenderEngine::RenderEngine()
     }
     onWindowResize(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 
-    lights::DirectionalLight defaultDirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
-    m_defaultLighting = std::make_shared<SceneLighting>(defaultDirLight);
-    m_defaultLighting->addPointLight(lights::PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), .7f));
-    m_defaultLighting->addPointLight(lights::PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
-    m_lighting = m_defaultLighting;
     glPolygonMode(GL_FRONT, GL_FILL);
 }
+RenderEngine::~RenderEngine() {}
 
 void RenderEngine::update()
 {
@@ -49,38 +46,40 @@ void RenderEngine::update()
     m_view = glm::lookAt(m_cameraPos, glm::vec3(.0f, .0f, .0f), glm::vec3(.0f, 1.0f, .0f));
     
     glEnable(GL_DEPTH_TEST); 
-    for(auto& object : m_objects)
+    for(auto object : m_objects3D)
     {
-        object.lock()->draw();
+        object->draw();
     }
     glDisable(GL_DEPTH_TEST);
-    for(auto& object : m_2dObjects)
+    for(auto object : m_objects2D)
     {
-        object.lock()->draw();
+        object->draw();
     }
     for(auto& callback : m_renderCallbacks)
         callback();
 }
 
-void RenderEngine::addObject(std::shared_ptr<Object> obj)
+void RenderEngine::addObject(Object* objPtr)
 {
-    auto& objects {dynamic_cast<Object2D*>(obj.get()) ? m_2dObjects : m_objects};
-    objects.push_back(obj);
+   auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D}; 
+   objects.push_back(objPtr);
 }
 void RenderEngine::removeObject(const Object* objPtr)
 {
-    auto& objects {dynamic_cast<const Object2D*>(objPtr) ? m_2dObjects : m_objects}; 
-
-    objects.erase(std::remove_if(objects.begin(), objects.end(), 
-    [objPtr](const auto& currObj) -> bool
-    {
-        return objPtr == currObj.lock().get();
-    }), objects.end());
+    auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D}; 
+    objects.erase(std::remove(objects.begin(), objects.end(), objPtr));
 }
 
-void RenderEngine::resetLighting()
+void RenderEngine::addLighting(SceneLighting&& lighting)
 {
-    m_lighting = m_defaultLighting;
+    m_lighting = std::make_unique<SceneLighting>(std::move(lighting));
+}
+SceneLighting* RenderEngine::getLighting() const 
+{
+    if(m_lighting)
+        return m_lighting.get();
+    static SceneLighting defaultLights {SceneLighting()};
+    return &defaultLights;
 }
 
 void RenderEngine::addRenderCallback(const renderCallbackFunc& callback)

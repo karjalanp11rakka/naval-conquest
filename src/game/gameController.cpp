@@ -1,6 +1,7 @@
 #include <span>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -10,6 +11,7 @@
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManager.hpp>
 #include <engine/shader.hpp>
+#include <engine/lightManagement.hpp>
 #include <engine/objectManagement.hpp>
 #include <glfwController.hpp>
 #include <game/uiManager.hpp>
@@ -23,31 +25,14 @@ GameController::GameController()
     MeshManager& meshManagerInstance {MeshManager::getInstance()};
 
     m_uiManager = std::make_unique<UIManager>();
-    
     glfwControllerInstance.addInputCallback(inputCallback);
 
-    std::string basicVPath {"../assets/shaders/vBasic.glsl"};
-    std::string basicFPath {"../assets/shaders/fBasic.glsl"};
-    std::weak_ptr<Shader> basicShader = ShaderManager::getInstance().getShader(basicVPath, basicFPath);
-
-    m_waterObj = std::make_shared<Object3D>(meshManagerInstance.getGrid(16, NormalMode::flat), basicShader.lock());
-    renderEngineInstance.addObject(m_waterObj);
-
-    Material cubeMaterial {glm::vec3(.9f, .6f, .2f), .2f, 150.f, .5f};
-    m_cubeObj = std::make_shared<LitObject>(meshManagerInstance.getMesh(MeshType::cube, NormalMode::smooth), basicShader.lock(), cubeMaterial);
-    renderEngineInstance.addObject(m_cubeObj);
-
-    m_loadedObj = std::make_shared<LitObject>(meshManagerInstance.getFromOBJ("../assets/models/sphereMixed.obj"), basicShader.lock(), cubeMaterial);
-    renderEngineInstance.addObject(m_loadedObj);
-
-    glm::mat4 tetrahedronModel(1.0f);
-    tetrahedronModel = glm::translate(tetrahedronModel, glm::vec3(-.4f, .2f, -.4f));
-    tetrahedronModel = glm::scale(tetrahedronModel, glm::vec3(.1f, .1f, .1f));
-    m_loadedObj->setModel(tetrahedronModel);
+    lights::DirectionalLight dirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
+    SceneLighting lighting {SceneLighting(std::move(dirLight))};
+    lighting.addPointLight(lights::PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), .7f));
+    lighting.addPointLight(lights::PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
     
-    glm::mat4 waterModel(1.0f);
-    waterModel = glm::rotate(waterModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-    m_waterObj->setModel(waterModel);
+    renderEngineInstance.addLighting(std::move(lighting));
 }
 
 GameController::~GameController() {}
@@ -55,13 +40,6 @@ GameController::~GameController() {}
 void GameController::update()
 {   
     double time {GLFWController::getInstance().getTime()};
-
-    glm::mat4 cubeModel(1.0f);
-    
-    cubeModel = glm::translate(cubeModel, glm::vec3(.2f, .2f, .0f));
-    cubeModel = glm::scale(cubeModel, glm::vec3(.1f, .1f, .1f));
-    cubeModel = glm::rotate(cubeModel, glm::radians(static_cast<float>(cos(time) * 360.0f)), glm::vec3(1.0f, 1.0f, 1.0f));
-    m_cubeObj->setModel(cubeModel);
 }
 
 void GameController::onWindowResize(int width, int height)

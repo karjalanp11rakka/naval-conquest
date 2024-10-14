@@ -10,10 +10,11 @@ class ShaderManager
 {
 private:
     ShaderManager() {}
+    ~ShaderManager();
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager& operator=(const ShaderManager& other) = delete;
 
-    std::unordered_map<std::string, std::shared_ptr<Shader>> m_shaders {};
+    std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders {};
 public:
     static ShaderManager& getInstance()
     {
@@ -21,7 +22,7 @@ public:
         return instance;
     }
 
-    std::weak_ptr<Shader> getShader(const std::string& vertexPath, const std::string& fragmentPath);
+    Shader* getShader(const std::string& vertexPath, const std::string& fragmentPath);
     void removeShader(const std::string& vertexPath, const std::string& fragmentPath);
     void removeShader(const Shader* ptr);
 };

@@ -21,7 +21,7 @@ protected:
     glm::vec3 m_outlineColor {};
     void configureShaders() const override;
 public:
-    InteractableObjectBackground(Mesh mesh, std::shared_ptr<Shader> shader, const glm::vec3& color, const glm::vec3& outlineColor)
+    InteractableObjectBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& outlineColor)
         : Object2D(mesh, shader, color), m_outlineColor(outlineColor) {}
     void setUseOutline(bool value) {m_useOutline = value;}
     void draw() const override;
@@ -40,15 +40,21 @@ struct TextData
 class UIElement
 {
 private:
-    std::shared_ptr<Object2D> m_backgroundObject {};
+    std::unique_ptr<Object2D> m_backgroundObject {};
 protected:
     TextData m_textData {};
     std::function<void()> m_callback {}; //set to nullptr if noninteractive
     virtual void trigger();
-    virtual std::string getText();
 public:
     UIElement(const TextData& textData, std::function<void()> callback)
         : m_textData(textData), m_callback(std::move(callback)) {}
+    UIElement(const UIElement& other)
+        : m_backgroundObject(other.m_backgroundObject ? 
+        std::make_unique<Object2D>(*other.m_backgroundObject) : nullptr),
+        m_textData(other.m_textData),
+        m_callback(other.m_callback) {}
+    UIElement& operator=(const UIElement& other) noexcept;
+    virtual std::string getText();
     friend class UIPreset;
 };
 class SettingUIElement : public UIElement
@@ -57,11 +63,11 @@ private:
     std::string m_enabledText {};
     bool* m_isEnabled;
     void trigger() override;
-    std::string getText() override;
 public:
     SettingUIElement(const TextData& textData, std::function<void()> callback,
     const std::string& enabledText, bool* enabled) 
         : UIElement(textData, callback), m_enabledText(enabledText), m_isEnabled(enabled) {}
+    std::string getText() override;
 };
 
 struct GLTtext;

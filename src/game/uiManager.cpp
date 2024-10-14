@@ -94,9 +94,9 @@ UIManager::UIManager()
 
 
     glm::vec3 highlightColor(.1f, .2f, .9f);
-    m_menuUI = std::make_unique<UIPreset>(highlightColor, playButton, settingsButton, infoButton, exitButton);
+    m_menuUI = std::make_unique<UIPreset>(highlightColor, std::move(playButton), std::move(settingsButton), std::move(infoButton), std::move(exitButton));
     m_gameUI = std::make_unique<UIPreset>(highlightColor, exitButton);
-    m_settingsUI = std::make_unique<UIPreset>(highlightColor, backButton, darkBackgroundButton);
+    m_settingsUI = std::make_unique<UIPreset>(highlightColor, std::move(darkBackgroundButton), std::move(backButton));
 
     m_currentUI->get()->enable();
 }
