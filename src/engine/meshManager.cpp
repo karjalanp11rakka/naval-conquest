@@ -13,7 +13,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <engine/meshManager.hpp>
-#include <engine/fileLoading.hpp>
 
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {
@@ -49,12 +48,12 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
     return *gridPtr;
 }
 
-Mesh MeshManager::getFromOBJ(const std::string& path)
+Mesh MeshManager::getFromOBJ(const std::string& objString)
 {
-    if (m_loadedMeshes.find(path) == m_loadedMeshes.end())
-        m_loadedMeshes[path] = meshtools::loadFromOBJ(loadFile(path));
+    if (!m_loadedMeshes.contains(&objString))
+        m_loadedMeshes[&objString] = meshtools::loadFromOBJ(objString);
 
-    return m_loadedMeshes[path];
+    return m_loadedMeshes[&objString];
 }
 
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals);

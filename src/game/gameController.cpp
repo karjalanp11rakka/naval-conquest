@@ -15,6 +15,7 @@
 #include <engine/objectManagement.hpp>
 #include <glfwController.hpp>
 #include <game/uiManager.hpp>
+#include <assets.hpp>
 
 void inputCallback(int key);
 

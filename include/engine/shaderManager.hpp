@@ -1,8 +1,9 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <memory>
+#include <utility>
 
 class Shader;
 
@@ -14,7 +15,7 @@ private:
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager& operator=(const ShaderManager& other) = delete;
 
-    std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders {};
+    std::map<std::pair<const std::string*, const std::string*>, Shader> m_shaders {};
 public:
     static ShaderManager& getInstance()
     {
@@ -22,7 +23,7 @@ public:
         return instance;
     }
 
-    Shader* getShader(const std::string& vertexPath, const std::string& fragmentPath);
-    void removeShader(const std::string& vertexPath, const std::string& fragmentPath);
+    Shader* getShader(const std::string& vertexString, const std::string& fragmentString);
+    void removeShader(const std::string& vertexString, const std::string& fragmentString);
     void removeShader(const Shader* ptr);
 };
