@@ -20,6 +20,10 @@ void Object::drawMesh() const
         glDrawElements(GL_TRIANGLES, m_mesh.indiciesLength, GL_UNSIGNED_INT, 0);
     else glDrawArrays(GL_TRIANGLES, 0, m_mesh.vertexCount);
 }
+void Object::setModel(glm::mat4&& model)
+{
+    m_model = std::move(model);
+}
 
 void Object3D::configureShaders() const
 {
@@ -123,8 +127,4 @@ void Object2D::draw() const
     shader->use();
     Object2D::configureShaders();
     drawMesh();
-}
-void Object2D::setModel(glm::mat4&& model)
-{
-    m_model = std::move(model);
 }

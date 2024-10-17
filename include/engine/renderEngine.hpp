@@ -37,7 +37,7 @@ public:
     void update();
     void addObject(Object* obj);
     void removeObject(const Object* objPtr);
-    void addLighting(SceneLighting&& lighting);
+    void setLighting(SceneLighting&& lighting);
     SceneLighting* getLighting() const;
     void setBackgroundColor(const glm::vec3& color) {m_backgroundColor = color;}
     void addRenderCallback(const renderCallbackFunc& callback);

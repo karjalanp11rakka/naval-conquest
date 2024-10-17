@@ -23,6 +23,7 @@ public:
         : m_mesh(mesh), shader(shader) {}
 
     virtual void draw() const = 0;
+    void setModel(glm::mat4&& model);
 };
 
 class Object3D : public Object
@@ -80,5 +81,4 @@ public:
         : Object(mesh, shader), m_color(color) {}
 
     void draw() const override;
-    void setModel(glm::mat4&& model);
 };

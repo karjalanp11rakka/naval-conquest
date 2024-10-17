@@ -24,7 +24,7 @@ RenderEngine::RenderEngine()
     }
     onWindowResize(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 
-    glPolygonMode(GL_FRONT, GL_FILL);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 RenderEngine::~RenderEngine() {}
 
@@ -33,7 +33,7 @@ void RenderEngine::update()
     glClearColor(m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+
     static constexpr float cameraRadius = 2.3f;
     static constexpr float cameraSpeed = .05f;
 
@@ -61,8 +61,8 @@ void RenderEngine::update()
 
 void RenderEngine::addObject(Object* objPtr)
 {
-   auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D}; 
-   objects.push_back(objPtr);
+    auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D}; 
+    objects.push_back(objPtr);
 }
 void RenderEngine::removeObject(const Object* objPtr)
 {
@@ -70,7 +70,7 @@ void RenderEngine::removeObject(const Object* objPtr)
     objects.erase(std::remove(objects.begin(), objects.end(), objPtr));
 }
 
-void RenderEngine::addLighting(SceneLighting&& lighting)
+void RenderEngine::setLighting(SceneLighting&& lighting)
 {
     m_lighting = std::make_unique<SceneLighting>(std::move(lighting));
 }

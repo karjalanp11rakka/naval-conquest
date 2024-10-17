@@ -143,8 +143,6 @@ void UIPreset::initialize()
     //sort the elements to be iterable correctly for keyboard input
     std::sort(m_elements.begin(), m_elements.end(), [](const auto& a, const auto& b) -> bool
     {
-        if(!a->m_callback) return false;
-        if(!b->m_callback) return true;
         float yDifference {a->m_textData.position.y - b->m_textData.position.y};
         if(yDifference > SAME_ROW_EPSILON)
             return true;

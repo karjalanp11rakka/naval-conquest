@@ -15,6 +15,7 @@
 #include <engine/objectManagement.hpp>
 #include <glfwController.hpp>
 #include <game/uiManager.hpp>
+#include <game/game.hpp>
 #include <assets.hpp>
 
 void inputCallback(int key);
@@ -28,12 +29,11 @@ GameController::GameController()
     m_uiManager = std::make_unique<UIManager>();
     glfwControllerInstance.addInputCallback(inputCallback);
 
-    lights::DirectionalLight dirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .97f, .74f), .2f};
-    SceneLighting lighting {SceneLighting(std::move(dirLight))};
-    lighting.addPointLight(lights::PointLight(glm::vec3(.5f, .8f, .5f), glm::vec3(.3f, .1f, .3f), .7f));
-    lighting.addPointLight(lights::PointLight(glm::vec3(.95f, .1f, .1f), glm::vec3(-.3f, .1f, -.3f), 1.4f));
-    
-    renderEngineInstance.addLighting(std::move(lighting));
+    lights::DirectionalLight dirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .9f, .7f), .4f};
+    SceneLighting lighting {SceneLighting(std::move(dirLight))};    
+    renderEngineInstance.setLighting(std::move(lighting));
+
+    static Game game(true);
 }
 
 GameController::~GameController() {}
