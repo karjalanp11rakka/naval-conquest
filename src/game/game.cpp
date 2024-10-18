@@ -1,5 +1,6 @@
 #include <utility>
 #include <cstddef>
+#include <initializer_list>
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>

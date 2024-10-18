@@ -7,6 +7,7 @@
 #include <functional>
 #include <cstddef>
 #include <type_traits>
+#include <initializer_list>
 
 #include <glm/glm.hpp>
 #include <engine/objectManagement.hpp>
@@ -45,8 +46,8 @@ protected:
     std::function<void()> m_callback {}; //set to nullptr if noninteractive
     virtual void trigger();
 public:
-    UIElement(const TextData& textData, std::function<void()> callback)
-        : m_textData(textData), m_callback(std::move(callback)) {}
+    UIElement(TextData&& textData, std::function<void()> callback)
+        : m_textData(std::move(textData)), m_callback(std::move(callback)) {}
     UIElement(const UIElement& other)
         : m_backgroundObject(other.m_backgroundObject ? 
         std::make_unique<Object2D>(*other.m_backgroundObject) : nullptr),
@@ -64,9 +65,9 @@ private:
     bool* m_isEnabled;
     void trigger() override;
 public:
-    SettingUIElement(const TextData& textData, std::function<void()> callback,
+    SettingUIElement(TextData&& textData, std::function<void()> callback,
     const std::string& enabledText, bool* enabled) 
-        : UIElement(textData, callback), m_enabledText(enabledText), m_isEnabled(enabled) {}
+        : UIElement(std::move(textData), callback), m_enabledText(enabledText), m_isEnabled(enabled) {}
     std::string getText() override;
 };
  
@@ -91,29 +92,17 @@ private:
         right,
         left
     };
-    std::vector<std::vector<std::unique_ptr<UIElement>>> m_sortedElements {};
+    std::vector<std::vector<UIElement*>> m_sortedElements {};
     ElementIndices m_focusIndicies {};
     glm::vec3 m_highlightColor {};
     GLTtext* m_text {};
     int m_interactableElementsCount {};
-    void initialize(std::vector<std::unique_ptr<UIElement>>&& elements); //Template constructor has to be defined in the header. The rest of initialization is moved in order to avoid too much logic on header file 
     void updateBackgroundsUniforms(int width, int height);
     void setFocusedElement(ElementIndices elementIndices);
     void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
     static void initializeGLT();
 public:
-    template<typename... Args>
-    UIPreset(const glm::vec3& highlightColor,
-        Args&&... elements) : m_highlightColor(highlightColor)
-    {
-        initializeGLT();
-
-        std::vector<std::unique_ptr<UIElement>> unsortedElements {};
-        std::size_t index {};
-        unsortedElements.reserve(sizeof...(elements));
-        (unsortedElements.push_back(std::make_unique<std::decay_t<Args>>(std::forward<Args>(elements))), ...);
-        initialize(std::move(unsortedElements));
-    }
+    UIPreset(const glm::vec3& highlightColor, std::initializer_list<UIElement*> elements);
     ~UIPreset();
     void enable();
     void disable();

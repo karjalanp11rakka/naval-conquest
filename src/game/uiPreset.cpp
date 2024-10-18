@@ -80,78 +80,6 @@ std::string SettingUIElement::getText()
     return *m_isEnabled ? m_enabledText : m_textData.text;
 }
 
-void UIPreset::initialize(std::vector<std::unique_ptr<UIElement>>&& elements)
-{
-    m_text = gltCreateText();
-
-    static auto uiElementShader {ShaderManager::getInstance().getShader(
-        assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
-
-    static constexpr float vertices[]
-    {
-        -1.f, 1.f, 0.f,
-        1.f, 1.f, 0.f,
-        1.f, -1.f, 0.f,
-
-        -1.f, 1.f, 0.f,
-        1.f, -1.f, 0.f,
-        -1.f, -1.f, 0.f
-    };
-    static Mesh uiElementMesh {meshtools::generateMesh(vertices, std::ssize(vertices))};
-    auto elementsSize {elements.size()};
-    for(std::size_t i {}; i < elementsSize; ++i)
-    {
-        //interactive elements
-        if(elements[i]->m_callback)
-        {
-            elements[i]->m_backgroundObject =
-                std::make_unique<InteractableObjectBackground>(uiElementMesh, uiElementShader,
-                glm::vec3(elements[i]->m_textData.backgroundColor.x, elements[i]->m_textData.backgroundColor.y, elements[i]->m_textData.backgroundColor.z), m_highlightColor);
-        }
-        //noninteractive elements
-        else
-        {
-            elements[i]->m_backgroundObject =
-                std::make_unique<Object2D>(uiElementMesh, uiElementShader, 
-                glm::vec3(elements[i]->m_textData.backgroundColor.x, elements[i]->m_textData.backgroundColor.y, elements[i]->m_textData.backgroundColor.z));
-        }
-    }
-
-    //sort the elements to be iterable correctly for keyboard input
-    std::sort(elements.begin(), elements.end(), [](const auto& a, const auto& b) -> bool
-    {
-        float yDifference {a->m_textData.position.y - b->m_textData.position.y};
-        if(yDifference > SAME_ROW_EPSILON)
-            return false;
-        else if(yDifference < -SAME_ROW_EPSILON)
-            return true;
-        else return (a->m_textData.position.x - b->m_textData.position.x) < .0f;
-    });
-
-    //divide interactable elements into rows and get the default focus elements position
-    auto isSameRow = [](const UIElement& element1, const UIElement& element2) -> bool
-    {
-        return std::fabs(element1.m_textData.position.y - element2.m_textData.position.y) < SAME_ROW_EPSILON;
-    };
-
-    for(std::size_t i {0}; i < elementsSize;)
-    {
-        std::size_t rangeLength {1};
-        while((i + rangeLength) != elementsSize && elements[i + rangeLength]->m_callback)
-        {
-            if(!isSameRow(*elements[i + rangeLength - 1], *elements[i + rangeLength]))
-            {
-                break;
-            }
-            ++rangeLength;
-        }
-
-        m_sortedElements.emplace_back(std::make_move_iterator(elements.begin() + i), 
-            std::make_move_iterator(elements.begin() + i + rangeLength));
-
-        i += rangeLength;
-    }
-}
 void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
 {
     for(auto& row : m_sortedElements)
@@ -264,6 +192,83 @@ void UIPreset::initializeGLT()
         }
         gltViewport(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
         initialized = true;
+    }
+}
+
+UIPreset::UIPreset(const glm::vec3& highlightColor, std::initializer_list<UIElement*> elements)
+    : m_highlightColor(highlightColor)
+{
+    initializeGLT();
+    m_text = gltCreateText();
+
+    static auto uiElementShader {ShaderManager::getInstance().getShader(
+        assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
+
+    std::vector<UIElement*> unsortedElements(elements);
+
+    static constexpr float vertices[]
+    {
+        -1.f, 1.f, 0.f,
+        1.f, 1.f, 0.f,
+        1.f, -1.f, 0.f,
+
+        -1.f, 1.f, 0.f,
+        1.f, -1.f, 0.f,
+        -1.f, -1.f, 0.f
+    };
+    static Mesh uiElementMesh {meshtools::generateMesh(vertices, std::ssize(vertices))};
+    auto elementsSize {unsortedElements.size()};
+    for(std::size_t i {}; i < elementsSize; ++i)
+    {
+        //interactive elements
+        if(unsortedElements[i]->m_callback)
+        {
+            unsortedElements[i]->m_backgroundObject =
+                std::make_unique<InteractableObjectBackground>(uiElementMesh, uiElementShader,
+                glm::vec3(unsortedElements[i]->m_textData.backgroundColor.x, unsortedElements[i]->m_textData.backgroundColor.y, unsortedElements[i]->m_textData.backgroundColor.z), m_highlightColor);
+        }
+        //noninteractive elements
+        else
+        {
+            unsortedElements[i]->m_backgroundObject =
+                std::make_unique<Object2D>(uiElementMesh, uiElementShader, 
+                glm::vec3(unsortedElements[i]->m_textData.backgroundColor.x, unsortedElements[i]->m_textData.backgroundColor.y, unsortedElements[i]->m_textData.backgroundColor.z));
+        }
+    }
+
+    //sort the elements to be iterable correctly for keyboard input
+    std::sort(unsortedElements.begin(), unsortedElements.end(), [](const auto& a, const auto& b) -> bool
+    {
+        float yDifference {a->m_textData.position.y - b->m_textData.position.y};
+        if(yDifference > SAME_ROW_EPSILON)
+            return false;
+        else if(yDifference < -SAME_ROW_EPSILON)
+            return true;
+        else return (a->m_textData.position.x - b->m_textData.position.x) < .0f;
+    });
+
+    //divide interactable elements into rows and get the default focus elements position
+    auto isSameRow = [](const UIElement& element1, const UIElement& element2) -> bool
+    {
+        return std::fabs(element1.m_textData.position.y - element2.m_textData.position.y) < SAME_ROW_EPSILON;
+    };
+
+    for(std::size_t i {0}; i < elementsSize;)
+    {
+        std::size_t rangeLength {1};
+        while((i + rangeLength) != elementsSize && unsortedElements[i + rangeLength]->m_callback)
+        {
+            if(!isSameRow(*unsortedElements[i + rangeLength - 1], *unsortedElements[i + rangeLength]))
+            {
+                break;
+            }
+            ++rangeLength;
+        }
+
+        m_sortedElements.emplace_back(std::make_move_iterator(unsortedElements.begin() + i), 
+            std::make_move_iterator(unsortedElements.begin() + i + rangeLength));
+
+        i += rangeLength;
     }
 }
 UIPreset::~UIPreset()
