@@ -4,7 +4,6 @@
 #include <utility>
 #include <string>
 #include <vector>
-#include <span>
 #include <functional>
 #include <cstddef>
 #include <type_traits>
@@ -53,7 +52,8 @@ public:
         std::make_unique<Object2D>(*other.m_backgroundObject) : nullptr),
         m_textData(other.m_textData),
         m_callback(other.m_callback) {}
-    UIElement& operator=(const UIElement& other) noexcept;
+    UIElement(UIElement&& other) = default;
+
     virtual std::string getText();
     friend class UIPreset;
 };
@@ -68,6 +68,13 @@ public:
     const std::string& enabledText, bool* enabled) 
         : UIElement(textData, callback), m_enabledText(enabledText), m_isEnabled(enabled) {}
     std::string getText() override;
+};
+ 
+class UIElement3D : public UIElement
+{
+private:
+public:
+
 };
 
 struct GLTtext;
@@ -84,12 +91,12 @@ private:
         right,
         left
     };
-    std::vector<std::unique_ptr<UIElement>> m_elements {};
-    std::vector<std::span<std::unique_ptr<UIElement>>> m_interactableElements {};
-    ElementIndices m_focusIndicies {}, m_defaultFocusIndices {};
+    std::vector<std::vector<std::unique_ptr<UIElement>>> m_sortedElements {};
+    ElementIndices m_focusIndicies {};
     glm::vec3 m_highlightColor {};
     GLTtext* m_text {};
-    void initialize(); //Template constructor has to be defined in the header. Hence the separate initialize func
+    int m_interactableElementsCount {};
+    void initialize(std::vector<std::unique_ptr<UIElement>>&& elements); //Template constructor has to be defined in the header. The rest of initialization is moved in order to avoid too much logic on header file 
     void updateBackgroundsUniforms(int width, int height);
     void setFocusedElement(ElementIndices elementIndices);
     void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
@@ -99,17 +106,13 @@ public:
     UIPreset(const glm::vec3& highlightColor,
         Args&&... elements) : m_highlightColor(highlightColor)
     {
-        static bool initialized {};
-        if(!initialized)
-        {
-            initializeGLT();
-            initialized = true;
-        }
-        
+        initializeGLT();
+
+        std::vector<std::unique_ptr<UIElement>> unsortedElements {};
         std::size_t index {};
-        m_elements.reserve(sizeof...(elements));
-        (m_elements.push_back(std::make_unique<std::decay_t<Args>>(std::forward<Args>(elements))), ...);
-        initialize();
+        unsortedElements.reserve(sizeof...(elements));
+        (unsortedElements.push_back(std::make_unique<std::decay_t<Args>>(std::forward<Args>(elements))), ...);
+        initialize(std::move(unsortedElements));
     }
     ~UIPreset();
     void enable();

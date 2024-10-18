@@ -86,18 +86,15 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.1f,
     };
-
     SettingUIElement darkBackgroundButton(darkBackgroundButtonTextData, [&]()
     {
         renderEngineInstance.setBackgroundColor(darkBackgroundEnabled ? glm::vec3(1.f) : glm::vec3(0.f));
     }, "DARK BACKGROUND (OFF)", &darkBackgroundEnabled);
 
-
     glm::vec3 highlightColor(.1f, .2f, .9f);
-    m_menuUI = std::make_unique<UIPreset>(highlightColor, std::move(playButton), std::move(settingsButton), std::move(infoButton), std::move(exitButton));
+    m_menuUI = std::make_unique<UIPreset>(highlightColor, std::move(playButton), std::move(settingsButton), std::move(infoButton), exitButton);
     m_gameUI = std::make_unique<UIPreset>(highlightColor, exitButton);
-    m_settingsUI = std::make_unique<UIPreset>(highlightColor, std::move(darkBackgroundButton), std::move(backButton));
-
+    m_settingsUI = std::make_unique<UIPreset>(highlightColor, std::move(darkBackgroundButton), backButton);
     m_currentUI->get()->enable();
 }
 
