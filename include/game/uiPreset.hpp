@@ -13,7 +13,7 @@
 #include <engine/objectManagement.hpp>
 
 //InteractableObject2D is specifically designed for UIElement. Therefore, it's defined here
-class InteractableObjectBackground : public Object2D
+class InteractableBackground : public Object2D
 {
 private:
     bool m_useOutline {};
@@ -21,10 +21,31 @@ protected:
     glm::vec3 m_outlineColor {};
     void configureShaders() const override;
 public:
-    InteractableObjectBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& outlineColor)
+    InteractableBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& outlineColor)
         : Object2D(mesh, shader, color), m_outlineColor(outlineColor) {}
     void setUseOutline(bool value) {m_useOutline = value;}
     void draw() const override;
+};
+
+
+class UIElement
+{
+protected:
+    std::function<void()> m_callback {};
+    glm::vec2 m_position {};
+public:
+    UIElement(std::function<void()> callback, const glm::vec2& position)
+        : m_callback(callback), m_position(position) {}
+    virtual ~UIElement() {};
+    virtual void trigger() {m_callback();}
+    virtual void enable() = 0;
+    virtual void disable() = 0;
+    virtual void focus() = 0;
+    virtual void defocus() = 0;
+    virtual void update() = 0;
+    virtual void onResize(int windowWidth, int windowHeight) = 0;
+    const glm::vec2& getPosition() const {return m_position;}
+    bool isInteractable();
 };
 
 struct TextData
@@ -37,48 +58,54 @@ struct TextData
     float backgroundScale {};
 };
 
-class UIElement
+struct GLTtext;
+
+class TextUIElement : public UIElement
 {
 private:
     std::unique_ptr<Object2D> m_backgroundObject {};
 protected:
-    TextData m_textData {};
-    std::function<void()> m_callback {}; //set to nullptr if noninteractive
-    virtual void trigger();
+    TextData m_textData {}; //set to nullptr if noninteractive
+    GLTtext* m_text {};
+    glm::vec3 m_highlightColor {};
 public:
-    UIElement(TextData&& textData, std::function<void()> callback)
-        : m_textData(std::move(textData)), m_callback(std::move(callback)) {}
-    UIElement(const UIElement& other)
-        : m_backgroundObject(other.m_backgroundObject ? 
-        std::make_unique<Object2D>(*other.m_backgroundObject) : nullptr),
-        m_textData(other.m_textData),
-        m_callback(other.m_callback) {}
-    UIElement(UIElement&& other) = default;
-
-    virtual std::string getText();
-    friend class UIPreset;
+    TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor);
+    ~TextUIElement();
+    void enable() override;
+    void disable() override;
+    void focus() override;
+    void defocus() override;
+    void update() override;
+    void onResize(int windowWidth, int windowHeight) override;
 };
-class SettingUIElement : public UIElement
+class SettingUIElement : public TextUIElement
 {
 private:
     std::string m_enabledText {};
     bool* m_isEnabled;
-    void trigger() override;
 public:
-    SettingUIElement(TextData&& textData, std::function<void()> callback,
+    SettingUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor,
     const std::string& enabledText, bool* enabled) 
-        : UIElement(std::move(textData), callback), m_enabledText(enabledText), m_isEnabled(enabled) {}
-    std::string getText() override;
+        : TextUIElement(std::move(textData), callback, highlightColor), m_enabledText(enabledText), m_isEnabled(enabled) {}
+    void trigger() override;
 };
- 
+
 class UIElement3D : public UIElement
 {
 private:
+    std::unique_ptr<UnlitObject> m_object {};
+    glm::vec3 m_defaultColor {}, m_highlightColor {}; 
 public:
+    UIElement3D(std::function<void()> callback, glm::mat4&& model, 
+        const glm::vec3& defaultColor, const glm::vec3& highlightColor);
 
+    void enable() override;
+    void disable() override;
+    void focus() override;
+    void defocus() override;
+    void update() override {}
+    void onResize(int windowWidth, int windowHeight) override {}
 };
-
-struct GLTtext;
 
 class UIPreset
 {
@@ -93,17 +120,12 @@ private:
         left
     };
     std::vector<std::vector<UIElement*>> m_sortedElements {};
-    ElementIndices m_focusIndicies {};
-    glm::vec3 m_highlightColor {};
-    GLTtext* m_text {};
+    ElementIndices m_focusIndices {};
     int m_interactableElementsCount {};
     void updateBackgroundsUniforms(int width, int height);
-    void setFocusedElement(ElementIndices elementIndices);
     void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
-    static void initializeGLT();
 public:
-    UIPreset(const glm::vec3& highlightColor, std::initializer_list<UIElement*> elements);
-    ~UIPreset();
+    UIPreset(std::vector<UIElement*>&& unsortedElements);
     void enable();
     void disable();
     void update();

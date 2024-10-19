@@ -1,8 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <initializer_list>
 
 class UIPreset;
+class TextUIElement;
 
 class UIManager
 {

@@ -17,6 +17,7 @@
 #include <game/uiManager.hpp>
 #include <game/game.hpp>
 #include <assets.hpp>
+#include <game/uiPreset.hpp>
 
 void inputCallback(int key);
 
@@ -33,7 +34,7 @@ GameController::GameController()
     SceneLighting lighting {SceneLighting(std::move(dirLight))};    
     renderEngineInstance.setLighting(std::move(lighting));
 
-    static Game game(true);
+    static Game game(true);//tmp
 }
 
 GameController::~GameController() {}

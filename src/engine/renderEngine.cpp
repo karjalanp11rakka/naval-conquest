@@ -62,7 +62,8 @@ void RenderEngine::update()
 void RenderEngine::addObject(Object* objPtr)
 {
     auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D}; 
-    objects.push_back(objPtr);
+    if(std::find(objects.begin(), objects.end(), objPtr) == objects.end())
+        objects.push_back(objPtr);
 }
 void RenderEngine::removeObject(const Object* objPtr)
 {

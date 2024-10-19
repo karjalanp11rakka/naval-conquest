@@ -1,6 +1,5 @@
 #include <utility>
 #include <cstddef>
-#include <initializer_list>
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>
@@ -31,11 +30,11 @@ Game::Game(bool onePlayer) : m_onePlayer(onePlayer)
 
     m_grid[0][0] = std::make_unique<AircraftCarrier>(true);
     m_grid[0][1] = std::make_unique<AircraftCarrier>(false);
-    m_grid[0][1]->setTransform({gridIndicesToPosition(std::make_pair<std::size_t, std::size_t>(Random::getInstance().get(0, 10), 5))});
-    m_grid[0][0]->setTransform({gridIndicesToPosition(std::make_pair<std::size_t, std::size_t>(1, 7))});
+    m_grid[0][1]->setTransform({gridIndicesToPosition(std::make_pair(Random::getInstance().get(0, 10), 5))});
+    m_grid[0][0]->setTransform({gridIndicesToPosition(std::make_pair(1, 7))});
 }
 
-Game::~Game() 
+Game::~Game()
 {
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     renderEngineInstance.removeObject(m_waterObj.get());

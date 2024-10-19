@@ -64,5 +64,4 @@ namespace meshtools
     Mesh generateTetrahedron(NormalMode normalMode);
     Mesh generateGrid(int gridSize, bool normals);
     Mesh loadFromOBJ(const std::string& objString);
-    Mesh generateMesh(const float vertices[], int verticesLength);
 }

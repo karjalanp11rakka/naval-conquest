@@ -12,6 +12,7 @@
 #include <engine/renderEngine.hpp>
 #include <engine/objectManagement.hpp>
 #include <engine/lightManagement.hpp>
+#include <assets.hpp>
 
 void Object::drawMesh() const
 {
@@ -100,6 +101,10 @@ void LitObject::draw() const
     Object3D::configureShaders();
     drawMesh();
 }
+
+UnlitObject::UnlitObject(Mesh mesh, const glm::vec3& color)
+    : Object3D(mesh, ShaderManager::getInstance().getShader(assets::SHADERS_VSIMPLE_GLSL,
+    assets::SHADERS_FSIMPLEUNLIT_GLSL)), m_color(color) {}
 
 void UnlitObject::configureShaders() const
 {

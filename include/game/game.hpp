@@ -18,3 +18,5 @@ public:
     Game(bool onePlayer);
     ~Game();
 };
+
+glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices);

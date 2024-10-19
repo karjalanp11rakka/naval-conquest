@@ -189,6 +189,33 @@ Mesh makeMesh(NormalMode normalMode)
 
 Mesh meshtools::generateGrid(int gridSize, bool normals)
 {
+    if(gridSize == 1)
+    {
+        static constexpr float vertices[]
+        {
+            -1.f, 1.f, 0.f,
+            1.f, 1.f, 0.f,
+            1.f, -1.f, 0.f,
+            -1.f, -1.f, 0.f,
+        };
+        static constexpr float normalVertices[]
+        {
+            -1.f, 1.f, 0.f, 0.f, 0.f, 1.f, 
+            1.f, 1.f, 0.f, 0.f, 0.f, 1.f, 
+            1.f, -1.f, 0.f, 0.f, 0.f, 1.f, 
+            -1.f, -1.f, 0.f, 0.f, 0.f, 1.f
+        };
+
+        static constexpr unsigned int indices[]
+        {
+            0, 1, 2,
+            0, 3, 2
+        };
+        
+        return {generateVAO(normals ? normalVertices : vertices, normals ? std::size(normalVertices) : std::size(vertices),
+            indices, std::size(indices), normals), std::size(indices)};
+
+    }
     assert(gridSize > 0 && "Grid size must be positive.");
     assert(gridSize % 2 == 0 && "Grid size can't be odd.");
 
@@ -341,15 +368,6 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
     }
     return {generateVAO(returnVertices.data(), returnVertices.size(), indices.data(), 
         indices.size(), normals.size()), static_cast<unsigned int>(indices.size())};
-}
-
-Mesh meshtools::generateMesh(const float vertices[], int verticesLength)
-{
-    std::unique_ptr<float[]> verticesPtr {std::make_unique<float[]>(verticesLength)};
-    std::copy(vertices, vertices + verticesLength, verticesPtr.get());
-    auto indices {generateIndices(verticesPtr, verticesLength)};
-    return {generateVAO(verticesPtr.get(), verticesLength,
-        indices.data(), std::ssize(indices), false), static_cast<unsigned int>(indices.size())};
 }
 
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals)

@@ -1,13 +1,16 @@
 #include <string>
 #include <utility>
+#include <algorithm>
 #include <cstddef>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include <engine/renderEngine.hpp>
 #include <game/uiManager.hpp>
 #include <game/uiPreset.hpp>
 #include <glfwController.hpp>
+#include <game/game.hpp>
 
 void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
 {
@@ -22,6 +25,8 @@ UIManager::UIManager()
     GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     renderEngineInstance.addRenderCallback([this](){m_currentUI->get()->update();});
 
+    constexpr glm::vec3 highlightColor(.1f, .2f, .9f);
+
     TextData playButtonTextData
     {
         .text = "PLAY",
@@ -31,7 +36,7 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.6f,
     };
-    static UIElement playButton(std::move(playButtonTextData), [this](){changeCurrentUI(m_gameUI);});
+    static TextUIElement playButton(std::move(playButtonTextData), [this](){changeCurrentUI(m_gameUI);}, highlightColor);
     
     TextData settingsButtonTextData
     {
@@ -42,7 +47,7 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.6f,
     };
-    static UIElement settingsButton(std::move(settingsButtonTextData), [this](){changeCurrentUI(m_settingsUI);});
+    static TextUIElement settingsButton(std::move(settingsButtonTextData), [this](){changeCurrentUI(m_settingsUI);}, highlightColor);
     
     TextData infoButtonTextData
     {
@@ -53,7 +58,7 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.6f,
     };
-    static UIElement infoButton(std::move(infoButtonTextData), [](){});
+    static TextUIElement infoButton(std::move(infoButtonTextData), [](){}, highlightColor);
 
     TextData exitButtonTextData
     {
@@ -64,7 +69,7 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .4f, .1f},
         .backgroundScale = 1.4f,
     };
-    static UIElement exitButton(std::move(exitButtonTextData), [&](){glfwControllerInstance.close();});
+    static TextUIElement exitButton(std::move(exitButtonTextData), [&](){glfwControllerInstance.close();}, highlightColor);
 
     TextData backButtonTextData
     {
@@ -75,7 +80,7 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .4f, .1f},
         .backgroundScale = 1.4f,
     };
-    static UIElement backButton(std::move(backButtonTextData), [this](){changeCurrentUI(m_menuUI);});
+    static TextUIElement backButton(std::move(backButtonTextData), [this](){changeCurrentUI(m_menuUI);}, highlightColor);
 
     TextData darkBackgroundButtonTextData
     {
@@ -89,12 +94,38 @@ UIManager::UIManager()
     static SettingUIElement darkBackgroundButton(std::move(darkBackgroundButtonTextData), [&]()
     {
         renderEngineInstance.setBackgroundColor(darkBackgroundEnabled ? glm::vec3(1.f) : glm::vec3(0.f));
-    }, "DARK BACKGROUND (OFF)", &darkBackgroundEnabled);
+    }, highlightColor, "DARK BACKGROUND (OFF)", &darkBackgroundEnabled);
 
-    glm::vec3 highlightColor(.1f, .2f, .9f);
-    m_menuUI = std::make_unique<UIPreset>(highlightColor, std::initializer_list<UIElement*>{&playButton, &settingsButton, &infoButton, &exitButton});
-    m_gameUI = std::make_unique<UIPreset>(highlightColor, std::initializer_list<UIElement*>{&exitButton});
-    m_settingsUI = std::make_unique<UIPreset>(highlightColor, std::initializer_list<UIElement*>{&darkBackgroundButton, &backButton});
+
+    m_menuUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&playButton, &settingsButton, &infoButton, &exitButton});
+    m_settingsUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&darkBackgroundButton, &backButton});
+
+    constexpr std::size_t gridUIElementsSize {GRID_SIZE * GRID_SIZE}; 
+    static std::array<std::unique_ptr<UIElement3D>, gridUIElementsSize> gridUIElements {};
+    std::vector<UIElement*> gameUIElements {};
+    gameUIElements.reserve(gridUIElementsSize + 1);
+
+    std::size_t i {};
+    for(std::size_t x {}; x < GRID_SIZE; ++x)
+    {
+        for(std::size_t y {}; y < GRID_SIZE; ++y)
+        {
+            glm::mat4 model(1.f);
+            model = glm::translate(model, gridIndicesToPosition(std::make_pair(x, y)));
+            model = glm::translate(model, glm::vec3(0.f, .001f, 0.f));
+            model = glm::rotate(model, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+            model = glm::scale(model, glm::vec3(0.9f / GRID_SIZE));
+
+            gridUIElements[i] = std::make_unique<UIElement3D>([](){}, std::move(model), 
+                glm::vec3(.4f, .4f, .5f), glm::vec3(.7f, .4f, .1f));
+
+            gameUIElements.push_back(gridUIElements[i++].get());
+        }
+    }
+
+    gameUIElements.push_back(&exitButton);
+    m_gameUI = std::make_unique<UIPreset>(std::move(gameUIElements));
+    
     m_currentUI->get()->enable();
 }
 

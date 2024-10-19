@@ -21,9 +21,10 @@ public:
     Object() {}
     Object(Mesh mesh, Shader* shader)
         : m_mesh(mesh), shader(shader) {}
+    virtual ~Object() {}
 
-    virtual void draw() const = 0;
     void setModel(glm::mat4&& model);
+    virtual void draw() const = 0;
 };
 
 class Object3D : public Object
@@ -54,7 +55,6 @@ protected:
 public:
     LitObject(Mesh mesh, Shader* shader, const Material& material) 
         : Object3D(mesh, shader), m_material(material) {}
-
     void draw() const override;
 };
 
@@ -64,9 +64,8 @@ protected:
     glm::vec3 m_color {};
     void configureShaders() const override;
 public:
-    UnlitObject(Mesh mesh, Shader* shader, const glm::vec3& color) 
-        : Object3D(mesh, shader), m_color(color) {}
-
+    UnlitObject(Mesh mesh, const glm::vec3& color);
+    void setColor(const glm::vec3& color) {m_color = color;}
     void draw() const override;
 };
 
