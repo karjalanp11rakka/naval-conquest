@@ -15,14 +15,15 @@
 class InteractableBackground : public Object2D
 {
 private:
-    bool m_useOutline {};
+    bool m_useHighlight {};
 protected:
-    glm::vec3 m_outlineColor {};
+    float m_highlightThickness {};
+    glm::vec3 m_highlightColor {};
     void configureShaders() const override;
 public:
-    InteractableBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& outlineColor)
-        : Object2D(mesh, shader, color), m_outlineColor(outlineColor) {}
-    void setUseOutline(bool value) {m_useOutline = value;}
+    InteractableBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& highlightColor, float highlightThickness)
+        : Object2D(mesh, shader, color), m_highlightColor(highlightColor), m_highlightThickness(highlightThickness) {}
+    void setUseHighlight(bool value) {m_useHighlight = value;}
     void draw() const override;
 };
 
@@ -63,13 +64,13 @@ struct GLTtext;
 class TextUIElement : public UIElement
 {
 private:
-    std::unique_ptr<Object2D> m_backgroundObject {};
-protected:
-    TextData m_textData {}; //set to nullptr if noninteractive
     GLTtext* m_text {};
+protected:
+    std::unique_ptr<Object2D> m_backgroundObject {};
+    TextData m_textData {}; //set to nullptr if noninteractive
     glm::vec3 m_highlightColor {};
 public:
-    TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor);
+    TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness = 0.f);
     ~TextUIElement();
     void enable() override;
     void disable() override;
@@ -84,10 +85,21 @@ private:
     std::string m_enabledText {};
     bool* m_turnedOn;
 public:
-    SettingUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor,
+    SettingUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness,
     const std::string& enabledText, bool* turnedOn)
-        : TextUIElement(std::move(textData), callback, highlightColor), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
+        : TextUIElement(std::move(textData), callback, highlightColor, highlightThickness), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
     void trigger() override;
+};
+class GameButtonUIElement : public TextUIElement
+{
+private:
+    float m_width {}, m_height {};
+public:
+    GameButtonUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness, float width, float height)
+        : TextUIElement(std::move(textData), callback, highlightColor, highlightThickness), m_width(width), m_height(height) {}
+
+    void changeText(const std::string& text);
+    void onResize(int windowWidth, int windowHeight) override;
 };
 
 class UIElement3D : public UIElement

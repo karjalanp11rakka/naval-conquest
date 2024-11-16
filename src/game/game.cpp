@@ -45,6 +45,7 @@ void Game::activatePlayerSquares()
 Game::Game(bool onePlayer) : m_onePlayer(onePlayer)
 {
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    static UIManager& uiManagerInstance {UIManager::getInstance()};
 
     m_grid.initializeAt<AircraftCarrier>(0, 0, true);
     m_grid.initializeAt<AircraftCarrier>(9, 9, true);
@@ -52,7 +53,12 @@ Game::Game(bool onePlayer) : m_onePlayer(onePlayer)
     auto r = Random::getInstance().get<std::size_t>(0, GRID_SIZE - 1);
     m_grid.initializeAt<AircraftCarrier>(2, r, false);
 
+    uiManagerInstance.setGameSquareCallback([&](std::size_t)
+    {
+        uiManagerInstance.enableGameActionButtons();
+    });
     activatePlayerSquares();
+    uiManagerInstance.disableGameActionButtons();
 }
 
 Game::~Game() {}

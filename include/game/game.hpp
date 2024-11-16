@@ -3,11 +3,15 @@
 #include <array>
 #include <memory>
 #include <cstddef>
+#include <concepts>
 
 #include <game/gameObject.hpp>
 #include <game/gameController.hpp>
 
 glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices);
+
+template<typename T>
+concept GameObjectDelivered = std::derived_from<T, GameObject>;
 
 template<std::size_t N>
 class GameGrid
@@ -16,7 +20,7 @@ private:
     std::array<std::unique_ptr<GameObject>, N*N> m_base {};
 public:
     ~GameGrid();
-    template<typename T, typename... Args>
+    template<GameObjectDelivered T, typename... Args>
     void initializeAt(std::size_t x, std::size_t y, Args... args)
     {
         auto& ptr = m_base[x + y * GRID_SIZE];

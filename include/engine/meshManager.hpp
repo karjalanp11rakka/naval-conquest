@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
-#include <string>
+#include <string_view>
 
 #include <glad/glad.h>
 
@@ -45,7 +45,7 @@ private:
     };
     std::unordered_map<MeshType, MeshVariations> m_meshes {};
     std::unordered_map<int, MeshVariations> m_gridMeshes {};
-    std::unordered_map<const std::string*, Mesh> m_loadedMeshes {};
+    std::unordered_map<const std::string_view*, Mesh> m_loadedMeshes {};
 public:
     static MeshManager& getInstance()
     {
@@ -55,7 +55,7 @@ public:
 
     Mesh getMesh(MeshType meshType, NormalMode normalMode);
     Mesh getGrid(int size, NormalMode normals);
-    Mesh getFromOBJ(const std::string& objString);
+    Mesh getFromOBJ(std::string_view objString);
 };
 
 namespace meshtools
@@ -63,5 +63,5 @@ namespace meshtools
     Mesh generateCube(NormalMode normalMode);
     Mesh generateTetrahedron(NormalMode normalMode);
     Mesh generateGrid(int gridSize, bool normals);
-    Mesh loadFromOBJ(const std::string& objString);
+    Mesh loadFromOBJ(std::string_view objString);
 }

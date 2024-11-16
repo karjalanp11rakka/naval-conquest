@@ -23,7 +23,6 @@
 #include <assets.hpp>
 
 static constexpr float TEXT_SIZE_MULTIPLIER {.002f};
-static constexpr float OUTLINE_THICKNESS {.55f};
 static constexpr float SAME_ROW_EPSILON {.01f};
 
 void InteractableBackground::configureShaders() const 
@@ -31,7 +30,7 @@ void InteractableBackground::configureShaders() const
     unsigned int colorLoc = glGetUniformLocation(shader->getID(), "color");
     unsigned int modelLoc = glGetUniformLocation(shader->getID(), "model");
 
-    glUniform3fv(colorLoc, 1, glm::value_ptr(m_outlineColor));
+    glUniform3fv(colorLoc, 1, glm::value_ptr(m_highlightColor));
 
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     float windowWidth = glfwControllerInstance.getWidth();
@@ -41,17 +40,17 @@ void InteractableBackground::configureShaders() const
     float originalSizeX {glm::length((glm::vec3(m_model[0])) * windowWidth)};
     float originalSizeY {glm::length((glm::vec3(m_model[1])) * windowHeight)};
 
-    auto outlineModel {glm::scale(m_model, glm::vec3(
-        1.f + OUTLINE_THICKNESS * (originalSizeY / originalSizeX),
-        1.f + OUTLINE_THICKNESS,
+    auto highlightModel {glm::scale(m_model, glm::vec3(
+        1.f + m_highlightThickness * (originalSizeY / originalSizeX),
+        1.f + m_highlightThickness,
         1.f
     ))};
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(outlineModel));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(highlightModel));
 }
 
 void InteractableBackground::draw() const
 {
-    if(m_useOutline)
+    if(m_useHighlight)
     {
         shader->use();
         InteractableBackground::configureShaders();
@@ -67,7 +66,7 @@ bool UIElement::interactable()
     return false;
 }
 
-TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor)
+TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness)
     : m_textData(std::move(textData)), UIElement(std::move(callback), textData.position), m_highlightColor(highlightColor)
 {
     m_text = gltCreateText();
@@ -93,7 +92,7 @@ TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback
     {
         m_backgroundObject =
             std::make_unique<InteractableBackground>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader,
-            glm::vec3(m_textData.backgroundColor.x, m_textData.backgroundColor.y, m_textData.backgroundColor.z), m_highlightColor);
+            glm::vec3(m_textData.backgroundColor.x, m_textData.backgroundColor.y, m_textData.backgroundColor.z), m_highlightColor, highlightThickness);
     }
     //noninteractive elements
     else
@@ -123,12 +122,12 @@ void TextUIElement::disable()
 void TextUIElement::focus()
 {
     if(m_callback)
-        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseOutline(true);
+        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(true);
 }
 void TextUIElement::defocus()
 {
     if(m_callback)
-        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseOutline(false);
+        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(false);
 }
 void TextUIElement::update()
 {
@@ -173,6 +172,18 @@ void SettingUIElement::trigger()
     std::swap(m_enabledText, m_textData.text);
     *m_turnedOn = !*m_turnedOn;
     TextUIElement::trigger();
+}
+void GameButtonUIElement::changeText(const std::string& text)
+{
+    m_textData.text = text;
+}
+void GameButtonUIElement::onResize(int windowWidth, int windowHeight)
+{
+    float sizeMultiplier {(windowHeight > windowWidth ? (float)windowHeight : (float)windowWidth)};
+    glm::mat4 backgroundModel(1.f);
+    backgroundModel = glm::translate(backgroundModel, glm::vec3(m_textData.position.x, m_textData.position.y, 0.f));
+    backgroundModel = glm::scale(backgroundModel, glm::vec3(m_width / (float)windowWidth * sizeMultiplier, m_height / float(windowHeight) * sizeMultiplier, 0.f));
+    m_backgroundObject->setModel(std::move(backgroundModel));
 }
 
 UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model, 
@@ -238,7 +249,6 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
             newElementIndices.first = 0;
         }
         else newElementIndices.first = m_focusIndices.first + 1;
-        newElementIndices.second = 0;
 
         if(m_sortedElements[newElementIndices.first].size() <= m_focusIndices.second)
         {

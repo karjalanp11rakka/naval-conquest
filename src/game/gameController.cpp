@@ -38,7 +38,7 @@ GameController::GameController()
     m_waterObj->setModel(std::move(waterModel));
 
     lights::DirectionalLight dirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .9f, .7f), .4f};
-    SceneLighting lighting(std::move(dirLight));    
+    SceneLighting lighting(std::move(dirLight));  
     renderEngineInstance.setLighting(std::move(lighting));
 
     m_camera = std::make_unique<OrbitingCamera>(1.8f, .05f, 2.3f, glm::vec3(0.f));

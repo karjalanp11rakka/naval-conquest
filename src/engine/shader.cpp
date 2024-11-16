@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string_view>
 #include <string>
 #include <cstddef>
 
@@ -7,15 +8,16 @@
 #include <engine/shader.hpp>
 #include <engine/lightManagement.hpp>
 
-void checkCompileErrors(unsigned int shader, std::string type);
-void addConstantsToShader(std::string& shaderString);
+void checkCompileErrors(unsigned int shader, std::string_view type);
+void addConstantsToShader(std::string_view input, std::string& output);
 
-Shader::Shader(std::string vertexString, std::string fragmentString)
-{
-    addConstantsToShader(vertexString);
-    addConstantsToShader(fragmentString);
-    const char* vShaderCode = vertexString.c_str();
-    const char* fShaderCode = fragmentString.c_str();
+Shader::Shader(std::string_view vertexString, std::string_view fragmentString)
+{   
+    std::string vertStr {}, fragStr {};
+    addConstantsToShader(vertexString, vertStr);
+    addConstantsToShader(fragmentString, fragStr);
+    const char* vShaderCode = vertStr.c_str();
+    const char* fShaderCode = fragStr.c_str();
 
     unsigned int vertex {glCreateShader(GL_VERTEX_SHADER)};
     glShaderSource(vertex, 1, &vShaderCode, nullptr);
@@ -27,17 +29,17 @@ Shader::Shader(std::string vertexString, std::string fragmentString)
     glCompileShader(fragment);
     checkCompileErrors(fragment, "FRAGMENT");
 
-    m_ID = glCreateProgram();
-    glAttachShader(m_ID, vertex);
-    glAttachShader(m_ID, fragment);
-    glLinkProgram(m_ID);
-    checkCompileErrors(m_ID, "PROGRAM");
+    m_id = glCreateProgram();
+    glAttachShader(m_id, vertex);
+    glAttachShader(m_id, fragment);
+    glLinkProgram(m_id);
+    checkCompileErrors(m_id, "PROGRAM");
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
 
-void checkCompileErrors(unsigned int shader, std::string type)
+void checkCompileErrors(unsigned int shader, std::string_view type)
 {
     int success;
     char infoLog[1024];
@@ -60,9 +62,12 @@ void checkCompileErrors(unsigned int shader, std::string type)
         }
     }
 }
-
-void addConstantsToShader(std::string& shaderString)
+void addConstantsToShader(std::string_view input, std::string& output)
 {
-    std::size_t pos {shaderString.find('\n')};
-    shaderString.insert(pos + 1, ("#define MAX_POINT_LIGHTS_LENGTH " + std::to_string(MAX_POINT_LIGHTS_LENGTH) + '\n'));
+    std::size_t firstLineEnd = input.find('\n');
+    output.append(input.substr(0, firstLineEnd + 1));
+    output.append("#define MAX_POINT_LIGHTS_LENGTH " + std::to_string(MAX_POINT_LIGHTS_LENGTH) + '\n');
+    std::size_t secondLineEnd = input.find('\n', firstLineEnd + 1);
+    if (secondLineEnd == std::string_view::npos) return;
+    output.append(input.substr(firstLineEnd + 1));
 }

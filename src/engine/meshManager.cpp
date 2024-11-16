@@ -48,7 +48,7 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
     return *gridPtr;
 }
 
-Mesh MeshManager::getFromOBJ(const std::string& objString)
+Mesh MeshManager::getFromOBJ(std::string_view objString)
 {
     if (!m_loadedMeshes.contains(&objString))
         m_loadedMeshes[&objString] = meshtools::loadFromOBJ(objString);
@@ -264,7 +264,7 @@ Mesh meshtools::generateGrid(int gridSize, bool normals)
 }
 
 //this loader is incomplete and only works when elements are in specific order
-Mesh meshtools::loadFromOBJ(const std::string& objString)
+Mesh meshtools::loadFromOBJ(std::string_view objString)
 {
     auto addVerticePositions {[](const std::string& line, std::vector<float>& positions) -> void
     {
@@ -280,7 +280,7 @@ Mesh meshtools::loadFromOBJ(const std::string& objString)
             positions.push_back(position);
         }
     }};
-    std::istringstream fileStream(objString);
+    std::istringstream fileStream(objString.data());
     std::string line {};
     std::vector<float> vertices {};
     std::vector<float> normals {};
