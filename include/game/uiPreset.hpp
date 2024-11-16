@@ -7,7 +7,6 @@
 #include <functional>
 #include <cstddef>
 #include <type_traits>
-#include <initializer_list>
 
 #include <glm/glm.hpp>
 #include <engine/objectManagement.hpp>
@@ -31,6 +30,7 @@ public:
 class UIElement
 {
 protected:
+    bool m_enabled {};
     std::function<void()> m_callback {};
     glm::vec2 m_position {};
 public:
@@ -38,14 +38,14 @@ public:
         : m_callback(callback), m_position(position) {}
     virtual ~UIElement() {};
     virtual void trigger() {m_callback();}
-    virtual void enable() = 0;
-    virtual void disable() = 0;
+    virtual void enable() {m_enabled = true;}
+    virtual void disable() {m_enabled = false;}
     virtual void focus() = 0;
     virtual void defocus() = 0;
     virtual void update() = 0;
     virtual void onResize(int windowWidth, int windowHeight) = 0;
     const glm::vec2& getPosition() const {return m_position;}
-    bool isInteractable();
+    bool interactable();
 };
 
 struct TextData
@@ -82,11 +82,11 @@ class SettingUIElement : public TextUIElement
 {
 private:
     std::string m_enabledText {};
-    bool* m_isEnabled;
+    bool* m_turnedOn;
 public:
     SettingUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor,
-    const std::string& enabledText, bool* enabled) 
-        : TextUIElement(std::move(textData), callback, highlightColor), m_enabledText(enabledText), m_isEnabled(enabled) {}
+    const std::string& enabledText, bool* turnedOn)
+        : TextUIElement(std::move(textData), callback, highlightColor), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
     void trigger() override;
 };
 
@@ -129,6 +129,8 @@ public:
     void enable();
     void disable();
     void update();
+    void disableElement(UIElement* ptr);
+    void enableElement(UIElement* ptr);
     void processInput(int key);
     void onWindowResize(int width, int height);
     static void terminate();

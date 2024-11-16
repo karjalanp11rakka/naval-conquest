@@ -1,5 +1,4 @@
 #include <utility>
-#include <cstddef>
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>
@@ -7,38 +6,56 @@
 #include <engine/objectManagement.hpp>
 #include <game/gameObject.hpp>
 #include <game/game.hpp>
-#include <engine/meshManager.hpp>
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManager.hpp>
+#include <game/uiManager.hpp>
 #include <game/random.hpp>
 #include <assets.hpp>
 
+template<std::size_t N>
+GameGrid<N>::~GameGrid() {} 
+
+template<std::size_t N>
+GameObject* GameGrid<N>::at(std::size_t x, std::size_t y) const
+{
+    return m_base[x + y * GRID_SIZE].get();
+}
+
+template<std::size_t N>
+void GameGrid<N>::destroyAt(std::size_t x, std::size_t y)
+{
+    m_base[x + y * GRID_SIZE].reset();
+}
+
 glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices);
+
+void Game::activatePlayerSquares()
+{
+    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    std::bitset<GRID_SIZE*GRID_SIZE> setSquares {};
+    for(int i {}; i < m_grid.size(); ++i)
+    {
+        if(m_grid[i] && m_grid[i]->isTeamOne() == m_playerOneTwoPlay)
+            setSquares.set(i);
+    }
+
+    uiManagerInstance.setGridSquares(std::move(setSquares));
+}
 
 Game::Game(bool onePlayer) : m_onePlayer(onePlayer)
 {
-    static MeshManager& meshManagerInstance {MeshManager::getInstance()};
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
 
-    m_waterObj = std::make_unique<Object3D>(meshManagerInstance.getGrid(GRID_SIZE, NormalMode::flat), 
-        ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FWATER_GLSL));
-    glm::mat4 waterModel(1.f);
-    renderEngineInstance.addObject(m_waterObj.get());
-    
-    waterModel = glm::rotate(waterModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-    m_waterObj->setModel(std::move(waterModel));
+    m_grid.initializeAt<AircraftCarrier>(0, 0, true);
+    m_grid.initializeAt<AircraftCarrier>(9, 9, true);
+    m_grid.initializeAt<AircraftCarrier>(8, 9, true);
+    auto r = Random::getInstance().get<std::size_t>(0, GRID_SIZE - 1);
+    m_grid.initializeAt<AircraftCarrier>(2, r, false);
 
-    m_grid[0][0] = std::make_unique<AircraftCarrier>(true);
-    m_grid[0][1] = std::make_unique<AircraftCarrier>(false);
-    m_grid[0][1]->setTransform({gridIndicesToPosition(std::make_pair(Random::getInstance().get(0, 10), 5))});
-    m_grid[0][0]->setTransform({gridIndicesToPosition(std::make_pair(1, 7))});
+    activatePlayerSquares();
 }
 
-Game::~Game()
-{
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.removeObject(m_waterObj.get());
-}
+Game::~Game() {}
 
 glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices)
 {

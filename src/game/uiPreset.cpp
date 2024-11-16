@@ -60,9 +60,9 @@ void InteractableBackground::draw() const
     Object2D::draw();
 }
 
-bool UIElement::isInteractable()
+bool UIElement::interactable()
 {
-    if(m_callback)
+    if(m_enabled && m_callback)
         return true;
     return false;
 }
@@ -106,15 +106,17 @@ TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback
 TextUIElement::~TextUIElement()
 {
     gltDeleteText(m_text);
-    disable();
+    if(m_enabled) disable();
 }
 void TextUIElement::enable()
 {
+    UIElement::enable();
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     renderEngineInstance.addObject(m_backgroundObject.get());
 }
 void TextUIElement::disable()
 {
+    UIElement::disable();
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     renderEngineInstance.removeObject(m_backgroundObject.get());
 }
@@ -130,6 +132,7 @@ void TextUIElement::defocus()
 }
 void TextUIElement::update()
 {
+    if(!m_enabled) return;
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     gltBeginDraw();
 
@@ -168,13 +171,13 @@ void TextUIElement::onResize(int windowWidth, int windowHeight)
 void SettingUIElement::trigger()
 {
     std::swap(m_enabledText, m_textData.text);
-    *m_isEnabled = !*m_isEnabled;
+    *m_turnedOn = !*m_turnedOn;
     TextUIElement::trigger();
 }
 
 UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model, 
     const glm::vec3& defaultColor, const glm::vec3& highlightColor)
-    : UIElement(callback, glm::vec2(model[3].x, model[3].z)), m_defaultColor(defaultColor), m_highlightColor(highlightColor)
+    : UIElement(callback, glm::vec2(model[3].x, -model[3].z - 1.f)), m_defaultColor(defaultColor), m_highlightColor(highlightColor)
 {
     static MeshManager& meshManagerInstance {MeshManager::getInstance()}; 
     m_object = std::make_unique<UnlitObject>(meshManagerInstance.getGrid(1, NormalMode::none), defaultColor);
@@ -182,11 +185,13 @@ UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model,
 }
 void UIElement3D::enable()
 {
+    UIElement::enable();
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     renderEngineInstance.addObject(m_object.get());
 }
 void UIElement3D::disable()
 {
+    UIElement::disable();
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     renderEngineInstance.removeObject(m_object.get());
 }
@@ -214,8 +219,9 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
 
     ElementIndices newElementIndices {};
 
-    auto moveUp = [&]()
+    switch (focusMoveDirection)
     {
+    case FocusMoveDirections::up:
         if(m_focusIndices.first == 0)
         {
             newElementIndices.first = m_sortedElements.size() - 1;
@@ -225,9 +231,8 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
         if(m_sortedElements[newElementIndices.first].size() <= m_focusIndices.second)
             newElementIndices.second = m_sortedElements[newElementIndices.first].size() - 1;
         else newElementIndices.second = m_focusIndices.second;
-    };
-    auto moveDown = [&]()
-    {
+        break;
+    case FocusMoveDirections::down:
         if(m_focusIndices.first == m_sortedElements.size() - 1)
         {
             newElementIndices.first = 0;
@@ -238,23 +243,18 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
         if(m_sortedElements[newElementIndices.first].size() <= m_focusIndices.second)
         {
             newElementIndices.second = 0;
-            std::cout << "f";
         }
         else newElementIndices.second = m_focusIndices.second;
-    };
-
-    switch (focusMoveDirection)
-    {
-    case FocusMoveDirections::up:
-        moveUp();
-        break;
-    case FocusMoveDirections::down:
-        moveDown();
         break;
     case FocusMoveDirections::right:
         if(m_focusIndices.second == (m_sortedElements[m_focusIndices.first].size() - 1))
         {
-            moveDown();
+            if(m_focusIndices.first == m_sortedElements.size() - 1)
+            {
+                newElementIndices.first = 0;
+            }
+            else newElementIndices.first = m_focusIndices.first + 1;
+            newElementIndices.second = 0;
         }
         else
         {
@@ -265,7 +265,12 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
     case FocusMoveDirections::left:
         if(m_focusIndices.second == 0)
         {
-            moveUp();
+            if(m_focusIndices.first == 0)
+            {
+                newElementIndices.first = m_sortedElements.size() - 1;
+            }
+            else newElementIndices.first = m_focusIndices.first - 1;
+            newElementIndices.second = m_sortedElements[newElementIndices.first].size() - 1;
         }
         else
         {
@@ -277,11 +282,11 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
 
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
     m_focusIndices = newElementIndices;
-
     //if the next element is not interactable, recursion is used to move again
-    if(!m_sortedElements[newElementIndices.first][newElementIndices.second]->isInteractable())
+    if(!m_sortedElements[newElementIndices.first][newElementIndices.second]->interactable())
     {
-        moveFocusedElement(focusMoveDirection);
+        moveFocusedElement((focusMoveDirection == FocusMoveDirections::right || focusMoveDirection == FocusMoveDirections::down)
+            ? FocusMoveDirections::right : FocusMoveDirections::left);
         return;
     }
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
@@ -309,12 +314,10 @@ UIPreset::UIPreset(std::vector<UIElement*>&& unsortedElements)
     for(std::size_t i {0}; i < elementsSize;)
     {
         std::size_t rangeLength {1};
-        while((i + rangeLength) != elementsSize && unsortedElements[i + rangeLength]->isInteractable())
+        while((i + rangeLength) != elementsSize)
         {
             if(!isSameRow(*unsortedElements[i + rangeLength - 1], *unsortedElements[i + rangeLength]))
-            {
                 break;
-            }
             ++rangeLength;
         }
 
@@ -330,15 +333,14 @@ void UIPreset::enable()
     static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
 
-    updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
-
     m_interactableElementsCount = 0;
     //send the objects to render engine and make the first interactable element focused
     for(std::size_t i {}; i < m_sortedElements.size(); ++i)
     {
         for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
         {
-            if(m_sortedElements[i][j]->isInteractable()) 
+            m_sortedElements[i][j]->enable();
+            if(m_sortedElements[i][j]->interactable()) 
             {   
                 if(!m_interactableElementsCount)
                 {
@@ -347,9 +349,9 @@ void UIPreset::enable()
                 }
                 ++m_interactableElementsCount;
             }
-            m_sortedElements[i][j]->enable();
         }
     }
+    updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 }
 
 void UIPreset::disable()
@@ -357,15 +359,43 @@ void UIPreset::disable()
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     for(auto& row : m_sortedElements)
-        for(auto& element : row)
+        for(auto element : row)
             element->disable();
 }
 void UIPreset::update()
 {
     for(auto& row : m_sortedElements)
     {
-        for(auto& element : row)
+        for(auto element : row)
             element->update();
+    }
+}
+void UIPreset::disableElement(UIElement* ptr)
+{
+    for(std::size_t i {}; i < m_sortedElements.size(); ++i)
+    {
+        for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
+            if(m_sortedElements[i][j] == ptr)
+            {
+                if(m_focusIndices == std::make_pair(i, j))
+                    moveFocusedElement(FocusMoveDirections::right);
+                if(m_sortedElements[i][j]->interactable()) --m_interactableElementsCount;
+                m_sortedElements[i][j]->disable();
+                return;
+            }
+    }
+}
+void UIPreset::enableElement(UIElement* ptr)
+{
+    for(auto& row : m_sortedElements)
+    {
+        for(auto element : row)
+            if(element == ptr)
+            {
+                element->enable();
+                if(element->interactable()) ++m_interactableElementsCount;
+                return;
+            }
     }
 }
 

@@ -18,6 +18,7 @@
 #include <game/game.hpp>
 #include <assets.hpp>
 #include <game/uiPreset.hpp>
+#include <engine/camera.hpp>
 
 void inputCallback(int key);
 
@@ -27,30 +28,42 @@ GameController::GameController()
     GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     MeshManager& meshManagerInstance {MeshManager::getInstance()};
 
-    m_uiManager = std::make_unique<UIManager>();
     glfwControllerInstance.addInputCallback(inputCallback);
 
+    m_waterObj = std::make_unique<Object3D>(meshManagerInstance.getGrid(GRID_SIZE, NormalMode::flat), 
+        ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FWATER_GLSL));
+    glm::mat4 waterModel(1.f);
+    renderEngineInstance.addObject(m_waterObj.get());
+    waterModel = glm::rotate(waterModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+    m_waterObj->setModel(std::move(waterModel));
+
     lights::DirectionalLight dirLight {glm::vec3(.2f, -.9f, .4f), glm::vec3(.9f, .9f, .7f), .4f};
-    SceneLighting lighting {SceneLighting(std::move(dirLight))};    
+    SceneLighting lighting(std::move(dirLight));    
     renderEngineInstance.setLighting(std::move(lighting));
 
-    static Game game(true);//tmp
+    m_camera = std::make_unique<OrbitingCamera>(1.8f, .05f, 2.3f, glm::vec3(0.f));
+    renderEngineInstance.assignCamera(m_camera.get());
+
+    //initialize UIManager
+    UIManager::getInstance();
 }
 
 GameController::~GameController() {}
 
-void GameController::update()
-{   
-    double time {GLFWController::getInstance().getTime()};
-}
+void GameController::update() {}
 
 void GameController::onWindowResize(int width, int height)
 {
-    m_uiManager->onWindowResize(width, height);
+    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    uiManagerInstance.onWindowResize(width, height);
+}
+void GameController::createGame(bool onePlayer)
+{
+    m_currentGame = std::make_unique<Game>(onePlayer);
 }
 
 void inputCallback(int key)
 {
-    static GameController& gameControllerInstance {GameController::getInstance()};
-    gameControllerInstance.m_uiManager->processInput(key);
+    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    uiManagerInstance.processInput(key);
 }

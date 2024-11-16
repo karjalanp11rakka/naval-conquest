@@ -50,9 +50,8 @@ void main()
     vec3 directionalReflectDir = reflect(-dirLightDir, norm);
     float directionalSpec = pow(max(dot(viewDir, directionalReflectDir), 0.f), material.shininess);
     vec3 directionalSpecular = dirLightColor * directionalSpec * material.specularStrength;
-    
-    vec3 result = directionalAmbient + directionalDiffuse + directionalSpecular;
 
+    vec3 result = directionalAmbient + directionalDiffuse + directionalSpecular;
     //point lights
     for(int i = 0; i < lightsCount; i++)
         result += CalculatePointLight(lights[i], norm, FragPos, viewDir);
@@ -65,12 +64,10 @@ vec3 CalculatePointLight(PointLight pointLight, vec3 normal, vec3 fragPos, vec3 
 {
     //ambient
     vec3 ambient = material.ambientStrength * pointLight.color;
-
     //diffuse
     vec3 lightDir = normalize(pointLight.position - fragPos);
     float diff = max(dot(normal, lightDir), 0.f);
     vec3 diffuse = diff * pointLight.color;
-
     //specular
     vec3 reflectDir = reflect(-lightDir, normal);  
     float spec = pow(max(dot(viewDir, reflectDir), 0.f), material.shininess);

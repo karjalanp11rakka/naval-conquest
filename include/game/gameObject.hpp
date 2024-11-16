@@ -4,7 +4,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <engine/objectManagement.hpp>
-#include <game/game.hpp>
+#include <game/gameController.hpp>
 
 struct Transform
 {
@@ -26,9 +26,10 @@ public:
     virtual void use() = 0;
 
     void setTransform(Transform&& trasnform);
-    const glm::vec3& getPosition() {return m_transform.position;}
-    const glm::vec3& getScale() {return m_transform.scale;}
-    const glm::quat& getRotation() {return m_transform.rotation;}
+    bool isTeamOne() const noexcept {return m_teamOne;}
+    const glm::vec3& getPosition() const {return m_transform.position;}
+    const glm::vec3& getScale() const {return m_transform.scale;}
+    const glm::quat& getRotation() const {return m_transform.rotation;}
 };
 
 class AircraftCarrier : public GameObject
