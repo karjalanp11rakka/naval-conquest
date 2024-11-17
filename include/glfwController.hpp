@@ -6,20 +6,18 @@
 struct GLFWwindow;
 
 class GLFWController
-{
-public:
-    using inputCallBackFunc = std::function<void(int)>; 
+{ 
 private:
     GLFWController();
     ~GLFWController();
     GLFWController(const GLFWController&) = delete;
     GLFWController& operator=(const GLFWController& other) = delete;
 
-    float m_deltaTime {}, m_currentTime {}, m_lastTime {}, timeToUpdateFPS {};
-    GLFWwindow* m_window {};
+    float m_deltaTime, m_currentTime {}, m_lastTime {}, m_timeToUpdateFPS {};
+    GLFWwindow* m_window;
     bool m_isMaximised {true};
-    int m_width {}, m_height {};
-    std::forward_list<inputCallBackFunc> m_inputCallbacks {};
+    int m_width, m_height;
+    std::forward_list<std::function<void(int)>> m_inputCallbacks;
 public:
     static GLFWController& getInstance()
     {
@@ -32,7 +30,7 @@ public:
     void close();
     void terminate();
     bool shouldClose() const;
-    void addInputCallback(const inputCallBackFunc& callback);
+    void addInputCallback(const std::function<void(int)>& callback);
     auto getWidth() const {return m_width;}
     auto getHeight() const {return m_height;}
     bool getIsMaximised() const {return m_isMaximised;}

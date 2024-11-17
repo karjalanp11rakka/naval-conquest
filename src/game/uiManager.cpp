@@ -24,8 +24,8 @@ void callGameSquareCallback(std::size_t index);
 
 UIManager::UIManager()
 {  
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
     renderEngineInstance.addRenderCallback([this](){m_currentUI->update();});
 
     constexpr glm::vec3 blue(.1f, .2f, .9f);
@@ -102,12 +102,14 @@ UIManager::UIManager()
         .backgroundColor = {1.f, .6f, .1f},
         .backgroundScale = 2.1f,
     };
-    static SettingUIElement darkBackgroundButton(std::move(darkBackgroundButtonTextData), [&]()
+    glm::vec3 defaultBackgroundColor(0.f);
+    renderEngineInstance.setBackgroundColor(defaultBackgroundColor);
+    static SettingUIElement darkBackgroundButton(std::move(darkBackgroundButtonTextData), [&, defaultBackgroundColor]()
     {
-        renderEngineInstance.setBackgroundColor(m_darkBackgroundEnabled ? glm::vec3(.7f, .6f, .4f) : glm::vec3(0.f));
+        renderEngineInstance.setBackgroundColor(m_darkBackgroundEnabled ? glm::vec3(.7f, .6f, .4f) : defaultBackgroundColor);
     }, blue, highlightThickness, "DARK BACKGROUND (OFF)", &m_darkBackgroundEnabled);
 
-    std::vector<UIElement*> gameElements {};
+    std::vector<UIElement*> gameElements;
     gameElements.reserve(GRID_SIZE * GRID_SIZE + GAME_ACTION_BUTTONS_COUNT);
 
     std::size_t gameElementIndex {};
@@ -121,32 +123,45 @@ UIManager::UIManager()
             model = glm::rotate(model, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
             model = glm::scale(model, glm::vec3(0.9f / GRID_SIZE));
 
-            m_gameSquares[gameElementIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
+            m_gameGridSquares[gameElementIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
             {
-                callGameSquareCallback(gameElementIndex);
+                static GameController& gameControllerInstance {GameController::getInstance()};
+                gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
             }, std::move(model), 
                 glm::vec3(.4f, .4f, .5f), yellow);
 
-            gameElements.push_back(m_gameSquares[gameElementIndex++].get());
+            gameElements.push_back(m_gameGridSquares[gameElementIndex++].get());
         }
     }
     m_enabledGameElements.set();
 
+    constexpr float actionButtonSpacing = .3f;
     for(std::size_t i {}; i < GAME_ACTION_BUTTONS_COUNT; ++i)
     {
-        static constexpr float actionButtonSpacing = .3f;
         TextData data
         {
             .position = {(-1.f + actionButtonSpacing / 2.f) + i * actionButtonSpacing, -1.f + actionButtonSpacing / 2.f},
             .textColor = {.7f, .9f, .9f},
             .scale = 1.f,
-            .backgroundColor = {.6f, .8f, .7f},
             .backgroundScale = .6f,
         };
+        if(i == 0)
+        {
+            data.text = "BACK";
+            data.backgroundColor = {.9f, .5f, .4f};
+        }
+        else
+        {
+            data.backgroundColor = {.2f, .8f, .6f};
+        }
 
         static constexpr float actionButtonWidth = .12f, actionButtonHeight = .05f;
         m_gameActionButtons[i] = std::make_unique<GameButtonUIElement>(std::move(data), 
-            [this](){}, yellow, .2f,
+            [i]()
+            {
+                static GameController& gameControllerInstance {GameController::getInstance()};
+                gameControllerInstance.receiveGameInput(i, ButtonTypes::ActionButton);
+            }, yellow, .2f,
             actionButtonWidth, actionButtonHeight);
         gameElements.push_back(m_gameActionButtons[i].get());
     }
@@ -163,48 +178,44 @@ UIManager::~UIManager()
 {
     UIPreset::terminate();
 }
-
-void UIManager::setGameSquareCallback(std::function<void(std::size_t)> callback)
+void UIManager::keepGameGridObjectAfterDisable(std::size_t index, const glm::vec3& color)
 {
-    m_gameSquareCallback = callback;
+    m_gameGridSquares[index]->keepRenderingAfterDisable(color);
 }
-
-void UIManager::setGridSquares(const std::bitset<GRID_SIZE*GRID_SIZE>&& activeSquares)
+void UIManager::setGameGridSquares(const std::bitset<GRID_SIZE*GRID_SIZE>&& activeSquares)
 {
     if(m_currentUI != m_gameUI.get()) return;
-    for(int i {}; i < m_gameSquares.size(); ++i)
+    for(int i {}; i < m_gameGridSquares.size(); ++i)
     {
         if(m_enabledGameElements.test(i) && !activeSquares.test(i))
-            m_gameUI->disableElement(m_gameSquares[i].get());
+            m_gameUI->disableElement(m_gameGridSquares[i].get());
         else if(!m_enabledGameElements.test(i) && activeSquares.test(i))
-            m_gameUI->enableElement(m_gameSquares[i].get());
+            m_gameUI->enableElement(m_gameGridSquares[i].get());
     }
     m_enabledGameElements = std::move(activeSquares);
 }
 
-void UIManager::enableGameActionButtons()
+void UIManager::enableGameActionButtons(std::vector<std::string_view>&& texts)
 {
-    for(auto& ptr : m_gameActionButtons)
-        m_gameUI->enableElement(ptr.get());
+    m_gameUI->enableElement(m_gameActionButtons[0].get());
+    m_enabledButtonsCount = texts.size();
+    for(std::size_t i {1}; i <= m_enabledButtonsCount; ++i)//ignore the first one which is the back button
+    {
+        m_gameActionButtons[i]->setText(texts[i - 1]);
+        m_gameUI->enableElement(m_gameActionButtons[i].get());
+    }
 }
 void UIManager::disableGameActionButtons()
 {
-    for(auto& ptr : m_gameActionButtons)
-        m_gameUI->disableElement(ptr.get());
+    for(std::size_t i {}; i <= m_enabledButtonsCount; ++i)
+        m_gameUI->disableElement(m_gameActionButtons[i].get());
 }
 
 void UIManager::processInput(int key)
 {
     m_currentUI->processInput(key);
 }
-
 void UIManager::onWindowResize(int width, int height)
 {
     m_currentUI->onWindowResize(width, height);
-}
-
-void callGameSquareCallback(std::size_t index)
-{
-    static UIManager& uiManagerInstance {UIManager::getInstance()};
-    uiManagerInstance.m_gameSquareCallback(index);
 }

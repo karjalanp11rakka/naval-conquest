@@ -142,7 +142,7 @@ void TextUIElement::update()
 
     gltColor(m_textData.textColor.x, 
         m_textData.textColor.y, m_textData.textColor.z, 1.f);    
-    gltSetText(m_text, m_textData.text.c_str());
+    gltSetText(m_text, m_textData.text.data());
     gltDrawText2DAligned(m_text,
         (GLfloat)(width / 2.f) + (m_textData.position.x / 2 * width),
         (GLfloat)(height / 2.f) + (m_textData.position.y / 2 * -height),
@@ -157,7 +157,7 @@ void TextUIElement::onResize(int windowWidth, int windowHeight)
     float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_textData.backgroundScale};
     glm::mat4 backgroundModel(1.f);
 
-    gltSetText(m_text, m_textData.text.c_str());
+    gltSetText(m_text, m_textData.text.data());
 
     auto textWidth {gltGetTextWidth(m_text, m_textData.scale) / (float)windowWidth};
     auto textHeight {gltGetTextHeight(m_text, m_textData.scale) / (float)windowHeight};
@@ -173,7 +173,7 @@ void SettingUIElement::trigger()
     *m_turnedOn = !*m_turnedOn;
     TextUIElement::trigger();
 }
-void GameButtonUIElement::changeText(const std::string& text)
+void GameButtonUIElement::setText(std::string_view text)
 {
     m_textData.text = text;
 }
@@ -197,22 +197,48 @@ UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model,
 void UIElement3D::enable()
 {
     UIElement::enable();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.addObject(m_object.get());
+    if(!m_keepRenderingAfterDisable)
+    {
+        static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+        renderEngineInstance.addObject(m_object.get());
+    }
+    else
+    {
+        m_keepRenderingAfterDisable = false;
+        if(m_temporaryColor)
+        {
+            m_object->setColor(m_defaultColor);
+            m_temporaryColor = false;
+        }
+    }
 }
 void UIElement3D::disable()
 {
     UIElement::disable();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.removeObject(m_object.get());
+    if(!m_keepRenderingAfterDisable)
+    {
+        static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+        renderEngineInstance.removeObject(m_object.get());
+    }
 }
+void UIElement3D::keepRenderingAfterDisable()
+{
+    m_keepRenderingAfterDisable = true;
+}
+void UIElement3D::keepRenderingAfterDisable(const glm::vec3& temporaryColor)
+{
+    keepRenderingAfterDisable();
+    m_object->setColor(temporaryColor);
+    m_temporaryColor = true;
+}
+
 void UIElement3D::focus()
 {
-    m_object->setColor(m_highlightColor);
+    if(!m_temporaryColor) m_object->setColor(m_highlightColor);
 }
 void UIElement3D::defocus()
 {
-    m_object->setColor(m_defaultColor);
+    if(!m_temporaryColor) m_object->setColor(m_defaultColor);
 }
 
 void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
@@ -228,7 +254,7 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
 {
     if(m_interactableElementsCount < 2) return;
 
-    ElementIndices newElementIndices {};
+    std::pair<std::size_t, std::size_t> newElementIndices {};
 
     switch (focusMoveDirection)
     {

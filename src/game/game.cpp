@@ -10,6 +10,7 @@
 #include <engine/shaderManager.hpp>
 #include <game/uiManager.hpp>
 #include <game/random.hpp>
+#include <game/uiPreset.hpp>
 #include <assets.hpp>
 
 template<std::size_t N>
@@ -39,7 +40,7 @@ void Game::activatePlayerSquares()
             setSquares.set(i);
     }
 
-    uiManagerInstance.setGridSquares(std::move(setSquares));
+    uiManagerInstance.setGameGridSquares(std::move(setSquares));
 }
 
 Game::Game(bool onePlayer) : m_onePlayer(onePlayer)
@@ -52,16 +53,33 @@ Game::Game(bool onePlayer) : m_onePlayer(onePlayer)
     m_grid.initializeAt<AircraftCarrier>(8, 9, true);
     auto r = Random::getInstance().get<std::size_t>(0, GRID_SIZE - 1);
     m_grid.initializeAt<AircraftCarrier>(2, r, false);
-
-    uiManagerInstance.setGameSquareCallback([&](std::size_t)
-    {
-        uiManagerInstance.enableGameActionButtons();
-    });
     activatePlayerSquares();
     uiManagerInstance.disableGameActionButtons();
 }
 
 Game::~Game() {}
+
+void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
+{
+    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    switch (buttonType)
+    {
+    case ButtonTypes::ActionButton:
+        if(index == 0)
+        {
+            activatePlayerSquares();
+            uiManagerInstance.disableGameActionButtons();
+        }
+        break;
+    
+    case ButtonTypes::GridSquare:
+        static constexpr auto gridSquareSelectedColor = glm::vec3(.8f, .9f, .2f);
+        uiManagerInstance.enableGameActionButtons({"ATTACK", "UPGRADE", "SELL"});
+        uiManagerInstance.keepGameGridObjectAfterDisable(index, gridSquareSelectedColor);
+        uiManagerInstance.setGameGridSquares({});
+        break;
+    }
+}
 
 glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices)
 {

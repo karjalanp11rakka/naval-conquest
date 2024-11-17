@@ -12,7 +12,7 @@ class Shader;
 class Object
 {
 protected:
-    Mesh m_mesh {};
+    Mesh m_mesh;
     void drawMesh() const;
     virtual void configureShaders() const {}; 
     glm::mat4 m_model {};
@@ -50,7 +50,7 @@ struct Material
 class LitObject : public Object3D
 {
 protected:
-    Material m_material {};
+    Material m_material;
     void configureShaders() const override;
 public:
     LitObject(Mesh mesh, Shader* shader, const Material& material) 
@@ -61,7 +61,7 @@ public:
 class UnlitObject : public Object3D
 {
 protected:
-    glm::vec3 m_color {};
+    glm::vec3 m_color;
     void configureShaders() const override;
 public:
     UnlitObject(Mesh mesh, const glm::vec3& color);
@@ -72,7 +72,7 @@ public:
 class Object2D : public Object
 {
 protected:
-    glm::vec3 m_color {1.f, 1.f, 1.f};
+    glm::vec3 m_color;
     void configureShaders() const override; 
 public:
     Object2D() {};

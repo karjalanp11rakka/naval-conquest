@@ -36,7 +36,7 @@ private:
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager& operator=(const ShaderManager& other) = delete;
 
-    std::unordered_map<std::pair<const std::string_view*, const std::string_view*>, Shader, StringPtrPairHash, StringPtrPairEqual> m_shaders {};
+    std::unordered_map<std::pair<const std::string_view*, const std::string_view*>, Shader, StringPtrPairHash, StringPtrPairEqual> m_shaders;
 public:
     static ShaderManager& getInstance()
     {

@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <utility>
-#include <string>
+#include <string_view>
 #include <vector>
 #include <functional>
 #include <cstddef>
@@ -18,7 +18,7 @@ private:
     bool m_useHighlight {};
 protected:
     float m_highlightThickness {};
-    glm::vec3 m_highlightColor {};
+    glm::vec3 m_highlightColor;
     void configureShaders() const override;
 public:
     InteractableBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& highlightColor, float highlightThickness)
@@ -32,8 +32,8 @@ class UIElement
 {
 protected:
     bool m_enabled {};
-    std::function<void()> m_callback {};
-    glm::vec2 m_position {};
+    std::function<void()> m_callback;
+    glm::vec2 m_position;
 public:
     UIElement(std::function<void()> callback, const glm::vec2& position)
         : m_callback(callback), m_position(position) {}
@@ -51,7 +51,7 @@ public:
 
 struct TextData
 {
-    std::string text {};
+    std::string_view text;
     glm::vec2 position {};
     glm::vec3 textColor {};
     float scale {};
@@ -66,9 +66,9 @@ class TextUIElement : public UIElement
 private:
     GLTtext* m_text {};
 protected:
-    std::unique_ptr<Object2D> m_backgroundObject {};
+    std::unique_ptr<Object2D> m_backgroundObject;
     TextData m_textData {}; //set to nullptr if noninteractive
-    glm::vec3 m_highlightColor {};
+    glm::vec3 m_highlightColor;
 public:
     TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness = 0.f);
     ~TextUIElement();
@@ -82,11 +82,11 @@ public:
 class SettingUIElement : public TextUIElement
 {
 private:
-    std::string m_enabledText {};
+    std::string_view m_enabledText;
     bool* m_turnedOn;
 public:
     SettingUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness,
-    const std::string& enabledText, bool* turnedOn)
+    std::string_view enabledText, bool* turnedOn)
         : TextUIElement(std::move(textData), callback, highlightColor, highlightThickness), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
     void trigger() override;
 };
@@ -98,15 +98,16 @@ public:
     GameButtonUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness, float width, float height)
         : TextUIElement(std::move(textData), callback, highlightColor, highlightThickness), m_width(width), m_height(height) {}
 
-    void changeText(const std::string& text);
+    void setText(std::string_view text);
     void onResize(int windowWidth, int windowHeight) override;
 };
 
 class UIElement3D : public UIElement
 {
 private:
-    std::unique_ptr<UnlitObject> m_object {};
-    glm::vec3 m_defaultColor {}, m_highlightColor {}; 
+    std::unique_ptr<UnlitObject> m_object;
+    glm::vec3 m_defaultColor {}, m_highlightColor {};
+    bool m_keepRenderingAfterDisable {}, m_temporaryColor {};
 public:
     UIElement3D(std::function<void()> callback, glm::mat4&& model, 
         const glm::vec3& defaultColor, const glm::vec3& highlightColor);
@@ -116,13 +117,13 @@ public:
     void focus() override;
     void defocus() override;
     void update() override {}
+    void keepRenderingAfterDisable();//Keeps the object being rendered after the next time it's disabled.
+    void keepRenderingAfterDisable(const glm::vec3& temporaryColor);//Overload that also applies temporary color until the next enable.
     void onResize(int windowWidth, int windowHeight) override {}
 };
 
 class UIPreset
 {
-public:
-    using ElementIndices = std::pair<std::size_t, std::size_t>;
 private:
     enum class FocusMoveDirections
     {
@@ -131,8 +132,8 @@ private:
         right,
         left
     };
-    std::vector<std::vector<UIElement*>> m_sortedElements {};
-    ElementIndices m_focusIndices {};
+    std::vector<std::vector<UIElement*>> m_sortedElements;
+    std::pair<std::size_t, std::size_t> m_focusIndices {};
     int m_interactableElementsCount {};
     void updateBackgroundsUniforms(int width, int height);
     void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element

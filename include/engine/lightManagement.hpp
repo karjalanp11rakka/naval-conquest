@@ -36,8 +36,8 @@ namespace lights
 class SceneLighting
 {
 private:
-    std::vector<std::unique_ptr<lights::PointLight>> m_lights {};
-    std::unique_ptr<lights::DirectionalLight> m_dirLight {};
+    std::vector<std::unique_ptr<lights::PointLight>> m_lights;
+    std::unique_ptr<lights::DirectionalLight> m_dirLight;
 public:
     SceneLighting() {}
     SceneLighting(lights::DirectionalLight&& directionLight);

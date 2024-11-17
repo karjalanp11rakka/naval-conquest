@@ -17,7 +17,7 @@ template<std::size_t N>
 class GameGrid
 {
 private:
-    std::array<std::unique_ptr<GameObject>, N*N> m_base {};
+    std::array<std::unique_ptr<GameObject>, N*N> m_base;
 public:
     ~GameGrid();
     template<GameObjectDelivered T, typename... Args>
@@ -37,9 +37,9 @@ public:
 
     class Iterator
     {
-private:
-        typename std::array<std::unique_ptr<GameObject>, N*N>::iterator m_iterator {};
-public:
+    private:
+        typename std::array<std::unique_ptr<GameObject>, N*N>::iterator m_iterator;
+    public:
         Iterator(typename std::array<std::unique_ptr<GameObject>, N*N>::iterator iterator) 
             : m_iterator(iterator) {}
 
@@ -80,9 +80,10 @@ class Game
 {
 private:
     bool m_onePlayer {}, m_playerOneTwoPlay {true};
-    GameGrid<GRID_SIZE> m_grid {};
+    GameGrid<GRID_SIZE> m_grid;
     void activatePlayerSquares();
 public:
     Game(bool onePlayer);
+    void receiveGameInput(std::size_t index, ButtonTypes buttonType);
     ~Game();
 };

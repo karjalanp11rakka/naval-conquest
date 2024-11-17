@@ -150,8 +150,8 @@ Mesh meshtools::generateTetrahedron(NormalMode normalMode)
 template <const float* vertices, int length>
 Mesh makeMesh(NormalMode normalMode)
 {
-    static std::vector<unsigned int> indices {};
-    static std::unique_ptr<float[]> verticesForIndices {nullptr};
+    static std::vector<unsigned int> indices;
+    static std::unique_ptr<float[]> verticesForIndices;
     static int verticesForIndicesLength {length};
 
     if(normalMode != NormalMode::flat && indices.empty())
@@ -281,11 +281,11 @@ Mesh meshtools::loadFromOBJ(std::string_view objString)
         }
     }};
     std::istringstream fileStream(objString.data());
-    std::string line {};
-    std::vector<float> vertices {};
-    std::vector<float> normals {};
-    std::vector<float> returnVertices {};
-    std::vector<unsigned int> indices {};
+    std::string line;
+    std::vector<float> vertices;
+    std::vector<float> normals;
+    std::vector<float> returnVertices;
+    std::vector<unsigned int> indices;
     while (std::getline(fileStream, line))
     {
         line.erase(0, line.find_first_not_of(' '));
@@ -417,8 +417,8 @@ std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, in
         oldVerticePositions[i / 3] = glm::vec3(vertices[i], vertices[i + 1], vertices[i + 2]);
     }
     
-    std::vector<glm::vec3> newVerticePositions {};
-    std::vector<unsigned int> indices {};
+    std::vector<glm::vec3> newVerticePositions;
+    std::vector<unsigned int> indices;
 
     for(std::size_t i {}; i < std::ssize(oldVerticePositions); ++i)
     {

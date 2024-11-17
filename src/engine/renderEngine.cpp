@@ -75,7 +75,7 @@ SceneLighting* RenderEngine::getLighting() const
     return &defaultLights;
 }
 
-void RenderEngine::addRenderCallback(const renderCallbackFunc& callback)
+void RenderEngine::addRenderCallback(const std::function<void()>& callback)
 {
     m_renderCallbacks.push_front(callback);
 }

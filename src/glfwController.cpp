@@ -53,10 +53,10 @@ void GLFWController::update()
 {
     m_currentTime = glfwGetTime();
     m_deltaTime = m_currentTime - m_lastTime;
-    timeToUpdateFPS -= m_deltaTime;
-    if(timeToUpdateFPS < 0)
+    m_timeToUpdateFPS -= m_deltaTime;
+    if(m_timeToUpdateFPS < 0)
     {
-        timeToUpdateFPS = .2f;
+        m_timeToUpdateFPS = .2f;
         float fps = 1.0f / m_deltaTime;
         std::stringstream fpsText;
         fpsText << std::fixed << std::setprecision(2) << fps;
@@ -94,7 +94,7 @@ bool GLFWController::shouldClose() const
     return glfwWindowShouldClose(m_window);
 }
 
-void GLFWController::addInputCallback(const inputCallBackFunc& callback)
+void GLFWController::addInputCallback(const std::function<void(int)>& callback)
 {
     m_inputCallbacks.push_front(callback);
 }

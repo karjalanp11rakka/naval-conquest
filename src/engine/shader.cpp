@@ -13,7 +13,7 @@ void addConstantsToShader(std::string_view input, std::string& output);
 
 Shader::Shader(std::string_view vertexString, std::string_view fragmentString)
 {   
-    std::string vertStr {}, fragStr {};
+    std::string vertStr, fragStr;
     addConstantsToShader(vertexString, vertStr);
     addConstantsToShader(fragmentString, fragStr);
     const char* vShaderCode = vertStr.c_str();
