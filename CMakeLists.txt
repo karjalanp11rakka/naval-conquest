@@ -3,7 +3,10 @@ project(myproj VERSION 0.1 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_BUILD_TYPE Release)
+
+if(NOT CMAKE_BUILD_TYPE)
+    message(FATAL_ERROR "Specify the build type (Release or Debug) by setting CMAKE_BUILD_TYPE.")
+endif()
 
 file(GLOB_RECURSE SRC_FILES "src/*.c" "src/*.cpp")
 
@@ -28,6 +31,10 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(glfw glm)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    remove_definitions(NDEBUG)
+endif()
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 

@@ -24,7 +24,7 @@ private:
 public:
     static GameController& getInstance()
     {
-        static GameController instance {GameController()};
+        static GameController instance;
         return instance;
     }
 

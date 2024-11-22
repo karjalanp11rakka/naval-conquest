@@ -40,7 +40,7 @@ private:
 public:
     static ShaderManager& getInstance()
     {
-        static ShaderManager instance {ShaderManager()};
+        static ShaderManager instance;
         return instance;
     }
 

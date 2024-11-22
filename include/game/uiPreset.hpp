@@ -7,6 +7,8 @@
 #include <functional>
 #include <cstddef>
 #include <type_traits>
+#include <optional>
+#include <stack>
 
 #include <glm/glm.hpp>
 #include <engine/objectManagement.hpp>
@@ -107,7 +109,7 @@ class UIElement3D : public UIElement
 private:
     std::unique_ptr<UnlitObject> m_object;
     glm::vec3 m_defaultColor {}, m_highlightColor {};
-    bool m_keepRenderingAfterDisable {}, m_temporaryColor {};
+    bool m_hasDisabledColor {};
 public:
     UIElement3D(std::function<void()> callback, glm::mat4&& model, 
         const glm::vec3& defaultColor, const glm::vec3& highlightColor);
@@ -117,8 +119,8 @@ public:
     void focus() override;
     void defocus() override;
     void update() override {}
-    void keepRenderingAfterDisable();//Keeps the object being rendered after the next time it's disabled.
-    void keepRenderingAfterDisable(const glm::vec3& temporaryColor);//Overload that also applies temporary color until the next enable.
+    void addDisabledColor(const glm::vec3& temporaryColor);
+    void removeDisabledColor();
     void onResize(int windowWidth, int windowHeight) override {}
 };
 
@@ -135,6 +137,7 @@ private:
     std::vector<std::vector<UIElement*>> m_sortedElements;
     std::pair<std::size_t, std::size_t> m_focusIndices {};
     int m_interactableElementsCount {};
+    std::stack<std::pair<std::size_t, std::size_t>> m_retrieveIndices;
     void updateBackgroundsUniforms(int width, int height);
     void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
 public:
@@ -144,6 +147,9 @@ public:
     void update();
     void disableElement(UIElement* ptr);
     void enableElement(UIElement* ptr);
+    void saveCurrentSelection();
+    void retrieveSavedSelection();
+    void removeSavedSelection();
     void processInput(int key);
     void onWindowResize(int width, int height);
     static void terminate();

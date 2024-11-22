@@ -17,8 +17,8 @@
 void Object::drawMesh() const
 {
     m_mesh.use();
-    if(m_mesh.indiciesLength)
-        glDrawElements(GL_TRIANGLES, m_mesh.indiciesLength, GL_UNSIGNED_INT, 0);
+    if(m_mesh.indicesLength)
+        glDrawElements(GL_TRIANGLES, m_mesh.indicesLength, GL_UNSIGNED_INT, 0);
     else glDrawArrays(GL_TRIANGLES, 0, m_mesh.vertexCount);
 }
 void Object::setModel(glm::mat4&& model)

@@ -4,55 +4,66 @@
 #include <memory>
 #include <cstddef>
 #include <concepts>
+#include <utility>
+#include <functional>
+#include <optional>
 
-#include <game/gameObject.hpp>
+#include <game/unit.hpp>
 #include <game/gameController.hpp>
 
 glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices);
 
 template<typename T>
-concept GameObjectDelivered = std::derived_from<T, GameObject>;
+concept UnitDelivered = std::derived_from<T, Unit>;
 
-template<std::size_t N>
+class Game;
+
 class GameGrid
 {
 private:
-    std::array<std::unique_ptr<GameObject>, N*N> m_base;
+    std::array<std::unique_ptr<Unit>, GRID_SIZE * GRID_SIZE> m_base;
+    Game* const m_gameInstance;
 public:
+    GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
     ~GameGrid();
-    template<GameObjectDelivered T, typename... Args>
+    template<UnitDelivered T, typename... Args>
     void initializeAt(std::size_t x, std::size_t y, Args... args)
     {
         auto& ptr = m_base[x + y * GRID_SIZE];
-        ptr = std::make_unique<T>(std::forward<Args>(args)...);
+        ptr = std::make_unique<T>(m_gameInstance, std::forward<Args>(args)...);
         ptr->setTransform({gridIndicesToPosition(std::make_pair(x, y))});
     }
-    GameObject* at(std::size_t x, std::size_t y) const;
+    Unit* at(std::size_t x, std::size_t y) const;
+    Unit* at(std::pair<std::size_t, std::size_t> indices) const;
     void destroyAt(std::size_t x, std::size_t y);
+    void moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2);
+    void moveAt(std::pair<std::size_t, std::size_t> indices1, std::pair<std::size_t, std::size_t> indices2);
     auto size() const {return m_base.size();}
-    GameObject* operator[](std::size_t index) const noexcept
+    Unit* operator[](std::size_t index) const noexcept
     {
         return m_base[index].get();
     }
-
-    class Iterator
+    static std::pair<std::size_t, std::size_t> convertIndexToIndices(std::size_t index)
+    {
+        return std::make_pair(index % GRID_SIZE, index / GRID_SIZE);
+    }
+    static std::size_t convertIndicesToIndex(std::pair<std::size_t, std::size_t> indices)
+    {
+        return indices.first + indices.second * GRID_SIZE;
+    }
+    struct Iterator
     {
     private:
-        typename std::array<std::unique_ptr<GameObject>, N*N>::iterator m_iterator;
+        typename std::array<std::unique_ptr<Unit>, GRID_SIZE * GRID_SIZE>::iterator m_iterator;
     public:
-        Iterator(typename std::array<std::unique_ptr<GameObject>, N*N>::iterator iterator) 
+        Iterator(typename std::array<std::unique_ptr<Unit>, GRID_SIZE * GRID_SIZE>::iterator iterator) 
             : m_iterator(iterator) {}
 
-        Iterator(Iterator&& other) noexcept = default;
-        Iterator& operator=(Iterator&& other) noexcept = default;
-        Iterator(const Iterator&) = delete;
-        Iterator& operator=(const Iterator&) = delete;
-
-        GameObject* operator*() const
+        Unit* operator*() const
         {
             return m_iterator->get();
         }
-        GameObject* operator->() const
+        Unit* operator->() const
         {
             return m_iterator->get();
         }
@@ -61,10 +72,25 @@ public:
             ++m_iterator;
             return *this;
         }
+        Iterator& operator--()
+        {
+            --m_iterator;
+            return *this;
+        }
         bool operator!=(const Iterator& other) const
         {
             return m_iterator != other.m_iterator;
         }
+        bool operator==(const Iterator& other) const
+        {
+            return m_iterator != other.m_iterator;
+        }
+
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Unit*;
+        using difference_type = std::ptrdiff_t;
+        using pointer = Unit*;
+        using reference = Unit&;
     };
     Iterator begin()
     {
@@ -80,10 +106,15 @@ class Game
 {
 private:
     bool m_onePlayer {}, m_playerOneTwoPlay {true};
-    GameGrid<GRID_SIZE> m_grid;
+    GameGrid m_grid;
+    std::optional<std::pair<std::size_t, std::size_t>> m_selectedUnitIndices {};
+    std::optional<std::size_t> m_selectedActionIndex {};
     void activatePlayerSquares();
 public:
     Game(bool onePlayer);
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);
     ~Game();
+    friend class Action;
+    // template<int Radius>
+    // friend void SelectOnGridAction<Radius>::setGameGridSquares(std::vector<std::pair<std::size_t, std::size_t>>&& activeSquares);
 };

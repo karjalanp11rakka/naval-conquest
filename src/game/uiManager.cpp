@@ -13,15 +13,6 @@
 #include <game/gameController.hpp>
 #include <game/game.hpp>
 
-void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
-{
-    m_currentUI->disable();
-    m_currentUI = newUI.get();
-    m_currentUI->enable();
-}
-
-void callGameSquareCallback(std::size_t index);
-
 UIManager::UIManager()
 {  
     RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
@@ -173,16 +164,39 @@ UIManager::UIManager()
     
     m_currentUI->enable();
 }
-
 UIManager::~UIManager()
 {
     UIPreset::terminate();
 }
-void UIManager::keepGameGridObjectAfterDisable(std::size_t index, const glm::vec3& color)
+void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
 {
-    m_gameGridSquares[index]->keepRenderingAfterDisable(color);
+    m_currentUI->disable();
+    m_currentUI = newUI.get();
+    m_currentUI->enable();
 }
-void UIManager::setGameGridSquares(const std::bitset<GRID_SIZE*GRID_SIZE>&& activeSquares)
+
+void UIManager::addDisabledColorToGridSquare(std::size_t index, const glm::vec3& color)
+{
+    m_gameGridSquares[index]->addDisabledColor(color);
+}
+
+void UIManager::saveCurrentSelection()
+{
+    m_currentUI->saveCurrentSelection();
+}
+void UIManager::retrieveSavedSelection()
+{
+    m_currentUI->retrieveSavedSelection();
+}
+void UIManager::removeSavedSelection()
+{
+    m_currentUI->removeSavedSelection();
+}
+void UIManager::removeDisabledColorToGridSquare(std::size_t index)
+{
+    m_gameGridSquares[index]->removeDisabledColor();
+}
+void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSquares)
 {
     if(m_currentUI != m_gameUI.get()) return;
     for(int i {}; i < m_gameGridSquares.size(); ++i)
@@ -195,9 +209,10 @@ void UIManager::setGameGridSquares(const std::bitset<GRID_SIZE*GRID_SIZE>&& acti
     m_enabledGameElements = std::move(activeSquares);
 }
 
-void UIManager::enableGameActionButtons(std::vector<std::string_view>&& texts)
+void UIManager::enableGameActionButtons(const std::vector<std::string_view>& texts)
 {
-    m_gameUI->enableElement(m_gameActionButtons[0].get());
+    assert(!m_enabledButtonsCount && "Buttons have to be disabled before they can be enabled.");
+    if(!m_backButtonEnabled) m_gameUI->enableElement(m_gameActionButtons[0].get());
     m_enabledButtonsCount = texts.size();
     for(std::size_t i {1}; i <= m_enabledButtonsCount; ++i)//ignore the first one which is the back button
     {
@@ -205,10 +220,12 @@ void UIManager::enableGameActionButtons(std::vector<std::string_view>&& texts)
         m_gameUI->enableElement(m_gameActionButtons[i].get());
     }
 }
-void UIManager::disableGameActionButtons()
+void UIManager::disableGameActionButtons(bool disableBackButton)
 {
-    for(std::size_t i {}; i <= m_enabledButtonsCount; ++i)
+    for(std::size_t i {disableBackButton ? 0u : 1u}; i <= m_enabledButtonsCount; ++i)
         m_gameUI->disableElement(m_gameActionButtons[i].get());
+    m_enabledButtonsCount = 0;
+    m_backButtonEnabled = !disableBackButton;
 }
 
 void UIManager::processInput(int key)

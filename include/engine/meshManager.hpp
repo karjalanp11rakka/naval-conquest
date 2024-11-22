@@ -9,7 +9,7 @@
 struct Mesh
 {
     unsigned int VAO {};
-    unsigned int indiciesLength {};
+    unsigned int indicesLength {};
     unsigned int vertexCount {};
 
     void use() const
@@ -49,7 +49,7 @@ private:
 public:
     static MeshManager& getInstance()
     {
-        static MeshManager instance {MeshManager()};
+        static MeshManager instance;
         return instance;
     }
 

@@ -16,7 +16,7 @@ private:
 public:
     static Random& getInstance()
     {
-        static Random instance {Random()};
+        static Random instance;
         return instance;
     }
     template<IsIntegral T>

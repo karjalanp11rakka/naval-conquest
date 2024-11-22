@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iterator>
 #include <cstddef>
+#include <cassert>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -197,48 +198,46 @@ UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model,
 void UIElement3D::enable()
 {
     UIElement::enable();
-    if(!m_keepRenderingAfterDisable)
+    if(!m_hasDisabledColor)
     {
         static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
         renderEngineInstance.addObject(m_object.get());
     }
     else
     {
-        m_keepRenderingAfterDisable = false;
-        if(m_temporaryColor)
-        {
-            m_object->setColor(m_defaultColor);
-            m_temporaryColor = false;
-        }
+        m_hasDisabledColor = false;
+        m_object->setColor(m_defaultColor);
     }
 }
 void UIElement3D::disable()
 {
     UIElement::disable();
-    if(!m_keepRenderingAfterDisable)
+    if(!m_hasDisabledColor)
     {
         static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
         renderEngineInstance.removeObject(m_object.get());
     }
 }
-void UIElement3D::keepRenderingAfterDisable()
+void UIElement3D::addDisabledColor(const glm::vec3& temporaryColor)
 {
-    m_keepRenderingAfterDisable = true;
-}
-void UIElement3D::keepRenderingAfterDisable(const glm::vec3& temporaryColor)
-{
-    keepRenderingAfterDisable();
+    m_hasDisabledColor = true;
     m_object->setColor(temporaryColor);
-    m_temporaryColor = true;
+}
+void UIElement3D::removeDisabledColor()
+{
+    m_hasDisabledColor = false;
+    m_object->setColor(m_defaultColor);
+    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    renderEngineInstance.removeObject(m_object.get());
 }
 
 void UIElement3D::focus()
 {
-    if(!m_temporaryColor) m_object->setColor(m_highlightColor);
+    if(!m_hasDisabledColor) m_object->setColor(m_highlightColor);
 }
 void UIElement3D::defocus()
 {
-    if(!m_temporaryColor) m_object->setColor(m_defaultColor);
+    if(!m_hasDisabledColor) m_object->setColor(m_defaultColor);
 }
 
 void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
@@ -433,6 +432,28 @@ void UIPreset::enableElement(UIElement* ptr)
                 return;
             }
     }
+}
+void UIPreset::saveCurrentSelection()
+{
+    m_retrieveIndices.push(m_focusIndices);   
+}
+void UIPreset::retrieveSavedSelection()
+{
+    auto& retrieveIndices = m_retrieveIndices.top();
+
+    assert(!m_retrieveIndices.empty());
+    if(m_sortedElements[retrieveIndices.first][retrieveIndices.second]->interactable())
+    {
+        m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
+        m_sortedElements[retrieveIndices.first][retrieveIndices.second]->focus();
+        m_focusIndices = retrieveIndices;
+    }
+    m_retrieveIndices.pop();
+}
+void UIPreset::removeSavedSelection()
+{
+    assert(!m_retrieveIndices.empty());
+    m_retrieveIndices.pop();
 }
 
 void UIPreset::processInput(int key)
