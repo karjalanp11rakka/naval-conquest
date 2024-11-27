@@ -16,7 +16,7 @@
 
 #include <game/uiPreset.hpp>
 #include <glfwController.hpp>
-#include <engine/objectManagement.hpp>
+#include <engine/object.hpp>
 #include <engine/meshManager.hpp>
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManager.hpp>

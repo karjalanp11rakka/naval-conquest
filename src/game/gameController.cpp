@@ -11,8 +11,8 @@
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManager.hpp>
 #include <engine/shader.hpp>
-#include <engine/lightManagement.hpp>
-#include <engine/objectManagement.hpp>
+#include <engine/sceneLighting.hpp>
+#include <engine/object.hpp>
 #include <glfwController.hpp>
 #include <game/uiManager.hpp>
 #include <game/game.hpp>

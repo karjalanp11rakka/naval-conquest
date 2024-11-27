@@ -10,8 +10,8 @@
 #include <engine/shader.hpp>
 #include <engine/shaderManager.hpp>
 #include <engine/renderEngine.hpp>
-#include <engine/objectManagement.hpp>
-#include <engine/lightManagement.hpp>
+#include <engine/object.hpp>
+#include <engine/sceneLighting.hpp>
 #include <assets.hpp>
 
 void Object::drawMesh() const

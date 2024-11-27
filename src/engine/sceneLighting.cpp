@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <utility>
 
-#include <engine/lightManagement.hpp>
+#include <engine/sceneLighting.hpp>
 
 using namespace lights;
 

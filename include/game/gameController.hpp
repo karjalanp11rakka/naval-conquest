@@ -9,7 +9,7 @@ class Game;
 class OrbitingCamera;
 enum class ButtonTypes;
 
-inline constexpr int GRID_SIZE = 12;
+inline constexpr int GRID_SIZE = 14;
 
 class GameController
 {

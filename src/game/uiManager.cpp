@@ -179,7 +179,6 @@ void UIManager::addDisabledColorToGridSquare(std::size_t index, const glm::vec3&
 {
     m_gameGridSquares[index]->addDisabledColor(color);
 }
-
 void UIManager::saveCurrentSelection()
 {
     m_currentUI->saveCurrentSelection();
@@ -211,10 +210,13 @@ void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSq
 
 void UIManager::enableGameActionButtons(const std::vector<std::string_view>& texts)
 {
-    assert(!m_enabledButtonsCount && "Buttons have to be disabled before they can be enabled.");
-    if(!m_backButtonEnabled) m_gameUI->enableElement(m_gameActionButtons[0].get());
-    m_enabledButtonsCount = texts.size();
-    for(std::size_t i {1}; i <= m_enabledButtonsCount; ++i)//ignore the first one which is the back button
+    assert(m_enabledButtonsCount <= 1 && "Buttons have to be disabled before they can be enabled.");
+    if(m_enabledButtonsCount == 0)
+    {
+        if(!m_backButtonEnabled) m_gameUI->enableElement(m_gameActionButtons[0].get());
+    }
+    m_enabledButtonsCount = texts.size() + 1;
+    for(std::size_t i {1}; i < m_enabledButtonsCount; ++i)//ignore the first one which is the back button
     {
         m_gameActionButtons[i]->setText(texts[i - 1]);
         m_gameUI->enableElement(m_gameActionButtons[i].get());
@@ -222,9 +224,9 @@ void UIManager::enableGameActionButtons(const std::vector<std::string_view>& tex
 }
 void UIManager::disableGameActionButtons(bool disableBackButton)
 {
-    for(std::size_t i {disableBackButton ? 0u : 1u}; i <= m_enabledButtonsCount; ++i)
+    for(std::size_t i {disableBackButton ? 0u : 1u}; i < m_enabledButtonsCount; ++i)
         m_gameUI->disableElement(m_gameActionButtons[i].get());
-    m_enabledButtonsCount = 0;
+    m_enabledButtonsCount = disableBackButton ? 0 : 1;
     m_backButtonEnabled = !disableBackButton;
 }
 

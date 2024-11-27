@@ -5,8 +5,9 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>
 
-#include <engine/objectManagement.hpp>
-#include <game/unit.hpp>
+#include <engine/object.hpp>
+#include <game/unitObject.hpp>
+#include <game/action.hpp>
 #include <game/game.hpp>
 #include <engine/renderEngine.hpp>
 #include <engine/shaderManager.hpp>
@@ -17,11 +18,11 @@
 
 GameGrid::~GameGrid() {} 
 
-Unit* GameGrid::at(std::size_t x, std::size_t y) const
+UnitObject* GameGrid::at(std::size_t x, std::size_t y) const
 {
     return m_base[x + y * GRID_SIZE].get();
 }
-Unit* GameGrid::at(std::pair<std::size_t, std::size_t> indices) const
+UnitObject* GameGrid::at(std::pair<std::size_t, std::size_t> indices) const
 {
     return at(indices.first, indices.second);
 }
@@ -59,11 +60,13 @@ Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer)
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     static UIManager& uiManagerInstance {UIManager::getInstance()};
 
-    m_grid.initializeAt<AircraftCarrier>(0, 0, true);
-    m_grid.initializeAt<AircraftCarrier>(9, 9, true);
-    m_grid.initializeAt<AircraftCarrier>(8, 9, true);
+    m_grid.initializeAt<AircraftCarrierUnit>(0, 0, true);
+    m_grid.initializeAt<AircraftCarrierUnit>(9, 9, true);
+    m_grid.initializeAt<SubmarineUnit>(9, 3, true);
+    m_grid.initializeAt<AircraftCarrierUnit>(8, 9, true);
     auto r = Random::getInstance().get<std::size_t>(0, GRID_SIZE - 1);
-    m_grid.initializeAt<AircraftCarrier>(2, r, false);
+    m_grid.initializeAt<AircraftCarrierUnit>(2, r, false);
+    m_grid.initializeAt<SubmarineUnit>(1, 2, false);
     activatePlayerSquares();
     uiManagerInstance.disableGameActionButtons(true);
 }
@@ -128,7 +131,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         else
         {
             uiManagerInstance.saveCurrentSelection();
-            static constexpr auto gridSquareSelectedColor = glm::vec3(.8f, .9f, .2f);
+            static constexpr auto gridSquareSelectedColor = glm::vec3(.7f, .9f, .2f);
             m_selectedUnitIndices = selectedActionSquare;
             uiManagerInstance.enableGameActionButtons(m_grid[index]->getActionNames());
             uiManagerInstance.addDisabledColorToGridSquare(index, gridSquareSelectedColor);

@@ -35,7 +35,6 @@ GLFWController::GLFWController()
         return;
     }
     glfwMakeContextCurrent(m_window);
-    glfwMaximizeWindow(m_window);
     glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);  
 
     glfwSwapInterval(0);

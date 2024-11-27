@@ -9,8 +9,8 @@
 #include <glm/glm.hpp>
 
 #include <engine/renderEngine.hpp>
-#include <engine/objectManagement.hpp>
-#include <engine/lightManagement.hpp>
+#include <engine/object.hpp>
+#include <engine/sceneLighting.hpp>
 #include <glfwController.hpp>
 #include <engine/camera.hpp>
 

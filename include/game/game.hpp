@@ -8,20 +8,20 @@
 #include <functional>
 #include <optional>
 
-#include <game/unit.hpp>
+#include <game/unitObject.hpp>
 #include <game/gameController.hpp>
 
 glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndices);
 
 template<typename T>
-concept UnitDelivered = std::derived_from<T, Unit>;
+concept UnitDelivered = std::derived_from<T, UnitObject>;
 
 class Game;
 
 class GameGrid
 {
 private:
-    std::array<std::unique_ptr<Unit>, GRID_SIZE * GRID_SIZE> m_base;
+    std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE> m_base;
     Game* const m_gameInstance;
 public:
     GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
@@ -33,13 +33,13 @@ public:
         ptr = std::make_unique<T>(m_gameInstance, std::forward<Args>(args)...);
         ptr->setTransform({gridIndicesToPosition(std::make_pair(x, y))});
     }
-    Unit* at(std::size_t x, std::size_t y) const;
-    Unit* at(std::pair<std::size_t, std::size_t> indices) const;
+    UnitObject* at(std::size_t x, std::size_t y) const;
+    UnitObject* at(std::pair<std::size_t, std::size_t> indices) const;
     void destroyAt(std::size_t x, std::size_t y);
     void moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2);
     void moveAt(std::pair<std::size_t, std::size_t> indices1, std::pair<std::size_t, std::size_t> indices2);
     auto size() const {return m_base.size();}
-    Unit* operator[](std::size_t index) const noexcept
+    UnitObject* operator[](std::size_t index) const noexcept
     {
         return m_base[index].get();
     }
@@ -54,16 +54,16 @@ public:
     struct Iterator
     {
     private:
-        typename std::array<std::unique_ptr<Unit>, GRID_SIZE * GRID_SIZE>::iterator m_iterator;
+        typename std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE>::iterator m_iterator;
     public:
-        Iterator(typename std::array<std::unique_ptr<Unit>, GRID_SIZE * GRID_SIZE>::iterator iterator) 
+        Iterator(typename std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE>::iterator iterator) 
             : m_iterator(iterator) {}
 
-        Unit* operator*() const
+        UnitObject* operator*() const
         {
             return m_iterator->get();
         }
-        Unit* operator->() const
+        UnitObject* operator->() const
         {
             return m_iterator->get();
         }
@@ -87,10 +87,10 @@ public:
         }
 
         using iterator_category = std::forward_iterator_tag;
-        using value_type = Unit*;
+        using value_type = UnitObject*;
         using difference_type = std::ptrdiff_t;
-        using pointer = Unit*;
-        using reference = Unit&;
+        using pointer = UnitObject*;
+        using reference = UnitObject&;
     };
     Iterator begin()
     {

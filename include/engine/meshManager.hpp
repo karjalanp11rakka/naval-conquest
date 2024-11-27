@@ -45,7 +45,7 @@ private:
     };
     std::unordered_map<MeshType, MeshVariations> m_meshes;
     std::unordered_map<int, MeshVariations> m_gridMeshes;
-    std::unordered_map<const std::string_view*, Mesh> m_loadedMeshes;
+    std::unordered_map<std::string_view, Mesh> m_loadedMeshes;
 public:
     static MeshManager& getInstance()
     {

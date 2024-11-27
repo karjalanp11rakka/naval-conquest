@@ -6,7 +6,7 @@
 #include <glad/glad.h>
 
 #include <engine/shader.hpp>
-#include <engine/lightManagement.hpp>
+#include <engine/sceneLighting.hpp>
 
 void checkCompileErrors(unsigned int shader, std::string_view type);
 void addConstantsToShader(std::string_view input, std::string& output);

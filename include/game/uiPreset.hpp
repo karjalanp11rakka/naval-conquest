@@ -11,7 +11,7 @@
 #include <stack>
 
 #include <glm/glm.hpp>
-#include <engine/objectManagement.hpp>
+#include <engine/object.hpp>
 
 //InteractableObject2D is specifically designed for UIElement. Therefore, it's defined here
 class InteractableBackground : public Object2D

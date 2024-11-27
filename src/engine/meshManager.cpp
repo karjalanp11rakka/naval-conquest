@@ -34,7 +34,6 @@ Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
     }
     return *meshPtr;
 }
-
 Mesh MeshManager::getGrid(int size, NormalMode normalMode)
 {
     auto& gridVariations {m_gridMeshes[size]};
@@ -47,13 +46,12 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
         gridPtr = std::make_unique<Mesh>(meshtools::generateGrid(size, normals));
     return *gridPtr;
 }
-
 Mesh MeshManager::getFromOBJ(std::string_view objString)
 {
-    if (!m_loadedMeshes.contains(&objString))
-        m_loadedMeshes[&objString] = meshtools::loadFromOBJ(objString);
+    if (!m_loadedMeshes.contains(objString))
+        m_loadedMeshes[objString] = meshtools::loadFromOBJ(objString);
 
-    return m_loadedMeshes[&objString];
+    return m_loadedMeshes[objString];
 }
 
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals);
