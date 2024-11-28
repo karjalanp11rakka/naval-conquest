@@ -4,10 +4,6 @@ project(myproj VERSION 0.1 LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-if(NOT CMAKE_BUILD_TYPE)
-    message(FATAL_ERROR "Specify the build type (Release or Debug) by setting CMAKE_BUILD_TYPE.")
-endif()
-
 option(USE_TOOLS "Run the Python scripts in 'tools' before building the project" OFF)
 if(USE_TOOLS)
     message(STATUS "Running python scripts in 'tools'")

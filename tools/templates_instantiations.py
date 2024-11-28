@@ -3,7 +3,6 @@
 #It is currently only used to add explicit template class instantiations of the classes in 'include/game/action.hpp' to the end of 'src/game/action.cpp'.
 
 import os
-import itertools as it
 from collections import deque
 import re
 
@@ -67,7 +66,7 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
                 line = line.strip()
                 if line.startswith("//"): continue
 
-                #get template classes to be instantiated to templates_to_instantiate = set()
+                #get template classes to be instantiated
                 for template_class in template_classes_data:
                     #find all occurances of the current template class
                     template_class_use_indices = []

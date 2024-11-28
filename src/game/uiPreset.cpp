@@ -332,6 +332,10 @@ UIPreset::UIPreset(std::vector<UIElement*>&& unsortedElements)
     //sort the elements to be iterable correctly for keyboard input
     std::sort(unsortedElements.begin(), unsortedElements.end(), [](const auto& a, const auto& b) -> bool
     {
+        //seperate 3D objects from the other UI elements
+        bool is3D = static_cast<bool>(dynamic_cast<UIElement3D*>(a));
+        if(is3D != static_cast<bool>(dynamic_cast<UIElement3D*>(b))) return is3D;
+
         float yDifference {a->getPosition().y - b->getPosition().y};
         if(yDifference > SAME_ROW_EPSILON)
             return true;

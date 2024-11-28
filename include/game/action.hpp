@@ -5,8 +5,6 @@
 #include <string_view>
 #include <cstddef>
 
-#include <game/uiManager.hpp>
-
 enum class ActionTypes
 {
     immediate,
@@ -14,6 +12,7 @@ enum class ActionTypes
 };
 
 class GameGrid;
+class Game;
 
 class Action
 {
@@ -46,28 +45,24 @@ public:
     }
 };
 
-template<int Radius, bool Blockable>
+enum class SelectOnGridTypes
+{
+    cross,
+    area
+};
+
+template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
 class SelectOnGridAction : public Action
 {
 public:
     using IndicesList = std::vector<std::pair<std::size_t, std::size_t>>;
 protected:
-    void setGameGridSquares(IndicesList&& activeSquares)
-    {
-        static UIManager& uiManagerInstance {UIManager::getInstance()};
-        std::bitset<GRID_SIZE * GRID_SIZE> setSquares;
-
-        for(auto pair : activeSquares)
-            setSquares.set(pair.first + pair.second * GRID_SIZE);
-
-        uiManagerInstance.setGameGridSquares(std::move(setSquares));
-    }
-public:
+    void setGameGridSquares(IndicesList&& activeSquares);
     void use(Game* gameInstance) override;
     ActionTypes getType() const override {return ActionTypes::selectSquare;}
 };
 template<int Radius>
-class MoveAction final : public SelectOnGridAction<Radius, true>, public SingletonAction<MoveAction<Radius>>
+class MoveAction final : public SelectOnGridAction<Radius, true, SelectOnGridTypes::area>, public SingletonAction<MoveAction<Radius>>
 {
 public:
     std::string_view getName() const override {return "MOVE";}

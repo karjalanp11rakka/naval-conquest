@@ -61,7 +61,7 @@ AircraftCarrierUnit::AircraftCarrierUnit(Game* gameInstance, bool teamOne)
     updateModelMatrix();
 }
 
-static constexpr int SUBMARINE_CARRIER_MOVE_RADIUS = 4;
+static constexpr int SUBMARINE_CARRIER_MOVE_RADIUS = 6;
 SubmarineUnit::SubmarineUnit(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, MeshManager::getInstance().getFromOBJ(assets::MODELS_SUBMARINE_OBJ),
     ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL),
