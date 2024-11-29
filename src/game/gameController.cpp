@@ -41,7 +41,7 @@ GameController::GameController()
     SceneLighting lighting(std::move(dirLight));  
     renderEngineInstance.setLighting(std::move(lighting));
 
-    m_camera = std::make_unique<OrbitingCamera>(1.8f, .05f, 2.3f, glm::vec3(0.f));
+    m_camera = std::make_unique<OrbitingCamera>(1.8f, .08f, 2.3f, glm::vec3(0.f), 90.f);
     renderEngineInstance.assignCamera(m_camera.get());
 
     //initialize UIManager
