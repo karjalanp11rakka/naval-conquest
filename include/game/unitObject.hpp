@@ -3,6 +3,7 @@
 #include <vector>
 #include <string_view>
 #include <cstddef>
+#include <utility>
 
 #include <glm/fwd.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -18,12 +19,13 @@ struct Transform
 };
 
 class Action;
+enum class ActionTypes;
 
 class UnitObject : public LitObject
 {
 private:
     std::vector<Action*> m_actions;
-    std::vector<std::string_view> m_actionNames;
+    std::vector<std::pair<std::string_view, glm::vec3>> m_actionData;
 protected:
     Transform m_transform {};
     bool m_teamOne;
@@ -33,19 +35,24 @@ public:
     UnitObject(Game* game, Mesh mesh, Shader* shader, const Material& material, bool teamOne, std::vector<Action*>&& actions);
     virtual ~UnitObject();
 
-    Action& getAction(std::size_t actionIndex);
+    ActionTypes useAction(std::size_t actionIndex);
     void setTransform(Transform&& trasnform);
     bool isTeamOne() const noexcept {return m_teamOne;}
     const glm::vec3& getPosition() const {return m_transform.position;}
     const glm::vec3& getScale() const {return m_transform.scale;}
     const glm::quat& getRotation() const {return m_transform.rotation;}
-    const std::vector<std::string_view>& getActionNames() {return m_actionNames;}
+    const std::vector<std::pair<std::string_view, glm::vec3>>& getActionData();
 };
 
 class AircraftCarrierUnit : public UnitObject
 {
 public:
     AircraftCarrierUnit(Game* game, bool teamOne);
+};
+class AircraftCarrierUpgrade1 : public UnitObject
+{
+public:
+    AircraftCarrierUpgrade1(Game* game, bool teamOne);
 };
 class SubmarineUnit : public UnitObject
 {

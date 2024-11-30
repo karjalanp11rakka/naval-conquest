@@ -58,26 +58,32 @@ public:
     void draw() const override;
 };
 
-class UnlitObject : public Object3D
+class AbstractColorSetter
 {
 protected:
     glm::vec3 m_color;
+    AbstractColorSetter(glm::vec3 color) : m_color(color) {}
+public:
+    virtual ~AbstractColorSetter() = default;
+    void setColor(const glm::vec3& color) {m_color = color;}
+};
+
+class UnlitObject : public Object3D, public AbstractColorSetter
+{
+protected:
     void configureShaders() const override;
 public:
     UnlitObject(Mesh mesh, const glm::vec3& color);
-    void setColor(const glm::vec3& color) {m_color = color;}
+
     void draw() const override;
 };
 
-class Object2D : public Object
+class Object2D : public Object, public AbstractColorSetter
 {
 protected:
-    glm::vec3 m_color;
     void configureShaders() const override; 
 public:
-    Object2D() {};
-    Object2D(Mesh mesh, Shader* shader, const glm::vec3& color)
-        : Object(mesh, shader), m_color(color) {}
+    Object2D(Mesh mesh, Shader* shader, const glm::vec3& color);
 
     void draw() const override;
 };

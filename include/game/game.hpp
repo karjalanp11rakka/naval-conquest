@@ -7,6 +7,7 @@
 #include <utility>
 #include <functional>
 #include <optional>
+#include <cstdint>
 
 #include <game/unitObject.hpp>
 #include <game/gameController.hpp>
@@ -26,12 +27,17 @@ private:
 public:
     GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
     ~GameGrid();
-    template<UnitDelivered T, typename... Args>
-    void initializeAt(std::size_t x, std::size_t y, Args... args)
+    template<UnitDelivered T>
+    void initializeAt(std::size_t x, std::size_t y, bool teamOne)
     {
         auto& ptr = m_base[x + y * GRID_SIZE];
-        ptr = std::make_unique<T>(m_gameInstance, std::forward<Args>(args)...);
+        ptr = std::make_unique<T>(m_gameInstance, teamOne);
         ptr->setTransform({gridIndicesToPosition(std::make_pair(x, y))});
+    }
+    template<UnitDelivered T>
+    void initializeAt(std::pair<std::size_t, std::size_t> indices, bool teamOne)
+    {
+        initializeAt<T>(indices.first, indices.second, teamOne);
     }
     UnitObject* at(std::size_t x, std::size_t y) const;
     UnitObject* at(std::pair<std::size_t, std::size_t> indices) const;
@@ -105,16 +111,18 @@ public:
 class Game
 {
 private:
-    bool m_onePlayer {}, m_playerOneTwoPlay {true};
+    bool m_onePlayer {}, m_playerOneToPlay {true};
     GameGrid m_grid;
+    std::pair<int32_t, int32_t> m_playersMoney;
     std::optional<std::pair<std::size_t, std::size_t>> m_selectedUnitIndices {};
     std::optional<std::size_t> m_selectedActionIndex {};
     void activatePlayerSquares();
+    void updateStatusTexts();
 public:
     Game(bool onePlayer);
+    ~Game() = default;
+    int32_t getMoney() const;
+    void addMoney(int32_t money);
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);
-    ~Game();
     friend class Action;
-    // template<int Radius>
-    // friend void SelectOnGridAction<Radius>::setGameGridSquares(std::vector<std::pair<std::size_t, std::size_t>>&& activeSquares);
 };

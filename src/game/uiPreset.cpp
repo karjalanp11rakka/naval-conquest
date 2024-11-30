@@ -59,16 +59,18 @@ void InteractableBackground::draw() const
     }
     Object2D::draw();
 }
-
+UIElement::~UIElement()
+{
+    if(m_enabled) disable();
+}
 bool UIElement::interactable()
 {
     if(m_enabled && m_callback)
         return true;
     return false;
 }
-
-TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness)
-    : m_textData(std::move(textData)), UIElement(std::move(callback), textData.position), m_highlightColor(highlightColor)
+TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback)
+    : UIElement(std::move(callback), textData.position), m_textData(std::move(textData))
 {
     m_text = gltCreateText();
     static bool initialized {};
@@ -83,52 +85,10 @@ TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback
         gltViewport(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
         initialized = true;
     }
-    
-    static auto uiElementShader {ShaderManager::getInstance().getShader(
-        assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
-
-    static MeshManager& meshManagerInstance {MeshManager::getInstance()}; 
-    //interactive elements
-    if(m_callback)
-    {
-        m_backgroundObject =
-            std::make_unique<InteractableBackground>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader,
-            glm::vec3(m_textData.backgroundColor.x, m_textData.backgroundColor.y, m_textData.backgroundColor.z), m_highlightColor, highlightThickness);
-    }
-    //noninteractive elements
-    else
-    {
-        m_backgroundObject =
-            std::make_unique<Object2D>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader, 
-            glm::vec3(m_textData.backgroundColor.x, m_textData.backgroundColor.y, m_textData.backgroundColor.z));
-    }
 }
 TextUIElement::~TextUIElement()
 {
     gltDeleteText(m_text);
-    if(m_enabled) disable();
-}
-void TextUIElement::enable()
-{
-    UIElement::enable();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.addObject(m_backgroundObject.get());
-}
-void TextUIElement::disable()
-{
-    UIElement::disable();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.removeObject(m_backgroundObject.get());
-}
-void TextUIElement::focus()
-{
-    if(m_callback)
-        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(true);
-}
-void TextUIElement::defocus()
-{
-    if(m_callback)
-        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(false);
 }
 void TextUIElement::update()
 {
@@ -152,10 +112,59 @@ void TextUIElement::update()
 
     gltEndDraw();
 }
-
-void TextUIElement::onResize(int windowWidth, int windowHeight)
+void TextUIElement::changeText(std::string_view text)
 {
-    float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_textData.backgroundScale};
+    m_textData.text = text;
+}
+ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness)
+    : TextUIElement(std::move(textData), callback), m_textBackgroundData(backgroundData), m_highlightColor(highlightColor)
+{    
+    static auto uiElementShader {ShaderManager::getInstance().getShader(
+        assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
+
+    static MeshManager& meshManagerInstance {MeshManager::getInstance()}; 
+    //interactive elements
+    if(m_callback)
+    {
+        m_backgroundObject =
+            std::make_unique<InteractableBackground>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader,
+            glm::vec3(m_textBackgroundData.backgroundColor.x, m_textBackgroundData.backgroundColor.y, m_textBackgroundData.backgroundColor.z), m_highlightColor, highlightThickness);
+    }
+    //noninteractive elements
+    else
+    {
+        m_backgroundObject =
+            std::make_unique<Object2D>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader, 
+            glm::vec3(m_textBackgroundData.backgroundColor.x, m_textBackgroundData.backgroundColor.y, m_textBackgroundData.backgroundColor.z));
+    }
+}
+
+void ButtonUIElement::enable()
+{
+    UIElement::enable();
+    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    renderEngineInstance.addObject(m_backgroundObject.get());
+}
+void ButtonUIElement::disable()
+{
+    UIElement::disable();
+    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    renderEngineInstance.removeObject(m_backgroundObject.get());
+}
+void ButtonUIElement::focus()
+{
+    if(m_callback)
+        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(true);
+}
+void ButtonUIElement::defocus()
+{
+    if(m_callback)
+        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(false);
+}
+
+void ButtonUIElement::onResize(int windowWidth, int windowHeight)
+{
+    float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_textBackgroundData.backgroundScale};
     glm::mat4 backgroundModel(1.f);
 
     gltSetText(m_text, m_textData.text.data());
@@ -172,13 +181,13 @@ void SettingUIElement::trigger()
 {
     std::swap(m_enabledText, m_textData.text);
     *m_turnedOn = !*m_turnedOn;
-    TextUIElement::trigger();
+    ButtonUIElement::trigger();
 }
-void GameButtonUIElement::setText(std::string_view text)
+void ScalableButtonUIElement::setBackgroundColor(const glm::vec3& color)
 {
-    m_textData.text = text;
+    m_backgroundObject->setColor(color);
 }
-void GameButtonUIElement::onResize(int windowWidth, int windowHeight)
+void ScalableButtonUIElement::onResize(int windowWidth, int windowHeight)
 {
     float sizeMultiplier {(windowHeight > windowWidth ? (float)windowHeight : (float)windowWidth)};
     glm::mat4 backgroundModel(1.f);

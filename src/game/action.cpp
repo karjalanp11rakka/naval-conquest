@@ -1,6 +1,7 @@
 #include <array>
 #include <optional>
 #include <cassert>
+#include <sstream>
 
 #include <game/action.hpp>
 #include <game/game.hpp>
@@ -15,6 +16,12 @@ GameGrid& Action::getGameGrid(Game* gameInstance) const
     return gameInstance->m_grid;
 }
 
+static constexpr glm::vec3 DEFAULT_ACTION_COLOR {.2f, .8f, .6f};
+glm::vec3 Action::getColor(Game*) const
+{
+    return DEFAULT_ACTION_COLOR;
+}
+
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
 void SelectOnGridAction<Radius, Blockable, SelectType>::setGameGridSquares(IndicesList&& activeSquares)
 {
@@ -27,8 +34,14 @@ void SelectOnGridAction<Radius, Blockable, SelectType>::setGameGridSquares(Indic
 }
 
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
-void SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameInstance)
+ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameInstance)
 {
+    SelectSquareCallback callback = [&](Game* gameInstance, std::size_t x, std::size_t y)
+    {
+        this->callback(gameInstance, x, y);
+    }; 
+    ActionCallbackManager::getInstance().bindCallback<SelectSquareCallback>(std::move(callback));
+
     GameGrid& gameGrid = this->getGameGrid(gameInstance);
     auto indices = this->getSelectedUnitIndices(gameInstance);
     IndicesList squaresToActivate;
@@ -152,7 +165,32 @@ void SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameInstance)
     if(SelectType == SelectOnGridTypes::area) addArea();
 
     this->setGameGridSquares(std::move(squaresToActivate));
+    return ActionTypes::selectSquare;
 }
+template<int32_t Price>
+ActionTypes BuyAction<Price>::use(Game* gameInstance)
+{
+    if(gameInstance->getMoney() < Price) return ActionTypes::nothing;
+    gameInstance->addMoney(-Price);
+    buy(gameInstance);
+
+    return ActionTypes::immediate;
+}
+template<int32_t Price>
+std::string_view BuyAction<Price>::getName() const
+{
+    static std::string concatenated;
+    concatenated = std::string(getBuyActionName()) + '\n' + std::to_string(Price) + CURRENCY_SYMBOL;
+    return std::string_view(concatenated);
+}
+static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.7f, .5f, .5f};
+template<int32_t Price>
+glm::vec3 BuyAction<Price>::getColor(Game* gameInstance) const
+{
+    if(gameInstance->getMoney() < Price) return ACTION_UNUSABLE_COLOR;
+    return Action::getColor(gameInstance);
+}
+
 template<int Radius>
 void MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y) const
 {
@@ -160,8 +198,19 @@ void MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t
     auto selectedIndices = this->getSelectedUnitIndices(gameInstance);
     gameGrid.moveAt(selectedIndices.first, selectedIndices.second, x, y);
 }
+template<int32_t Price, typename UgradeClass>
+void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
+{
+    GameGrid& gameGrid = this->getGameGrid(gameInstance);
+    auto indices = this->getSelectedUnitIndices(gameInstance);
+    gameGrid.initializeAt<UgradeClass>(indices, gameGrid.at(indices)->isTeamOne());
+}
 
+
+#include <game/unitObject.hpp>
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class MoveAction<2>;
 template class MoveAction<6>;
+template class UpgradeAction<1000,AircraftCarrierUpgrade1>;
+template class MoveAction<2>;
+template class MoveAction<2+1>;

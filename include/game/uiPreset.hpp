@@ -29,7 +29,6 @@ public:
     void draw() const override;
 };
 
-
 class UIElement
 {
 protected:
@@ -39,14 +38,14 @@ protected:
 public:
     UIElement(std::function<void()> callback, const glm::vec2& position)
         : m_callback(callback), m_position(position) {}
-    virtual ~UIElement() {};
+    virtual ~UIElement();
     virtual void trigger() {m_callback();}
     virtual void enable() {m_enabled = true;}
     virtual void disable() {m_enabled = false;}
     virtual void focus() = 0;
     virtual void defocus() = 0;
     virtual void update() = 0;
-    virtual void onResize(int windowWidth, int windowHeight) = 0;
+    virtual void onResize(int windowWidth, int windowHeight) {};
     const glm::vec2& getPosition() const {return m_position;}
     bool interactable();
 };
@@ -57,50 +56,61 @@ struct TextData
     glm::vec2 position {};
     glm::vec3 textColor {};
     float scale {};
+};
+struct GLTtext;
+class TextUIElement : public UIElement
+{
+protected:
+    GLTtext* m_text {};
+    TextData m_textData {};
+public:
+    TextUIElement(TextData&& textData, std::function<void()> callback = nullptr);
+    ~TextUIElement();
+    void focus() override {}
+    void defocus() override {}
+    void update() override;
+    void changeText(std::string_view text);
+};
+
+struct TextBackgroundData
+{
     glm::vec3 backgroundColor {}; 
     float backgroundScale {};
 };
-
-struct GLTtext;
-
-class TextUIElement : public UIElement
+class ButtonUIElement : public TextUIElement
 {
-private:
-    GLTtext* m_text {};
 protected:
     std::unique_ptr<Object2D> m_backgroundObject;
-    TextData m_textData {}; //set to nullptr if noninteractive
     glm::vec3 m_highlightColor;
+    TextBackgroundData m_textBackgroundData;
 public:
-    TextUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness = 0.f);
-    ~TextUIElement();
+    ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness = 0.f);
     void enable() override;
     void disable() override;
     void focus() override;
     void defocus() override;
-    void update() override;
     void onResize(int windowWidth, int windowHeight) override;
 };
-class SettingUIElement : public TextUIElement
+class SettingUIElement : public ButtonUIElement
 {
 private:
     std::string_view m_enabledText;
     bool* m_turnedOn;
 public:
-    SettingUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness,
+    SettingUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness,
     std::string_view enabledText, bool* turnedOn)
-        : TextUIElement(std::move(textData), callback, highlightColor, highlightThickness), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
+        : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
     void trigger() override;
 };
-class GameButtonUIElement : public TextUIElement
+class ScalableButtonUIElement : public ButtonUIElement
 {
 private:
     float m_width {}, m_height {};
 public:
-    GameButtonUIElement(TextData&& textData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness, float width, float height)
-        : TextUIElement(std::move(textData), callback, highlightColor, highlightThickness), m_width(width), m_height(height) {}
+    ScalableButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness, float width, float height)
+        : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_width(width), m_height(height) {}
 
-    void setText(std::string_view text);
+    void setBackgroundColor(const glm::vec3& color);
     void onResize(int windowWidth, int windowHeight) override;
 };
 

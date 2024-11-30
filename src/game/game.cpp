@@ -48,18 +48,19 @@ void Game::activatePlayerSquares()
     std::bitset<GRID_SIZE * GRID_SIZE> setSquares {};
     for(int i {}; i < m_grid.size(); ++i)
     {
-        if(m_grid[i] && m_grid[i]->isTeamOne() == m_playerOneTwoPlay)
+        if(m_grid[i] && m_grid[i]->isTeamOne() == m_playerOneToPlay)
             setSquares.set(i);
     }
 
     uiManagerInstance.setGameGridSquares(std::move(setSquares));
 }
 
-Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer)
+static constexpr int32_t PLAYER_STARTING_MONEY = 1000;
+Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer), m_playersMoney(std::make_pair(PLAYER_STARTING_MONEY, PLAYER_STARTING_MONEY))
 {
     static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
     static UIManager& uiManagerInstance {UIManager::getInstance()};
-
+    updateStatusTexts();
     m_grid.initializeAt<AircraftCarrierUnit>(0, 0, true);
     m_grid.initializeAt<AircraftCarrierUnit>(9, 9, true);
     m_grid.initializeAt<SubmarineUnit>(9, 3, true);
@@ -70,12 +71,25 @@ Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer)
     activatePlayerSquares();
     uiManagerInstance.disableGameActionButtons(true);
 }
-
-Game::~Game() {}
-
+int32_t Game::getMoney() const
+{
+    return m_playerOneToPlay ? m_playersMoney.first : m_playersMoney.second;
+}
+void Game::addMoney(int32_t money)
+{
+    if(m_playerOneToPlay) m_playersMoney.first += money;
+    else m_playersMoney.second -= money;
+    updateStatusTexts();
+}
+void Game::updateStatusTexts()
+{
+    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    uiManagerInstance.updateGameStatusTexts({m_playerOneToPlay, getMoney()});
+}
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
     static UIManager& uiManagerInstance {UIManager::getInstance()};
+    static ActionCallbackManager& actionCallbackManagerInstance {ActionCallbackManager::getInstance()};
     auto returnToPlayerUnitSelection = [&]()
     {
         m_selectedUnitIndices.reset();
@@ -91,7 +105,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         {
             if(m_selectedActionIndex)
             {
-                uiManagerInstance.enableGameActionButtons(m_grid.at(m_selectedUnitIndices.value())->getActionNames());
+                uiManagerInstance.enableGameActionButtons(m_grid.at(m_selectedUnitIndices.value())->getActionData());
                 uiManagerInstance.setGameGridSquares({});
                 m_selectedActionIndex.reset();
                 uiManagerInstance.retrieveSavedSelection();
@@ -99,20 +113,25 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             else
             {
                 returnToPlayerUnitSelection();
+                actionCallbackManagerInstance.reset();
             }
         }
         else
         {
             m_selectedActionIndex = index - 1;
-            auto& currentAction = m_grid.at(m_selectedUnitIndices.value())->getAction(m_selectedActionIndex.value());
-            currentAction.use(this);//ignore the back button
-            switch (currentAction.getType())
+            auto actionType = m_grid.at(m_selectedUnitIndices.value())->useAction(m_selectedActionIndex.value());
+            switch (actionType)
             {
             case ActionTypes::selectSquare:
                 uiManagerInstance.saveCurrentSelection();
                 uiManagerInstance.disableGameActionButtons(false);
                 break;
             case ActionTypes::immediate:
+                m_selectedActionIndex.reset();
+                returnToPlayerUnitSelection();
+                break;
+            case ActionTypes::nothing:
+                m_selectedActionIndex.reset();
                 break;
             }
         }
@@ -122,7 +141,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         auto selectedActionSquare = GameGrid::convertIndexToIndices(index);
         if(m_selectedActionIndex)
         {
-            m_grid.at(m_selectedUnitIndices.value())->getAction(m_selectedActionIndex.value()).callback(this, selectedActionSquare.first, selectedActionSquare.second);
+            actionCallbackManagerInstance.invoke<SelectSquareCallback>(this, selectedActionSquare.first, selectedActionSquare.second);
             uiManagerInstance.removeDisabledColorToGridSquare(GameGrid::convertIndicesToIndex(m_selectedUnitIndices.value()));
             uiManagerInstance.removeSavedSelection();
             returnToPlayerUnitSelection();
@@ -133,7 +152,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             uiManagerInstance.saveCurrentSelection();
             static constexpr auto gridSquareSelectedColor = glm::vec3(.7f, .9f, .2f);
             m_selectedUnitIndices = selectedActionSquare;
-            uiManagerInstance.enableGameActionButtons(m_grid[index]->getActionNames());
+            uiManagerInstance.enableGameActionButtons(m_grid[index]->getActionData());
             uiManagerInstance.addDisabledColorToGridSquare(index, gridSquareSelectedColor);
             uiManagerInstance.setGameGridSquares({});
         }

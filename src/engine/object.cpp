@@ -104,7 +104,10 @@ void LitObject::draw() const
 
 UnlitObject::UnlitObject(Mesh mesh, const glm::vec3& color)
     : Object3D(mesh, ShaderManager::getInstance().getShader(assets::SHADERS_VSIMPLE_GLSL,
-    assets::SHADERS_FSIMPLEUNLIT_GLSL)), m_color(color) {}
+    assets::SHADERS_FSIMPLEUNLIT_GLSL)), AbstractColorSetter(color) {}
+
+Object2D::Object2D(Mesh mesh, Shader* shader, const glm::vec3& color)
+        : Object(mesh, shader), AbstractColorSetter(color) {}
 
 void UnlitObject::configureShaders() const
 {

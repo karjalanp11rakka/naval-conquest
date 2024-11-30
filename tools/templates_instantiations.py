@@ -27,21 +27,26 @@ class TemplateClassInstantiation:
         self.template_class = template_class
         self.template_parameters = template_parameters
 
+def ProcessLine(line: str) -> str:
+    comment_start_index = line.find("//")
+    if(comment_start_index != -1):
+        line = line[:comment_start_index]
+    line = line.strip()
+    return line
+
 def getTemplateClassesData(file) -> deque:
     returnValue = deque()
     istemplate = False
     for line in file:
-        line = line.strip()
+        line = ProcessLine(line)
         if not line: continue
-        if line.startswith("//"): continue
-
         if istemplate:
             istemplate = False
-            name_start_index = line.find("class")
+            name_start_index = line.find("class ")
             if name_start_index == -1:
                 returnValue.popleft()
             else:
-                name_start_index += len("class") + 1
+                name_start_index += len("class ")
                 name_end_index = line.find(" ", name_start_index)
                 returnValue[-1].name = line[name_start_index:name_end_index] if name_end_index != -1 else line[name_start_index:]
 
@@ -62,10 +67,8 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
     for use_path in TEMPLATE_CLASSES_USE_PATHS[index]:
         with open(os.path.join(ROOT_DIRECTORY, *use_path), "r") as use_file:
             for line in use_file:
-                if not line.strip(): continue
-                line = line.strip()
-                if line.startswith("//"): continue
-
+                line = ProcessLine(line)
+                if not line: continue
                 #get template classes to be instantiated
                 for template_class in template_classes_data:
                     #find all occurances of the current template class
@@ -76,22 +79,30 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
                         if index == -1: break
                         template_class_use_indices.append(index)
                         template_class_use_indices_start = index + 1
-
                     #save the instantiation template parameters
                     for template_class_use_index in template_class_use_indices:
-                        instantiation_definition = "".join(line.split())[template_class_use_index + len(template_class.name):]
+                        instantiation_definition = "".join(line[template_class_use_index + len(template_class.name):].split())
                         if not instantiation_definition.startswith("<"): continue
                         instantiation_definition_end_index = instantiation_definition.find(">")
                         if instantiation_definition_end_index == -1: continue
                         instantiation_definition = instantiation_definition[1:instantiation_definition_end_index]
                         
                         instantiation_template_argument_count = instantiation_definition.count(",") + 1
-                        if instantiation_template_argument_count < template_class.min_template_count: raise Exception("Template class usage cannot have more parameters than the template class definition: " + line)
+                        if instantiation_template_argument_count < template_class.min_template_count: raise Exception("Template class usage cannot have less parameters than the template class definition: " + line)
                         templates_to_instantiate.add(TemplateClassInstantiation(template_class, instantiation_definition))
-                if ";" not in line: continue
                 #get constants
                 use_file_line_words = line.split()
-                if "const" in use_file_line_words or "constexpr" in use_file_line_words:
+                if "#define" == use_file_line_words[0]:
+                    constant_variables[use_file_line_words[1]] = use_file_line_words[2]
+                elif ";" not in line: continue
+                elif "using" in use_file_line_words:
+                    equal_index = line.find('=')
+                    if equal_index == -1: continue
+
+                    variable_name = re.search(r"(\S+)(?=\s*$)", line[:equal_index]).group(0)
+                    variable_value = re.search(r".+(?=;)", line[equal_index + 1:]).group(0).strip()
+                    constant_variables[variable_name] = variable_value
+                elif "const" in use_file_line_words or "constexpr" in use_file_line_words:
                     variable_name = ""
                     variable_value = ""
                     equal_index = line.find('=')
@@ -115,7 +126,7 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
                     break
             if index_to_clear != -1:
                 lines = lines[:index_to_clear]
-            else: lines.append("\n\n")
+            else: lines.append("\n" * 3)
 
         lines.append(f"{COMMENT_FIRST_LINE}\n")
         lines.append("// Do not add or modify anything after these comments\n")
