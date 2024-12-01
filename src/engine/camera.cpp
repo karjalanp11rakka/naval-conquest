@@ -6,7 +6,7 @@
 Camera::Camera(glm::vec3&& position) 
     : m_position(std::move(position)) 
 {
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     onWindowResize(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
 }
 void Camera::onWindowResize(int width, int height)

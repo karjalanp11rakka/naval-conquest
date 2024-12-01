@@ -1,7 +1,6 @@
 #include <array>
 #include <optional>
 #include <cassert>
-#include <sstream>
 
 #include <game/action.hpp>
 #include <game/game.hpp>
@@ -25,7 +24,7 @@ glm::vec3 Action::getColor(Game*) const
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
 void SelectOnGridAction<Radius, Blockable, SelectType>::setGameGridSquares(IndicesList&& activeSquares)
 {
-    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    static UIManager& uiManagerInstance = UIManager::getInstance();
     std::bitset<GRID_SIZE * GRID_SIZE> setSquares;
 
     for(auto pair : activeSquares)
@@ -179,9 +178,9 @@ ActionTypes BuyAction<Price>::use(Game* gameInstance)
 template<int32_t Price>
 std::string_view BuyAction<Price>::getName() const
 {
-    static std::string concatenated;
-    concatenated = std::string(getBuyActionName()) + '\n' + std::to_string(Price) + CURRENCY_SYMBOL;
-    return std::string_view(concatenated);
+    if(m_buyActionName.empty()) 
+        m_buyActionName = std::string(getBuyActionName()) + '\n' + std::to_string(Price) + CURRENCY_SYMBOL;
+    return m_buyActionName;
 }
 static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.7f, .5f, .5f};
 template<int32_t Price>
@@ -210,7 +209,7 @@ void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
 #include <game/unitObject.hpp>
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class MoveAction<6>;
-template class UpgradeAction<1000,AircraftCarrierUpgrade1>;
-template class MoveAction<2>;
 template class MoveAction<2+1>;
+template class MoveAction<6>;
+template class UpgradeAction<900,AircraftCarrierUpgrade1>;
+template class MoveAction<2>;

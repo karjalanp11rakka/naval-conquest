@@ -16,8 +16,8 @@
 
 UIManager::UIManager()
 {  
-    RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    RenderEngine& renderEngineInstance = RenderEngine::getInstance();
+    GLFWController& glfwControllerInstance = GLFWController::getInstance();
     renderEngineInstance.addRenderCallback([this](){m_currentUI->update();});
 
     constexpr glm::vec3 blue(.1f, .2f, .9f);
@@ -41,7 +41,7 @@ UIManager::UIManager()
     static ButtonUIElement playButton(std::move(playButtonTextData), std::move(playButtonBackgroundData),
         [this]()
         {
-            static GameController& gameControllerInstance {GameController::getInstance()};
+            static GameController& gameControllerInstance = GameController::getInstance();
             changeCurrentUI(m_gameUI);
             gameControllerInstance.createGame(true);
 
@@ -143,7 +143,7 @@ UIManager::UIManager()
 
             m_gameGridSquares[gameElementIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
             {
-                static GameController& gameControllerInstance {GameController::getInstance()};
+                static GameController& gameControllerInstance = GameController::getInstance();
                 gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
             }, std::move(model), 
                 glm::vec3(.4f, .4f, .5f), yellow);
@@ -176,7 +176,7 @@ UIManager::UIManager()
         m_gameActionButtons[i] = std::make_unique<ScalableButtonUIElement>(std::move(textData), std::move(backgroundData), 
             [i]()
             {
-                static GameController& gameControllerInstance {GameController::getInstance()};
+                static GameController& gameControllerInstance = GameController::getInstance();
                 gameControllerInstance.receiveGameInput(i, ButtonTypes::ActionButton);
             }, yellow, .2f,
             actionButtonWidth, actionButtonHeight);
@@ -235,12 +235,8 @@ void UIManager::removeSavedSelection()
 }
 void UIManager::updateGameStatusTexts(GameStatutsData gameData)
 {
-    static std::string concatenatedTurnText;
-    concatenatedTurnText = std::string("TURN: ") + (gameData.turn ? "PLAYER ONE" : "PLAYER TWO");
-    m_turnText->changeText(std::string_view(concatenatedTurnText));
-    static std::string concatenatedMoneyText;
-    concatenatedMoneyText = "MONEY: " + std::to_string(gameData.money) + CURRENCY_SYMBOL;
-    m_moneyText->changeText(std::string_view(concatenatedMoneyText));
+    m_turnText->changeText(std::string("TURN: ") + (gameData.turn ? "PLAYER ONE" : "PLAYER TWO"));
+    m_moneyText->changeText("MONEY: " + std::to_string(gameData.money) + CURRENCY_SYMBOL);
 }
 void UIManager::removeDisabledColorToGridSquare(std::size_t index)
 {
@@ -269,7 +265,7 @@ void UIManager::enableGameActionButtons(const std::vector<std::pair<std::string_
     m_enabledButtonsCount = data.size() + 1;
     for(std::size_t i {1}; i < m_enabledButtonsCount; ++i)//ignore the first one which is the back button
     {
-        m_gameActionButtons[i]->changeText(data[i - 1].first);
+        m_gameActionButtons[i]->changeText(std::string(data[i - 1].first));
         m_gameActionButtons[i]->setBackgroundColor(data[i - 1].second);
         m_gameUI->enableElement(m_gameActionButtons[i].get());
     }

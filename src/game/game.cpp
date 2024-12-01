@@ -44,7 +44,7 @@ glm::vec3 gridIndicesToPosition(std::pair<std::size_t, std::size_t>&& gridIndice
 
 void Game::activatePlayerSquares()
 {
-    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    static UIManager& uiManagerInstance = UIManager::getInstance();
     std::bitset<GRID_SIZE * GRID_SIZE> setSquares {};
     for(int i {}; i < m_grid.size(); ++i)
     {
@@ -58,8 +58,8 @@ void Game::activatePlayerSquares()
 static constexpr int32_t PLAYER_STARTING_MONEY = 1000;
 Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer), m_playersMoney(std::make_pair(PLAYER_STARTING_MONEY, PLAYER_STARTING_MONEY))
 {
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
+    static UIManager& uiManagerInstance = UIManager::getInstance();
     updateStatusTexts();
     m_grid.initializeAt<AircraftCarrierUnit>(0, 0, true);
     m_grid.initializeAt<AircraftCarrierUnit>(9, 9, true);
@@ -83,13 +83,13 @@ void Game::addMoney(int32_t money)
 }
 void Game::updateStatusTexts()
 {
-    static UIManager& uiManagerInstance {UIManager::getInstance()};
+    static UIManager& uiManagerInstance = UIManager::getInstance();
     uiManagerInstance.updateGameStatusTexts({m_playerOneToPlay, getMoney()});
 }
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
-    static UIManager& uiManagerInstance {UIManager::getInstance()};
-    static ActionCallbackManager& actionCallbackManagerInstance {ActionCallbackManager::getInstance()};
+    static UIManager& uiManagerInstance = UIManager::getInstance();
+    static ActionCallbackManager& actionCallbackManagerInstance = ActionCallbackManager::getInstance();
     auto returnToPlayerUnitSelection = [&]()
     {
         m_selectedUnitIndices.reset();

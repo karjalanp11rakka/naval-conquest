@@ -15,30 +15,30 @@
 
 void UnitObject::updateModelMatrix()
 {
-    m_model = glm::mat4(1.f);
-    m_model *= glm::mat4_cast(m_transform.rotation);
-    m_model = glm::translate(m_model, m_transform.position);
-    m_model = glm::scale(m_model, m_transform.scale);
+    glm::mat4 model(1.f);
+    model *= glm::mat4_cast(m_transform.rotation);
+    model = glm::translate(model, m_transform.position);
+    model = glm::scale(model, m_transform.scale);
+    for(auto& obj : m_objects)
+    {
+        obj->setModel(model);
+    }
 }
-
-UnitObject::UnitObject(Game* gameInstance, Mesh mesh, Shader* shader, const Material& material, bool teamOne, std::vector<Action*>&& actions)
-    : m_gameInstance(gameInstance), LitObject(mesh, shader, material), m_teamOne(teamOne), m_actions(std::move(actions))
+void UnitObject::initialize()
 {
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.addObject(this);
+    addToRenderEngine();
 
     m_actionData.resize(m_actions.size());
     assert(m_actions.size() < GAME_ACTION_BUTTONS_COUNT && "Unit cannot have more actions than there are buttons");//the first button is back button so < instead of <=
-    std::transform(m_actions.begin(), m_actions.end(), m_actionData.begin(), [gameInstance](Action* action)
+    std::transform(m_actions.begin(), m_actions.end(), m_actionData.begin(), [&](Action* action)
     {
         //color is not constant so it's only set it when returning data
-        return std::make_pair(action->getName(), glm::vec3());
+        return std::make_pair(std::string_view(action->getName()), glm::vec3());
     });
 }
 UnitObject::~UnitObject()
 {
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.removeObject(this);
+    removeFromRenderEngine();
 }
 ActionTypes UnitObject::useAction(std::size_t actionIndex)
 {
@@ -57,32 +57,52 @@ const std::vector<std::pair<std::string_view, glm::vec3>>& UnitObject::getAction
     }
     return m_actionData;
 }
+
+template<ObjectDelivered T, typename... Args>
+T constructObject(std::string_view mesh, std::string_view vShader, std::string_view fShader, Args&&... args)
+{
+    static MeshManager& meshManagerInstance = MeshManager::getInstance();
+    static ShaderManager& shaderManagerInstance = ShaderManager::getInstance();
+    return T(meshManagerInstance.getFromOBJ(mesh), shaderManagerInstance.getShader(vShader, fShader), 
+        std::forward<Args>(args)...);
+}
+
+static constexpr Material TEAM_ONE_DEFAULT_MAT {glm::vec3(.1f, .6f, .1f), .3f, 150.f, .5f};
+static constexpr Material TEAM_ONE_SECONDARY_MAT {glm::vec3(.7f, .8f, .1f), .2f, 220.f, .8f};
+static constexpr Material TEAM_TWO_DEFAULT_MAT {glm::vec3(.6f, .1f, .6f), .3f, 150.f, .5f};
+static constexpr Material TEAM_TWO_SECONDARY_MAT {glm::vec3(.9f, .1f, .1f), .2f, 220.f, .8f};
+static constexpr Material DARK_MAT {glm::vec3(.1f, .1f, .1f), .5f, 100.f, .3f};
+
 static constexpr int AIRCRAFT_CARRIER_MOVE_RADIUS = 2;
-static constexpr Material AIRCRAFT_CARRIER_MATERIAL_TEAM_ONE {glm::vec3(.3f, .3f, .6f), .3f, 150.f, .6f};
-static constexpr Material AIRCRAFT_CARRIER_MATERIAL_TEAM_TWO {glm::vec3(.6f, .3f, .3f), .3f, 150.f, .6f};
 AircraftCarrierUnit::AircraftCarrierUnit(Game* gameInstance, bool teamOne) 
-    : UnitObject(gameInstance, MeshManager::getInstance().getFromOBJ(assets::MODELS_AIRCRAFT_CARRIER_OBJ),
-    ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL),
-    teamOne ? AIRCRAFT_CARRIER_MATERIAL_TEAM_ONE : AIRCRAFT_CARRIER_MATERIAL_TEAM_TWO, teamOne, 
-    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), &UpgradeAction<1000, AircraftCarrierUpgrade1>::get()})
+    : UnitObject(gameInstance, teamOne, 
+    //actions
+    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), &UpgradeAction<900, AircraftCarrierUpgrade1>::get()},
+    //3D object parts
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_MAT))
 {
     updateModelMatrix();
 }
 AircraftCarrierUpgrade1::AircraftCarrierUpgrade1(Game* gameInstance, bool teamOne) 
-    : UnitObject(gameInstance, MeshManager::getInstance().getFromOBJ(assets::MODELS_AIRCRAFT_CARRIER_UPGRADE_1_OBJ),
-    ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL),
-    teamOne ? AIRCRAFT_CARRIER_MATERIAL_TEAM_ONE : AIRCRAFT_CARRIER_MATERIAL_TEAM_TWO, teamOne, 
-    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS + 1>::get()})
+    : UnitObject(gameInstance, teamOne, 
+    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS + 1>::get()},
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_MAT))
 {
     updateModelMatrix();
 }
 
 static constexpr int SUBMARINE_CARRIER_MOVE_RADIUS = 6;
 SubmarineUnit::SubmarineUnit(Game* gameInstance, bool teamOne) 
-    : UnitObject(gameInstance, MeshManager::getInstance().getFromOBJ(assets::MODELS_SUBMARINE_OBJ),
-    ShaderManager::getInstance().getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL),
-    teamOne ? AIRCRAFT_CARRIER_MATERIAL_TEAM_ONE : AIRCRAFT_CARRIER_MATERIAL_TEAM_TWO, teamOne, 
-    {&MoveAction<SUBMARINE_CARRIER_MOVE_RADIUS>::get()})
+    : UnitObject(gameInstance, teamOne, 
+    {&MoveAction<SUBMARINE_CARRIER_MOVE_RADIUS>::get()},
+    constructObject<LitObject>(assets::MODELS_SUBMARINE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_SUBMARINE_SAIL_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT))
 {
     updateModelMatrix();
 }

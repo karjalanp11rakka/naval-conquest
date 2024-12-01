@@ -1,5 +1,5 @@
 #This file is designed to add explicit template class instantiations of the classes, so that template classes definition can be located in the .cpp file.
-#This allows having the template classes definition outside the header file.
+#This allows having the template classes definition outside the header file. It's currently a simple script and doesn't have advanced features.
 #It is currently only used to add explicit template class instantiations of the classes in 'include/game/action.hpp' to the end of 'src/game/action.cpp'.
 
 import os
@@ -21,11 +21,17 @@ class TemplateClass:
         self.min_template_count = min_template_count
     def __eq__(self, other):
         return self.name == other.name
+    def __hash__(self):
+        return hash(self.name)
 
 class TemplateClassInstantiation:
     def __init__(self, template_class, template_parameters):
         self.template_class = template_class
         self.template_parameters = template_parameters
+    def __eq__(self, other):
+        return other.template_class == self.template_class and other.template_parameters == self.template_parameters
+    def __hash__(self):
+        return hash((self.template_class, self.template_parameters))
 
 def ProcessLine(line: str) -> str:
     comment_start_index = line.find("//")

@@ -4,6 +4,7 @@
 #include <string_view>
 #include <cstddef>
 #include <utility>
+#include <concepts>
 
 #include <glm/fwd.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -21,18 +22,26 @@ struct Transform
 class Action;
 enum class ActionTypes;
 
-class UnitObject : public LitObject
+template<typename T>
+concept Object3DDelivered = std::derived_from<T, Object3D>;
+class UnitObject : public ObjectEntity
 {
 private:
     std::vector<Action*> m_actions;
     std::vector<std::pair<std::string_view, glm::vec3>> m_actionData;
+    void initialize();
 protected:
     Transform m_transform {};
     bool m_teamOne;
     void updateModelMatrix();
     Game* m_gameInstance;
 public:
-    UnitObject(Game* game, Mesh mesh, Shader* shader, const Material& material, bool teamOne, std::vector<Action*>&& actions);
+    template<Object3DDelivered... UnitParts>
+    UnitObject(Game* gameInstance, bool teamOne, std::vector<Action*>&& actions, UnitParts&&... parts)
+        : m_gameInstance(gameInstance), m_teamOne(teamOne), m_actions(std::move(actions)), ObjectEntity(std::forward<UnitParts>(parts)...)
+    {
+        initialize();
+    }
     virtual ~UnitObject();
 
     ActionTypes useAction(std::size_t actionIndex);

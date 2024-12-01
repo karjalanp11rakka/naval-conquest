@@ -28,12 +28,12 @@ static constexpr float SAME_ROW_EPSILON {.01f};
 
 void InteractableBackground::configureShaders() const 
 {
-    unsigned int colorLoc = glGetUniformLocation(shader->getID(), "color");
-    unsigned int modelLoc = glGetUniformLocation(shader->getID(), "model");
+    unsigned int colorLoc = glGetUniformLocation(m_shader->getID(), "color");
+    unsigned int modelLoc = glGetUniformLocation(m_shader->getID(), "model");
 
     glUniform3fv(colorLoc, 1, glm::value_ptr(m_highlightColor));
 
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     float windowWidth = glfwControllerInstance.getWidth();
     float windowHeight = glfwControllerInstance.getHeight();
 
@@ -53,7 +53,7 @@ void InteractableBackground::draw() const
 {
     if(m_useHighlight)
     {
-        shader->use();
+        m_shader->use();
         InteractableBackground::configureShaders();
         drawMesh();
     }
@@ -76,7 +76,7 @@ TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback
     static bool initialized {};
     if(!initialized)
     {
-        GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+        GLFWController& glfwControllerInstance = GLFWController::getInstance();
         if (!gltInit())
         {
             std::cerr << "Failed to initialize glText\n";
@@ -93,7 +93,7 @@ TextUIElement::~TextUIElement()
 void TextUIElement::update()
 {
     if(!m_enabled) return;
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     gltBeginDraw();
 
     int width {glfwControllerInstance.getWidth()}, height {glfwControllerInstance.getHeight()};
@@ -112,9 +112,9 @@ void TextUIElement::update()
 
     gltEndDraw();
 }
-void TextUIElement::changeText(std::string_view text)
+void TextUIElement::changeText(std::string&& text)
 {
-    m_textData.text = text;
+    m_textData.text = std::move(text);
 }
 ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness)
     : TextUIElement(std::move(textData), callback), m_textBackgroundData(backgroundData), m_highlightColor(highlightColor)
@@ -122,7 +122,7 @@ ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backg
     static auto uiElementShader {ShaderManager::getInstance().getShader(
         assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
 
-    static MeshManager& meshManagerInstance {MeshManager::getInstance()}; 
+    static MeshManager& meshManagerInstance = MeshManager::getInstance(); 
     //interactive elements
     if(m_callback)
     {
@@ -142,14 +142,12 @@ ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backg
 void ButtonUIElement::enable()
 {
     UIElement::enable();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.addObject(m_backgroundObject.get());
+    m_backgroundObject->addToRenderEngine();
 }
 void ButtonUIElement::disable()
 {
     UIElement::disable();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.removeObject(m_backgroundObject.get());
+    m_backgroundObject->removeFromRenderEngine();
 }
 void ButtonUIElement::focus()
 {
@@ -200,7 +198,7 @@ UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model,
     const glm::vec3& defaultColor, const glm::vec3& highlightColor)
     : UIElement(callback, glm::vec2(model[3].x, -model[3].z - 1.f)), m_defaultColor(defaultColor), m_highlightColor(highlightColor)
 {
-    static MeshManager& meshManagerInstance {MeshManager::getInstance()}; 
+    static MeshManager& meshManagerInstance = MeshManager::getInstance(); 
     m_object = std::make_unique<UnlitObject>(meshManagerInstance.getGrid(1, NormalMode::none), defaultColor);
     m_object->setModel(std::move(model));
 }
@@ -208,10 +206,7 @@ void UIElement3D::enable()
 {
     UIElement::enable();
     if(!m_hasDisabledColor)
-    {
-        static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-        renderEngineInstance.addObject(m_object.get());
-    }
+        m_object->addToRenderEngine();
     else
     {
         m_hasDisabledColor = false;
@@ -222,10 +217,7 @@ void UIElement3D::disable()
 {
     UIElement::disable();
     if(!m_hasDisabledColor)
-    {
-        static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-        renderEngineInstance.removeObject(m_object.get());
-    }
+        m_object->removeFromRenderEngine();
 }
 void UIElement3D::addDisabledColor(const glm::vec3& temporaryColor)
 {
@@ -236,8 +228,7 @@ void UIElement3D::removeDisabledColor()
 {
     m_hasDisabledColor = false;
     m_object->setColor(m_defaultColor);
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    renderEngineInstance.removeObject(m_object.get());
+    m_object->removeFromRenderEngine();
 }
 
 void UIElement3D::focus()
@@ -378,8 +369,8 @@ UIPreset::UIPreset(std::vector<UIElement*>&& unsortedElements)
 
 void UIPreset::enable()
 { 
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
+    static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
 
     m_interactableElementsCount = 0;
     //send the objects to render engine and make the first interactable element focused
@@ -405,7 +396,7 @@ void UIPreset::enable()
 void UIPreset::disable()
 {
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
-    static RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
+    static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
     for(auto& row : m_sortedElements)
         for(auto element : row)
             element->disable();

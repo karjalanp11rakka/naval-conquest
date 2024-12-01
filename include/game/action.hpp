@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <string_view>
+#include <string>
 #include <cstddef>
 #include <variant>
 #include <concepts>
@@ -43,10 +44,10 @@ public:
     {
         m_callback = std::forward<Func>(func);
     }
-    template<typename T, typename... Args>
-    void invoke(Args&&... args)
+    template<typename T, typename... UnitParts>
+    void invoke(UnitParts&&... args)
     {
-        std::get<T>(m_callback)(std::forward<Args>(args)...);
+        std::get<T>(m_callback)(std::forward<UnitParts>(args)...);
         reset();
     }
     void reset()
@@ -100,6 +101,8 @@ public:
 template<int32_t Price>
 class BuyAction : public Action
 {
+private:
+    mutable std::string m_buyActionName;
 protected:
     virtual std::string_view getBuyActionName() const = 0;
     virtual void buy(Game* gameInstance) = 0;
@@ -113,14 +116,17 @@ public:
 template<int Radius>
 class MoveAction final : public SelectOnGridAction<Radius, true, SelectOnGridTypes::area>, public SingletonAction<MoveAction<Radius>>
 {
+private:
+    const std::string_view m_name = "MOVE";
 public:
-    std::string_view getName() const override {return "MOVE";}
+    std::string_view getName() const override {return m_name;}
     void callback(Game* gameInstance, std::size_t x, std::size_t y) const override;
 };
 template<int32_t Price, typename UpgradeClass>
 class UpgradeAction final : public BuyAction<Price>, public SingletonAction<UpgradeAction<Price, UpgradeClass>>
 {
+    const std::string_view m_name = "UPGRADE";
 protected:
-    std::string_view getBuyActionName() const override {return "UPGRADE";}
+    std::string_view getBuyActionName() const override {return m_name;}
     void buy(Game* gameInstance) override;
 };

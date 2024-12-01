@@ -79,7 +79,7 @@ void GLFWController::unmaximize()
 
 void GLFWController::close()
 {
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     glfwSetWindowShouldClose(glfwControllerInstance.m_window, true);
 }
 
@@ -99,7 +99,7 @@ void GLFWController::addInputCallback(const std::function<void(int)>& callback)
 }
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     if(action == GLFW_RELEASE)
     {
         for(auto& func : glfwControllerInstance.m_inputCallbacks)
@@ -109,7 +109,7 @@ void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mo
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
-    static GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     glfwControllerInstance.m_width = width;
     glfwControllerInstance.m_height = height;
     glfwControllerInstance.m_isMaximised = glfwGetWindowAttrib(glfwControllerInstance.m_window, GLFW_MAXIMIZED);

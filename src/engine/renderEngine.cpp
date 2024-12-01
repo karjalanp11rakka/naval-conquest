@@ -16,7 +16,7 @@
 
 RenderEngine::RenderEngine()
 {
-    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
+    GLFWController& glfwControllerInstance = GLFWController::getInstance();
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cerr << "Failed to initialize GLAD\n"; 

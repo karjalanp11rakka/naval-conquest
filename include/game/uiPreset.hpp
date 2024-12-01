@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <utility>
-#include <string_view>
+#include <string>
 #include <vector>
 #include <functional>
 #include <cstddef>
@@ -52,7 +52,7 @@ public:
 
 struct TextData
 {
-    std::string_view text;
+    std::string text;
     glm::vec2 position {};
     glm::vec3 textColor {};
     float scale {};
@@ -69,7 +69,7 @@ public:
     void focus() override {}
     void defocus() override {}
     void update() override;
-    void changeText(std::string_view text);
+    void changeText(std::string&& text);
 };
 
 struct TextBackgroundData
@@ -94,12 +94,12 @@ public:
 class SettingUIElement : public ButtonUIElement
 {
 private:
-    std::string_view m_enabledText;
+    std::string m_enabledText;
     bool* m_turnedOn;
 public:
     SettingUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness,
-    std::string_view enabledText, bool* turnedOn)
-        : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_enabledText(enabledText), m_turnedOn(turnedOn) {}
+    std::string&& enabledText, bool* turnedOn)
+        : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_enabledText(std::move(enabledText)), m_turnedOn(turnedOn) {}
     void trigger() override;
 };
 class ScalableButtonUIElement : public ButtonUIElement

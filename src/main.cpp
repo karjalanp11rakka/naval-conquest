@@ -4,9 +4,9 @@
 
 int main()
 {
-    GLFWController& glfwControllerInstance {GLFWController::getInstance()};
-    RenderEngine& renderEngineInstance {RenderEngine::getInstance()};
-    GameController& gameControllerInstance {GameController::getInstance()};
+    GLFWController& glfwControllerInstance = GLFWController::getInstance();
+    RenderEngine& renderEngineInstance = RenderEngine::getInstance();
+    GameController& gameControllerInstance = GameController::getInstance();
 
     while (!glfwControllerInstance.shouldClose())
     {        
