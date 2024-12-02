@@ -26,7 +26,7 @@ void UnitObject::updateModelMatrix()
 }
 void UnitObject::initialize()
 {
-    addToRenderEngine();
+    addToRenderEngine(Object3DRenderTypes::renderLastly);
 
     m_actionData.resize(m_actions.size());
     assert(m_actions.size() < GAME_ACTION_BUTTONS_COUNT && "Unit cannot have more actions than there are buttons");//the first button is back button so < instead of <=

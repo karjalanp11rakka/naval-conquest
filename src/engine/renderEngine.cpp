@@ -38,7 +38,17 @@ void RenderEngine::update()
     m_camera->update();
 
     glEnable(GL_DEPTH_TEST); 
-    for(auto object : m_objects3D)
+    for(auto object : m_objects3DNormal)
+    {
+        object->draw();
+    }
+    glDisable(GL_DEPTH_TEST);
+    for(auto object : m_objects3DnoDepth)
+    {
+        object->draw();
+    }
+    glEnable(GL_DEPTH_TEST); 
+    for(auto object : m_objects3Dlastl)
     {
         object->draw();
     }
@@ -51,16 +61,50 @@ void RenderEngine::update()
         callback();
 }
 
-void RenderEngine::addObject(Object* objPtr)
+void RenderEngine::addObject(Object* objPtr, Object3DRenderTypes renderType)
 {
-    auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D}; 
-    if(std::find(objects.begin(), objects.end(), objPtr) == objects.end())
-        objects.push_back(objPtr);
+    auto processObjectsVector = [objPtr](std::vector<Object*>& objects)
+    {
+        if(std::find(objects.begin(), objects.end(), objPtr) == objects.end())
+            objects.push_back(objPtr);
+    };
+    if(!dynamic_cast<const Object3D*>(objPtr))
+    {
+        processObjectsVector(m_objects2D);
+        return;
+    }
+    switch (renderType)
+    {
+    case Object3DRenderTypes::normal:
+        processObjectsVector(m_objects3DNormal);
+        break;
+    case Object3DRenderTypes::noDepthTest:
+        processObjectsVector(m_objects3DnoDepth);
+    case Object3DRenderTypes::renderLastly:
+        processObjectsVector(m_objects3Dlastl);
+    }
 }
-void RenderEngine::removeObject(Object* objPtr)
+void RenderEngine::removeObject(Object* objPtr, Object3DRenderTypes renderType)
 {
-    auto& objects {dynamic_cast<const Object3D*>(objPtr) ? m_objects3D : m_objects2D};
-    objects.erase(std::find(objects.begin(), objects.end(), objPtr));
+    auto processObjectsVector = [objPtr](std::vector<Object*>& objects)
+    {
+        objects.erase(std::find(objects.begin(), objects.end(), objPtr));
+    };
+    if(!dynamic_cast<const Object3D*>(objPtr))
+    {
+        processObjectsVector(m_objects2D);
+        return;
+    }
+    switch (renderType)
+    {
+    case Object3DRenderTypes::normal:
+        processObjectsVector(m_objects3DNormal);
+        break;
+    case Object3DRenderTypes::noDepthTest:
+        processObjectsVector(m_objects3DnoDepth);
+    case Object3DRenderTypes::renderLastly:
+        processObjectsVector(m_objects3Dlastl);
+    }
 }
 
 void RenderEngine::setLighting(SceneLighting&& lighting)

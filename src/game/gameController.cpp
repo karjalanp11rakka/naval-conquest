@@ -30,9 +30,8 @@ GameController::GameController()
     ShaderManager& shaderManagerInstance = ShaderManager::getInstance();
 
     glfwControllerInstance.addInputCallback(inputCallback);
-
-    m_waterObj = std::make_unique<Object3D>(meshManagerInstance.getGrid(2, NormalMode::flat), 
-        shaderManagerInstance.getShader(assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FWATER_GLSL));
+    m_waterObj = std::make_unique<Object3D>(meshManagerInstance.getGrid(26, NormalMode::flat), 
+        shaderManagerInstance.getShader(assets::SHADERS_VWATER_GLSL, assets::SHADERS_FWATER_GLSL), true);
     glm::mat4 waterModel(1.f);
     m_waterObj->addToRenderEngine();
     waterModel = glm::rotate(waterModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));

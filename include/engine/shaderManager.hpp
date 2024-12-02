@@ -24,8 +24,7 @@ struct StringPtrPairEqual
 {
     bool operator()(const std::pair<const std::string_view*, const std::string_view*>& first,
                     const std::pair<const std::string_view*, const std::string_view*>& second) const {
-        return first == first && second == second;
-    }
+    return *first.first == *second.first && *first.second == *second.second;    }
 };
 
 class ShaderManager

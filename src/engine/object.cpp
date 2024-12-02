@@ -9,15 +9,15 @@
 #include <engine/meshManager.hpp>
 #include <engine/shader.hpp>
 #include <engine/shaderManager.hpp>
-#include <engine/renderEngine.hpp>
 #include <engine/object.hpp>
 #include <engine/sceneLighting.hpp>
 #include <assets.hpp>
+#include <glfwController.hpp>
 
-void ObjectEntity::addToRenderEngine()
+void ObjectEntity::addToRenderEngine(Object3DRenderTypes renderType)
 {
     for(auto& obj : m_objects)
-        obj->addToRenderEngine();
+        obj->addToRenderEngine(renderType);
 }
 void ObjectEntity::removeFromRenderEngine()
 {
@@ -32,15 +32,26 @@ void Object::drawMesh() const
         glDrawElements(GL_TRIANGLES, m_mesh.indicesLength, GL_UNSIGNED_INT, 0);
     else glDrawArrays(GL_TRIANGLES, 0, m_mesh.vertexCount);
 }
-void Object::addToRenderEngine()
+void Object::configureShaders() const
 {
+    if(m_useTime)
+    {
+        static GLFWController& glfwControllerInstance = GLFWController::getInstance();
+
+        unsigned int timeLoc = glGetUniformLocation(m_shader->getID(), "time");
+        glUniform1f(timeLoc, glfwControllerInstance.getTime());
+    }
+}
+void Object::addToRenderEngine(Object3DRenderTypes renderType)
+{
+    m_renderType = renderType;
     static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
-    renderEngineInstance.addObject(this);
+    renderEngineInstance.addObject(this, renderType);
 }
 void Object::removeFromRenderEngine()
 {
     static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
-    renderEngineInstance.removeObject(this);
+    renderEngineInstance.removeObject(this, m_renderType);
 }
 void Object::setModel(glm::mat4&& model)
 {
@@ -66,6 +77,7 @@ void Object3D::draw() const
 {
     m_shader->use();
     Object3D::configureShaders();
+    Object::configureShaders();
     drawMesh();
 }
 
@@ -126,12 +138,12 @@ void LitObject::draw() const
     drawMesh();
 }
 
-UnlitObject::UnlitObject(Mesh mesh, const glm::vec3& color)
+UnlitObject::UnlitObject(Mesh mesh, const glm::vec3& color, bool useTime)
     : Object3D(mesh, ShaderManager::getInstance().getShader(assets::SHADERS_VSIMPLE_GLSL,
-    assets::SHADERS_FSIMPLEUNLIT_GLSL)), AbstractColorSetter(color) {}
+    assets::SHADERS_FSIMPLEUNLIT_GLSL), useTime), AbstractColorSetter(color) {}
 
-Object2D::Object2D(Mesh mesh, Shader* shader, const glm::vec3& color)
-        : Object(mesh, shader), AbstractColorSetter(color) {}
+Object2D::Object2D(Mesh mesh, Shader* shader, const glm::vec3& color, bool useTime)
+        : Object(mesh, shader, useTime), AbstractColorSetter(color) {}
 
 void UnlitObject::configureShaders() const
 {
@@ -158,5 +170,6 @@ void Object2D::draw() const
 {
     m_shader->use();
     Object2D::configureShaders();
+    Object::configureShaders();
     drawMesh();
 }

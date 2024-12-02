@@ -206,7 +206,7 @@ void UIElement3D::enable()
 {
     UIElement::enable();
     if(!m_hasDisabledColor)
-        m_object->addToRenderEngine();
+        m_object->addToRenderEngine(Object3DRenderTypes::noDepthTest);
     else
     {
         m_hasDisabledColor = false;

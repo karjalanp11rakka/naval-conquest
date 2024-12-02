@@ -11,6 +11,13 @@ class SceneLighting;
 class Object;
 class Camera;
 
+enum class Object3DRenderTypes
+{
+    normal,
+    noDepthTest,
+    renderLastly
+};
+
 class RenderEngine
 {
 private:
@@ -20,7 +27,7 @@ private:
     RenderEngine& operator=(const RenderEngine& other) = delete;
 
     int m_width {}, m_height {};
-    std::vector<Object*> m_objects3D, m_objects2D;
+    std::vector<Object*> m_objects3DNormal, m_objects3DnoDepth, m_objects3Dlastl, m_objects2D;
     Camera* m_camera {};
     glm::vec3 m_backgroundColor;
     std::unique_ptr<SceneLighting> m_lighting;
@@ -33,8 +40,8 @@ public:
     }
 
     void update();
-    void addObject(Object* obj);
-    void removeObject(Object* objPtr);
+    void addObject(Object* obj, Object3DRenderTypes renderType = Object3DRenderTypes::normal);
+    void removeObject(Object* objPtr, Object3DRenderTypes renderType = Object3DRenderTypes::normal);
     void setLighting(SceneLighting&& lighting);
     SceneLighting* getLighting() const;
     void setBackgroundColor(const glm::vec3& color) {m_backgroundColor = color;}

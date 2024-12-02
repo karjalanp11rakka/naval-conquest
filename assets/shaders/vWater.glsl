@@ -6,10 +6,18 @@ out vec3 FragPos;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform float time;
+out float zPosOffset;
+
+float random(float seed)
+{
+    return fract(sin(seed) * 43758.5453);
+}
 
 void main()
 {
-    vec4 modelPosition = model * vec4(aPos.x, aPos.y, aPos.z, 1.0f);
+    zPosOffset = sin(random(aPos.x * aPos.y) * 100.f + time * 2.f);
+    vec4 modelPosition = model * vec4(aPos.x, aPos.y, aPos.z + zPosOffset / 150.f, 1.0f);
     FragPos = modelPosition.xyz / modelPosition.w;
 
     gl_Position = projection * view * modelPosition;
