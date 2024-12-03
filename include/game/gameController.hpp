@@ -32,4 +32,5 @@ public:
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);
     void onWindowResize(int width, int height);
     void createGame(bool onePlayer);
+    OrbitingCamera* getCamera() {return m_camera.get();}
 };

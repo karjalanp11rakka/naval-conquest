@@ -14,6 +14,7 @@
 #include <game/uiManager.hpp>
 #include <game/random.hpp>
 #include <game/uiPreset.hpp>
+#include <engine/camera.hpp>
 #include <assets.hpp>
 
 GameGrid::~GameGrid() {} 
@@ -90,6 +91,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
     static ActionCallbackManager& actionCallbackManagerInstance = ActionCallbackManager::getInstance();
+    static GameController& gameControllerInstance = GameController::getInstance();
     auto returnToPlayerUnitSelection = [&]()
     {
         m_selectedUnitIndices.reset();
@@ -112,12 +114,14 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             }
             else
             {
+                gameControllerInstance.getCamera()->stopZoom();
                 returnToPlayerUnitSelection();
                 actionCallbackManagerInstance.reset();
             }
         }
         else
         {
+            gameControllerInstance.getCamera()->stopZoom();
             m_selectedActionIndex = index - 1;
             auto actionType = m_grid.at(m_selectedUnitIndices.value())->useAction(m_selectedActionIndex.value());
             switch (actionType)
@@ -149,6 +153,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         }
         else
         {
+            gameControllerInstance.getCamera()->zoom(m_grid[index]->getPosition(), .3f, .5f, 1.f);
             uiManagerInstance.saveCurrentSelection();
             static constexpr auto gridSquareSelectedColor = glm::vec3(.7f, .9f, .2f);
             m_selectedUnitIndices = selectedActionSquare;

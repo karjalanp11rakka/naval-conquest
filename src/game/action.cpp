@@ -210,6 +210,6 @@ void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
 template class MoveAction<6>;
+template class UpgradeAction<900,AircraftCarrierUpgrade1>;
 template class MoveAction<2>;
 template class MoveAction<2+1>;
-template class UpgradeAction<900,AircraftCarrierUpgrade1>;
