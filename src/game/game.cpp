@@ -90,7 +90,7 @@ void Game::updateStatusTexts()
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
-    static ActionCallbackManager& actionCallbackManagerInstance = ActionCallbackManager::getInstance();
+    static SelectSquareCallbackManager& actionCallbackManagerInstance = SelectSquareCallbackManager::getInstance();
     static GameController& gameControllerInstance = GameController::getInstance();
     auto returnToPlayerUnitSelection = [&]()
     {
@@ -121,7 +121,6 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         }
         else
         {
-            gameControllerInstance.getCamera()->stopZoom();
             m_selectedActionIndex = index - 1;
             auto actionType = m_grid.at(m_selectedUnitIndices.value())->useAction(m_selectedActionIndex.value());
             switch (actionType)
@@ -129,9 +128,11 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             case ActionTypes::selectSquare:
                 uiManagerInstance.saveCurrentSelection();
                 uiManagerInstance.disableGameActionButtons(false);
+                gameControllerInstance.getCamera()->stopZoom();
                 break;
             case ActionTypes::immediate:
                 m_selectedActionIndex.reset();
+                gameControllerInstance.getCamera()->stopZoom();
                 returnToPlayerUnitSelection();
                 break;
             case ActionTypes::nothing:
@@ -145,7 +146,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         auto selectedActionSquare = GameGrid::convertIndexToIndices(index);
         if(m_selectedActionIndex)
         {
-            actionCallbackManagerInstance.invoke<SelectSquareCallback>(this, selectedActionSquare.first, selectedActionSquare.second);
+            actionCallbackManagerInstance.invoke(this, selectedActionSquare.first, selectedActionSquare.second);
             uiManagerInstance.removeDisabledColorToGridSquare(GameGrid::convertIndicesToIndex(m_selectedUnitIndices.value()));
             uiManagerInstance.removeSavedSelection();
             returnToPlayerUnitSelection();

@@ -9,6 +9,7 @@
 #include <concepts>
 #include <functional>
 #include <cstdint>
+#include <cassert>
 
 #include <glm/glm.hpp>
 
@@ -25,34 +26,32 @@ class GameGrid;
 class Game;
 
 using SelectSquareCallback = std::function<void(Game*, std::size_t, std::size_t)>;
-
-class ActionCallbackManager
+//This used to be more flexible and had templates but it has now been changed to be more explicit because the actions will only need this single callback
+class SelectSquareCallbackManager
 {
 private:
-    ActionCallbackManager() {}
-    ~ActionCallbackManager() = default;
-    using CallbackVariant = std::variant<std::function<void()>, SelectSquareCallback>;
-    CallbackVariant m_callback;
+    SelectSquareCallbackManager() {}
+    ~SelectSquareCallbackManager() = default;
+    SelectSquareCallback m_callback;
 public:
-    static ActionCallbackManager& getInstance()
+    static SelectSquareCallbackManager& getInstance()
     {
-        static ActionCallbackManager instance;
+        static SelectSquareCallbackManager instance;
         return instance;
     }
-    template<typename Func>
-    void bindCallback(Func&& func)
+    void bindCallback(SelectSquareCallback&& func)
     {
-        m_callback = std::forward<Func>(func);
+        m_callback = std::move(func);
     }
-    template<typename T, typename... UnitParts>
-    void invoke(UnitParts&&... args)
+    void invoke(Game* gameInstance, std::size_t x, std::size_t y)
     {
-        std::get<T>(m_callback)(std::forward<UnitParts>(args)...);
+        assert(m_callback);
+        m_callback(gameInstance, x, y);
         reset();
     }
     void reset()
     {
-        m_callback = std::function<void()>();
+        m_callback = nullptr;
     }
 };
 

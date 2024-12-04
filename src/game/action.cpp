@@ -1,6 +1,5 @@
 #include <array>
 #include <optional>
-#include <cassert>
 
 #include <game/action.hpp>
 #include <game/game.hpp>
@@ -31,7 +30,6 @@ void SelectOnGridAction<Radius, Blockable, SelectType>::setGameGridSquares(Indic
         setSquares.set(pair.first + pair.second * GRID_SIZE);
     uiManagerInstance.setGameGridSquares(std::move(setSquares));
 }
-
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
 ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameInstance)
 {
@@ -39,7 +37,7 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
     {
         this->callback(gameInstance, x, y);
     }; 
-    ActionCallbackManager::getInstance().bindCallback<SelectSquareCallback>(std::move(callback));
+    SelectSquareCallbackManager::getInstance().bindCallback(std::move(callback));
 
     GameGrid& gameGrid = this->getGameGrid(gameInstance);
     auto indices = this->getSelectedUnitIndices(gameInstance);
@@ -65,8 +63,8 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
                 assert(blockMask.has_value());
                 if(i < processedIndex) 
                 {
-                    if(vertical) blockMask.value().first |= (1ULL << (newIndices.size() - 2));
-                    else blockMask.value().second |= (1ULL << (newIndices.size() - 2));
+                    if(vertical) blockMask.value().first |= (1ULL << newIndices.size()) - 1;
+                    else blockMask.value().second |= (1ULL << newIndices.size()) - 1;
                     newIndices.clear();
                     continue;
                 }
@@ -82,11 +80,10 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
     };
     auto addArea = [&squaresToActivate, indices, &blockMask, &gameGrid]()
     {
-        auto validPosIndex = [](int x)  -> bool
+        auto validPosIndex = [](int x) -> bool
         {
             return x < GRID_SIZE && x >= 0;
         };
-
         static constexpr std::array<std::pair<int, int>, 4> directions =
         {
             std::make_pair(1, -1), 
@@ -96,25 +93,28 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
         };
         for(auto dir : directions)
         {
+            //this lambda should not affect the blocking elsewhere hence the copy
+            std::optional<BlockMask> areaBlockMask = blockMask;
             for(int length {Radius - 1}, offsetX {dir.first}, offsetY {dir.second};
                 length >= 1; length -= 2, offsetX += dir.first, offsetY += dir.second)
             {
                 int x = indices.first + offsetX;
                 int y = indices.second + offsetY;
                 if(!validPosIndex(x) || !validPosIndex(y)) break;
-                std::size_t blockMaskX = Radius + offsetX + (offsetX < 0 ? -1: -2);
-                std::size_t blockMaskY = Radius + offsetY + (offsetY < 0 ? -1: -2);
+                std::size_t blockMaskX = Radius + offsetX + (offsetX < 0 ? -1 : -2);
+                std::size_t blockMaskY = Radius + offsetY + (offsetY < 0 ? -1 : -2);
                 if(!gameGrid.at(x, y))
                 {
                     if(!Blockable
-                        || !blockMask.value().first.test(blockMaskX)
-                        || !blockMask.value().second.test(blockMaskY))
+                        || !areaBlockMask.value().first.test(blockMaskX)
+                        || !areaBlockMask.value().second.test(blockMaskY))
                         squaresToActivate.push_back(std::make_pair(x, y));
                 }
                 else if(Blockable)
                 {
-                    blockMask.value().first.set(blockMaskX);
-                    blockMask.value().second.set(blockMaskY);
+                    assert(areaBlockMask.has_value());
+                    areaBlockMask.value().first.set(blockMaskX);
+                    areaBlockMask.value().second.set(blockMaskY);
                 }
                 for(int i {1}; i < length; ++i)
                 {
@@ -130,14 +130,14 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
                         if(!gameGrid.at(newX, y))
                         {
                             if(!Blockable 
-                                || !blockMask.value().first.test(newBlockMaskX)
-                                || !blockMask.value().second.test(blockMaskY))
+                                || !areaBlockMask.value().first.test(newBlockMaskX)
+                                || !areaBlockMask.value().second.test(blockMaskY))
                                 squaresToActivate.push_back(std::make_pair(newX, y));
                         }
                         else if(Blockable)
                         {
-                            blockMask.value().first.set(newBlockMaskX);
-                            blockMask.value().second.set(blockMaskY);
+                            areaBlockMask.value().first.set(newBlockMaskX);
+                            areaBlockMask.value().second.set(blockMaskY);
                         }
                     }
                     if(validY)
@@ -145,14 +145,14 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
                         if(!gameGrid.at(x, newY))
                         {
                             if(!Blockable 
-                                || !blockMask.value().first.test(blockMaskX)
-                                || !blockMask.value().second.test(newBlockMaskY))
+                                || !areaBlockMask.value().first.test(blockMaskX)
+                                || !areaBlockMask.value().second.test(newBlockMaskY))
                                 squaresToActivate.push_back(std::make_pair(x, newY));
                         }
                         else if(Blockable)
                         {
-                            blockMask.value().first.set(blockMaskX);
-                            blockMask.value().second.set(newBlockMaskY);
+                            areaBlockMask.value().first.set(blockMaskX);
+                            areaBlockMask.value().second.set(newBlockMaskY);
                         }
                     }
                 }
