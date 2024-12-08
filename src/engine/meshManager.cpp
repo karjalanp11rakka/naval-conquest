@@ -115,7 +115,7 @@ Mesh meshtools::generateCube(NormalMode normalMode)
         -1.f,  1.f,  1.f,
         -1.f,  1.f, -1.f,
     };
-    static constexpr int length {std::ssize(vertices)};
+    constexpr int length {std::ssize(vertices)};
 
     return makeMesh<vertices, length>(normalMode);
 }
@@ -140,7 +140,7 @@ Mesh meshtools::generateTetrahedron(NormalMode normalMode)
         -1.f,  1.f, -1.f,
         1.f, -1.f, -1.f
     };
-    static constexpr int length {std::ssize(vertices)};
+    constexpr int length {std::ssize(vertices)};
 
     return makeMesh<vertices, length>(normalMode);
 }
@@ -321,7 +321,7 @@ Mesh meshtools::loadFromOBJ(std::string_view objString)
 
                 if(useNormals)
                 {
-                    std::size_t normalStartIndex {};
+                    std::size_t normalStartIndex;
                     if(useTextures)
                     {
                         std::size_t textureStartIndex = startIndex + numberLength + 1;

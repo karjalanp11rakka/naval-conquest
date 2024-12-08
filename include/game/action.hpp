@@ -25,7 +25,7 @@ enum class ActionTypes
 class GameGrid;
 class Game;
 
-using SelectSquareCallback = std::function<void(Game*, std::size_t, std::size_t)>;
+using SelectSquareCallback = std::function<float(Game*, std::size_t, std::size_t)>;
 //This used to be more flexible and had templates but it has now been changed to be more explicit because the actions will only need this single callback
 class SelectSquareCallbackManager
 {
@@ -43,10 +43,10 @@ public:
     {
         m_callback = std::move(func);
     }
-    void invoke(Game* gameInstance, std::size_t x, std::size_t y)
+    void invoke(Game* gameInstance, std::size_t x, std::size_t y, float& cooldown)
     {
         assert(m_callback);
-        m_callback(gameInstance, x, y);
+        cooldown = m_callback(gameInstance, x, y);
         reset();
     }
     void reset()
@@ -95,7 +95,7 @@ protected:
     void setGameGridSquares(IndicesList&& activeSquares);
 public:
     ActionTypes use(Game* gameInstance) override final;
-    virtual void callback(Game* gameInstance, std::size_t x, std::size_t y) const = 0;
+    virtual float callback(Game* gameInstance, std::size_t x, std::size_t y) const = 0;
 };
 template<int32_t Price>
 class BuyAction : public Action
@@ -119,7 +119,7 @@ private:
     const std::string_view m_name = "MOVE";
 public:
     std::string_view getName() const override {return m_name;}
-    void callback(Game* gameInstance, std::size_t x, std::size_t y) const override;
+    float callback(Game* gameInstance, std::size_t x, std::size_t y) const override;
 };
 template<int32_t Price, typename UpgradeClass>
 class UpgradeAction final : public BuyAction<Price>, public SingletonAction<UpgradeAction<Price, UpgradeClass>>

@@ -426,13 +426,22 @@ void UIPreset::disableElement(UIElement* ptr)
 }
 void UIPreset::enableElement(UIElement* ptr)
 {
-    for(auto& row : m_sortedElements)
+    for(std::size_t i {}; i < m_sortedElements.size(); ++i)
     {
-        for(auto element : row)
-            if(element == ptr)
+        for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
+            if(m_sortedElements[i][j] == ptr)
             {
-                element->enable();
-                if(element->interactable()) ++m_interactableElementsCount;
+                m_sortedElements[i][j]->enable();
+                if(m_sortedElements[i][j]->interactable())
+                {
+                    ++m_interactableElementsCount;
+                    if(m_interactableElementsCount == 1)
+                    {
+                        m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
+                        m_focusIndices = std::make_pair(i, j);
+                        m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
+                    }
+                }
                 return;
             }
     }

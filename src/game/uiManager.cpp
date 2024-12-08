@@ -136,7 +136,7 @@ UIManager::UIManager()
         for(std::size_t x {}; x < GRID_SIZE; ++x)
         {
             glm::mat4 model(1.f);
-            model = glm::translate(model, gridIndicesToPosition(std::make_pair(x, y)));
+            model = glm::translate(model, GameGrid::gridLocationToPosition(std::make_pair(x, y)));
             model = glm::translate(model, glm::vec3(0.f, .001f, 0.f));
             model = glm::rotate(model, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
             model = glm::scale(model, glm::vec3(0.9f / GRID_SIZE));
@@ -172,7 +172,7 @@ UIManager::UIManager()
             backgroundData.backgroundColor = {.9f, .5f, .4f};
         }
 
-        static constexpr float actionButtonWidth = .12f, actionButtonHeight = .05f;
+        constexpr float actionButtonWidth = .12f, actionButtonHeight = .05f;
         m_gameActionButtons[i] = std::make_unique<ScalableButtonUIElement>(std::move(textData), std::move(backgroundData), 
             [i]()
             {

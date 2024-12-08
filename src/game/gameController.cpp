@@ -50,10 +50,13 @@ GameController::GameController()
 
 GameController::~GameController() {}
 
-void GameController::update() {}
+void GameController::update() 
+{
+    if(m_currentGame) m_currentGame->update();
+}
 void GameController::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
-    m_currentGame->receiveGameInput(index, buttonType);
+    if(m_currentGame) m_currentGame->receiveGameInput(index, buttonType);
 }
 
 void GameController::onWindowResize(int width, int height)

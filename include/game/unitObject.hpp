@@ -45,7 +45,8 @@ public:
     virtual ~UnitObject();
 
     ActionTypes useAction(std::size_t actionIndex);
-    void setTransform(Transform&& trasnform);
+    void setPosition(glm::vec3 position);
+    void setRotation(glm::quat rotation);
     bool isTeamOne() const noexcept {return m_teamOne;}
     const glm::vec3& getPosition() const {return m_transform.position;}
     const glm::vec3& getScale() const {return m_transform.scale;}

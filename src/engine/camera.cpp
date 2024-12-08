@@ -41,7 +41,7 @@ void OrbitingCamera::update()
                 float ratio = zoomProperties.timeLeft / zoomProperties.transitionTime;
                 float otherRatio = 1.f - ratio;
                 frameLookAtPoint 
-                    = zoomProperties.lookAtPoint * glm::vec3(otherRatio) + m_lookAtPoint * ratio; 
+                    = zoomProperties.lookAtPoint * otherRatio + m_lookAtPoint * ratio; 
                 frameRadius = zoomProperties.zoomRadius * otherRatio + m_radius * ratio;
                 m_position.y = zoomProperties.zoomHeight * otherRatio + m_height * ratio;
             }

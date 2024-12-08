@@ -35,7 +35,7 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
 {
     SelectSquareCallback callback = [&](Game* gameInstance, std::size_t x, std::size_t y)
     {
-        this->callback(gameInstance, x, y);
+        return this->callback(gameInstance, x, y);
     }; 
     SelectSquareCallbackManager::getInstance().bindCallback(std::move(callback));
 
@@ -51,9 +51,13 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
         IndicesList newIndices;
         std::size_t processedIndex = vertical ? indices.first : indices.second;
         
-        auto maxIndex = std::min(static_cast<std::size_t>(GRID_SIZE), processedIndex + Radius + 1);
-        for(std::size_t i {static_cast<std::size_t>(std::max(static_cast<int>(processedIndex) - Radius, 0))}; 
-            i < maxIndex; ++i)
+        std::size_t i = static_cast<std::size_t>(std::max(static_cast<int>(processedIndex) - Radius, 0));
+        std::size_t startIndexOffset;
+        if(i == 0) startIndexOffset = std::abs(static_cast<int>(processedIndex) - Radius);
+        else startIndexOffset = 0;
+        std::size_t maxIndex = processedIndex + Radius + 1;
+        auto targetIndex = std::min(static_cast<std::size_t>(GRID_SIZE), maxIndex);
+        for(; i < targetIndex; ++i)
         {
             if(i == processedIndex) continue;
             std::pair<std::size_t, std::size_t> currentPos(vertical ? i : indices.first, vertical ? indices.second : i);
@@ -63,12 +67,12 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
                 assert(blockMask.has_value());
                 if(i < processedIndex) 
                 {
-                    if(vertical) blockMask.value().first |= (1ULL << newIndices.size()) - 1;
-                    else blockMask.value().second |= (1ULL << newIndices.size()) - 1;
+                    if(vertical) blockMask.value().first |= (1ULL << newIndices.size() + startIndexOffset) - 1;
+                    else blockMask.value().second |= (1ULL << newIndices.size() + startIndexOffset) - 1;
                     newIndices.clear();
                     continue;
                 }
-                int squaresLeft = maxIndex - 1 - i;
+                int squaresLeft = maxIndex - i - 1;
                 if(vertical) blockMask.value().first |= ((1ULL << squaresLeft) - 1) << (blockMask.value().first.size() - squaresLeft);
                 else blockMask.value().second |= ((1ULL << squaresLeft) - 1) << (blockMask.value().second.size() - squaresLeft);
                 break;
@@ -80,11 +84,11 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
     };
     auto addArea = [&squaresToActivate, indices, &blockMask, &gameGrid]()
     {
-        auto validPosIndex = [](int x) -> bool
+        auto validLocIndex = [](int x) -> bool
         {
             return x < GRID_SIZE && x >= 0;
         };
-        static constexpr std::array<std::pair<int, int>, 4> directions =
+        constexpr std::array<std::pair<int, int>, 4> directions =
         {
             std::make_pair(1, -1), 
             std::make_pair(1, 1), 
@@ -100,7 +104,7 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
             {
                 int x = indices.first + offsetX;
                 int y = indices.second + offsetY;
-                if(!validPosIndex(x) || !validPosIndex(y)) break;
+                if(!validLocIndex(x) || !validLocIndex(y)) break;
                 std::size_t blockMaskX = Radius + offsetX + (offsetX < 0 ? -1 : -2);
                 std::size_t blockMaskY = Radius + offsetY + (offsetY < 0 ? -1 : -2);
                 if(!gameGrid.at(x, y))
@@ -123,7 +127,7 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
           
                     int newX = x + (dir.first == 1 ? i : -i);
                     int newY = y + (dir.second == 1 ? i : -i);
-                    bool validX = validPosIndex(newX), validY = validPosIndex(newY);
+                    bool validX = validLocIndex(newX), validY = validLocIndex(newY);
                     if(!validX && !validY) break;
                     if(validX)
                     {
@@ -189,13 +193,17 @@ glm::vec3 BuyAction<Price>::getColor(Game* gameInstance) const
     if(gameInstance->getMoney() < Price) return ACTION_UNUSABLE_COLOR;
     return Action::getColor(gameInstance);
 }
-
 template<int Radius>
-void MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y) const
+float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y) const
 {
+    constexpr float PATH_MOVE_SPEED = .4f;
+
     GameGrid& gameGrid = this->getGameGrid(gameInstance);
     auto selectedIndices = this->getSelectedUnitIndices(gameInstance);
-    gameGrid.moveAt(selectedIndices.first, selectedIndices.second, x, y);
+
+    GameGrid::Path moveAlongPath = gameGrid.findPath(selectedIndices, std::make_pair(x, y));
+    int steps = gameGrid.moveAlongPath(std::move(moveAlongPath), PATH_MOVE_SPEED);
+    return steps * PATH_MOVE_SPEED;
 }
 template<int32_t Price, typename UgradeClass>
 void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
@@ -210,6 +218,6 @@ void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
 template class MoveAction<6>;
-template class UpgradeAction<900,AircraftCarrierUpgrade1>;
 template class MoveAction<2>;
+template class UpgradeAction<900,AircraftCarrierUpgrade1>;
 template class MoveAction<2+1>;

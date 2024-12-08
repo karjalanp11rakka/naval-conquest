@@ -58,7 +58,7 @@ void interpolateCoefficients(float distance, float& linear, float& quadratic)
         float linear {};
         float quadratic {};
     };
-    static constexpr std::array<Sample, 12> samples //linear and quadratic attenuation coefficients from https://wiki.ogre3d.org/tiki-index.php?page=-Point+Light+Attenuation
+    constexpr std::array<Sample, 12> samples //linear and quadratic attenuation coefficients from https://wiki.ogre3d.org/tiki-index.php?page=-Point+Light+Attenuation
     {{
         {.7f, 0.7f, 1.8f},
         {1.3f, 0.35f, 0.44f},

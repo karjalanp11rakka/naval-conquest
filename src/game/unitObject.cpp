@@ -16,14 +16,15 @@
 void UnitObject::updateModelMatrix()
 {
     glm::mat4 model(1.f);
-    model *= glm::mat4_cast(m_transform.rotation);
     model = glm::translate(model, m_transform.position);
-    model = glm::scale(model, m_transform.scale);
+    model *= glm::mat4_cast(m_transform.rotation);
+    model = glm::scale(model, m_transform.scale);  
     for(auto& obj : m_objects)
     {
         obj->setModel(model);
     }
 }
+
 void UnitObject::initialize()
 {
     addToRenderEngine(Object3DRenderTypes::renderLastly);
@@ -44,9 +45,14 @@ ActionTypes UnitObject::useAction(std::size_t actionIndex)
 {
     return m_actions[actionIndex]->use(m_gameInstance);
 }
-void UnitObject::setTransform(Transform&& transform)
+void UnitObject::setPosition(glm::vec3 position)
 {
-    m_transform = std::move(transform);
+    m_transform.position = position;
+    updateModelMatrix();
+}
+void UnitObject::setRotation(glm::quat rotation)
+{
+    m_transform.rotation = rotation;
     updateModelMatrix();
 }
 const std::vector<std::pair<std::string_view, glm::vec3>>& UnitObject::getActionData()
