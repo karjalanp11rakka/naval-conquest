@@ -115,7 +115,7 @@ Mesh meshtools::generateCube(NormalMode normalMode)
         -1.f,  1.f,  1.f,
         -1.f,  1.f, -1.f,
     };
-    constexpr int length {std::ssize(vertices)};
+    static constexpr int length {std::ssize(vertices)};
 
     return makeMesh<vertices, length>(normalMode);
 }
@@ -140,7 +140,7 @@ Mesh meshtools::generateTetrahedron(NormalMode normalMode)
         -1.f,  1.f, -1.f,
         1.f, -1.f, -1.f
     };
-    constexpr int length {std::ssize(vertices)};
+    static constexpr int length {std::ssize(vertices)};
 
     return makeMesh<vertices, length>(normalMode);
 }

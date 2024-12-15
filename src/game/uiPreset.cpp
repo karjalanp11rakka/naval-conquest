@@ -63,7 +63,7 @@ UIElement::~UIElement()
 {
     if(m_enabled) disable();
 }
-bool UIElement::interactable()
+bool UIElement::isInteractable()
 {
     if(m_enabled && m_callback)
         return true;
@@ -230,6 +230,10 @@ void UIElement3D::removeDisabledColor()
     m_object->setColor(m_defaultColor);
     m_object->removeFromRenderEngine();
 }
+bool UIElement3D::hasDisabledColor()
+{
+    return m_hasDisabledColor;
+}
 
 void UIElement3D::focus()
 {
@@ -318,7 +322,7 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
     m_focusIndices = newElementIndices;
     //if the next element is not interactable, recursion is used to move again
-    if(!m_sortedElements[newElementIndices.first][newElementIndices.second]->interactable())
+    if(!m_sortedElements[newElementIndices.first][newElementIndices.second]->isInteractable())
     {
         moveFocusedElement((focusMoveDirection == FocusMoveDirections::right || focusMoveDirection == FocusMoveDirections::down)
             ? FocusMoveDirections::right : FocusMoveDirections::left);
@@ -379,7 +383,7 @@ void UIPreset::enable()
         for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
         {
             m_sortedElements[i][j]->enable();
-            if(m_sortedElements[i][j]->interactable()) 
+            if(m_sortedElements[i][j]->isInteractable()) 
             {   
                 if(!m_interactableElementsCount)
                 {
@@ -418,7 +422,7 @@ void UIPreset::disableElement(UIElement* ptr)
             {
                 if(m_focusIndices == std::make_pair(i, j))
                     moveFocusedElement(FocusMoveDirections::right);
-                if(m_sortedElements[i][j]->interactable()) --m_interactableElementsCount;
+                if(m_sortedElements[i][j]->isInteractable()) --m_interactableElementsCount;
                 m_sortedElements[i][j]->disable();
                 return;
             }
@@ -432,7 +436,7 @@ void UIPreset::enableElement(UIElement* ptr)
             if(m_sortedElements[i][j] == ptr)
             {
                 m_sortedElements[i][j]->enable();
-                if(m_sortedElements[i][j]->interactable())
+                if(m_sortedElements[i][j]->isInteractable())
                 {
                     ++m_interactableElementsCount;
                     if(m_interactableElementsCount == 1)
@@ -455,7 +459,7 @@ void UIPreset::retrieveSavedSelection()
     auto& retrieveIndices = m_retrieveIndices.top();
 
     assert(!m_retrieveIndices.empty());
-    if(m_sortedElements[retrieveIndices.first][retrieveIndices.second]->interactable())
+    if(m_sortedElements[retrieveIndices.first][retrieveIndices.second]->isInteractable())
     {
         m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
         m_sortedElements[retrieveIndices.first][retrieveIndices.second]->focus();

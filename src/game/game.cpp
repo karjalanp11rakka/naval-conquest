@@ -1,9 +1,7 @@
-#include <cassert>
 #include <iterator>
 #include <algorithm>
 #include <cmath>
 #include <set>
-#include <unordered_set>
 #include <limits>
 
 #include <glm/gtc/quaternion.hpp>
@@ -22,15 +20,34 @@
 #include <assets.hpp>
 #include <glfwController.hpp>
 
+void GameGrid::destroyAt(std::size_t index)
+{
+    for(auto it = m_combinedLocations.begin(); it != m_combinedLocations.end(); ++it)
+    {
+        if(it->first.count(index))
+        {
+            it->second->reset();
+            m_combinedLocations.erase(it);
+            return;
+        }
+    }
+
+    m_base[index].reset();
+}
 UnitObject* GameGrid::at(std::size_t x, std::size_t y) const
 {
-    return m_base[x + y * GRID_SIZE].get();
+    std::size_t index = x + y * GRID_SIZE;
+    for(auto& comb : m_combinedLocations)
+    {
+        if(comb.first.count(index)) return comb.second->get();
+    }
+    return m_base[index].get();
 }
 UnitObject* GameGrid::at(Loc loc) const
 {
     return at(loc.first, loc.second);
 }
-#include <iostream>
+
 void GameGrid::update()
 {
     if(m_movements.empty()) return;
@@ -74,17 +91,32 @@ void GameGrid::update()
 }
 void GameGrid::destroyAt(std::size_t x, std::size_t y)
 {
-    m_base[x + y * GRID_SIZE].reset();
+    destroyAt(x + y * GRID_SIZE);
+}
+void GameGrid::destroyAt(Loc loc)
+{
+    destroyAt(loc.first + loc.second * GRID_SIZE);
 }
 void GameGrid::moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2)
 {
-    m_base[x2 + y2 * GRID_SIZE] = std::move(m_base[x1 + y1 * GRID_SIZE]);
-    m_base[x1 + y1 * GRID_SIZE].reset();
-    m_base[x2 + y2 * GRID_SIZE]->setPosition(gridLocationToPosition(std::make_pair(x2, y2)));
+    auto& startPtr = m_base[x1 + y1 * GRID_SIZE], & movePtr = m_base[x2 + y2 * GRID_SIZE];
+    assert(dynamic_cast<Base*>(startPtr.get()) && "Base cannot be moved");
+    assert(dynamic_cast<Base*>(movePtr.get()) && "Base cannot be destroyed by moving");
+    movePtr = std::move(startPtr);
+    startPtr.reset();
+    movePtr->setPosition(gridLocationToPosition(std::make_pair(x2, y2)));
 }
 void GameGrid::moveAt(Loc loc1, Loc loc2)
 {
     moveAt(loc1.first, loc1.second, loc2.first, loc2.second); 
+}
+std::optional<std::unordered_set<std::size_t>*> GameGrid::getCombinedLocations(std::size_t index)
+{
+    for(auto& comb : m_combinedLocations)
+    {
+        if(comb.first.count(index)) return &comb.first;
+    }
+    return {};
 }
 GameGrid::Path GameGrid::findPath(Loc startLoc, Loc moveLoc, bool avoidObstacles)//A*
 {
@@ -114,8 +146,8 @@ GameGrid::Path GameGrid::findPath(Loc startLoc, Loc moveLoc, bool avoidObstacles
         }
     };
     
-    constexpr int MOVE_STRAIGHT_COST = 10;
-    constexpr int MOVE_DIAGONAL_COST = 14;
+    static constexpr int MOVE_STRAIGHT_COST = 10;
+    static constexpr int MOVE_DIAGONAL_COST = 14;
     auto calculateDistanceCost = [](PathNode* pathNode1, PathNode* pathNode2) -> int
     {
         int xDistance = std::abs(static_cast<int>(pathNode1->loc.first) - static_cast<int>(pathNode2->loc.first));
@@ -168,7 +200,7 @@ GameGrid::Path GameGrid::findPath(Loc startLoc, Loc moveLoc, bool avoidObstacles
         openList.erase(currentNode);
         closedList.insert(currentNode);
 
-        constexpr std::array<std::pair<int, int>, 8> directions =
+        static constexpr std::array<std::pair<int, int>, 8> directions =
         {
             std::make_pair(1, -1),
             std::make_pair(1, 1),
@@ -197,7 +229,7 @@ GameGrid::Path GameGrid::findPath(Loc startLoc, Loc moveLoc, bool avoidObstacles
                 neighbourNode->hCost = calculateDistanceCost(neighbourNode, endNode);
                 neighbourNode->calculateFCost();
 
-                openList.erase(neighbourNode);//remove if it is included so it gets correctly sorted position in the set
+                openList.erase(neighbourNode);//remove when it's already included so it gets correctly sorted position in the set
                 openList.insert(neighbourNode);
             }
         }
@@ -214,12 +246,16 @@ int GameGrid::moveAlongPath(Path&& path, float speed, bool useRotation)
     assert(moveObj != nullptr && "There has to be an object to be moved");
 
     int pathLength = path.size();
-    m_movements.push_back({moveObj, std::move(path), speed, useRotation});
+    m_movements.emplace_back(moveObj, std::move(path), speed, useRotation);
     return pathLength;
 }
 
 UnitObject* GameGrid::operator[](std::size_t index) const noexcept
 {
+    for(auto& comb : m_combinedLocations)
+    {
+        if(comb.first.count(index)) return comb.second->get();
+    }
     return m_base[index].get();
 }
 GameGrid::Loc GameGrid::convertIndexToLocation(std::size_t index)
@@ -232,9 +268,8 @@ std::size_t GameGrid::convertLocationToIndex(Loc loc)
 }
 glm::vec3 GameGrid::gridLocationToPosition(Loc loc)
 {
-    static const float squareSize {2.f / GRID_SIZE};
-    return glm::vec3(-1.f + squareSize * loc.first + squareSize / 2.f, 0.f, 
-        -1.f + squareSize * loc.second + squareSize / 2.f);
+    return glm::vec3(-1.f + SQUARE_SIZE * loc.first + SQUARE_SIZE / 2.f, 0.f, 
+        -1.f + SQUARE_SIZE * loc.second + SQUARE_SIZE / 2.f);
 }
 // float GameGrid::distance(Loc loc1, Loc loc2)
 // {
@@ -247,22 +282,37 @@ void Game::activatePlayerSquares()
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
     std::bitset<GRID_SIZE * GRID_SIZE> setSquares {};
+    std::bitset<GRID_SIZE * GRID_SIZE / 2> setSquaresLarge {};
+    std::unordered_set<std::unordered_set<std::size_t>*> combinedIndices;
     for(int i {}; i < m_grid.size(); ++i)
     {
+        auto combinedLocations = m_grid.getCombinedLocations(i);
+        if(combinedLocations)
+        {
+            if(combinedIndices.count(combinedLocations.value())) continue;
+            combinedIndices.insert(combinedLocations.value());
+        } 
         if(m_grid[i] && m_grid[i]->isTeamOne() == m_playerOneToPlay)
-            setSquares.set(i);
+        {
+            if(combinedLocations)
+            {
+                setSquaresLarge.set(i / 2);
+            } 
+            else setSquares.set(i);
+        }
     }
 
-    uiManagerInstance.setGameGridSquares(std::move(setSquares));
+    uiManagerInstance.setGameGridSquares(std::move(setSquares), std::move(setSquaresLarge));
 }
 
-static constexpr int32_t PLAYER_STARTING_MONEY = 1000;
-Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer), m_playersMoney(std::make_pair(PLAYER_STARTING_MONEY, PLAYER_STARTING_MONEY))
+Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer)
 {
     static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
     static UIManager& uiManagerInstance = UIManager::getInstance();
     updateStatusTexts();
     m_grid.initializeAt<AircraftCarrierUnit>(0, 0, true);
+    m_grid.initializeAt<Base>(14, 14, true);
+    m_grid.initializeAt<Base>(14, 2, false);
     m_grid.initializeAt<AircraftCarrierUnit>(9, 9, true);
     m_grid.initializeAt<SubmarineUnit>(9, 3, true);
     m_grid.initializeAt<AircraftCarrierUnit>(8, 9, true);
@@ -288,20 +338,32 @@ void Game::update()
         }
     }
 }
-int32_t Game::getMoney() const
+std::int32_t Game::getMoney() const
 {
-    return m_playerOneToPlay ? m_playersMoney.first : m_playersMoney.second;
+    return m_playerOneToPlay ? m_playerData.first.money : m_playerData.second.money;
 }
-void Game::addMoney(int32_t money)
+void Game::addMoney(std::int32_t money)
 {
-    if(m_playerOneToPlay) m_playersMoney.first += money;
-    else m_playersMoney.second -= money;
+    if(m_playerOneToPlay) m_playerData.first.money += money;
+    else m_playerData.second.money -= money;
     updateStatusTexts();
+}
+void Game::takeMove()
+{
+    if(m_playerOneToPlay) --m_playerData.first.moves.first;
+    else --m_playerData.second.moves.first;
+    updateStatusTexts();
+}
+bool Game::canMove()
+{
+    if(m_playerOneToPlay) return m_playerData.first.moves.first;
+    else return m_playerData.second.moves.first;
 }
 void Game::updateStatusTexts()
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
-    uiManagerInstance.updateGameStatusTexts({m_playerOneToPlay, getMoney()});
+    uiManagerInstance.updateGameStatusTexts(m_playerOneToPlay ? 
+        m_playerData.first : m_playerData.second, m_playerOneToPlay);
 }
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
@@ -384,10 +446,10 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         {
             gameControllerInstance.getCamera()->zoom(m_grid[index]->getPosition(), .3f, .5f, 1.f);
             uiManagerInstance.saveCurrentSelection();
-            constexpr auto gridSquareSelectedColor = glm::vec3(.7f, .9f, .2f);
+            static constexpr auto SELECTED_GRID_SQUARE_COLOR = glm::vec3(.7f, .9f, .2f);
             m_selectedUnitIndices = selectedActionSquare;
             uiManagerInstance.enableGameActionButtons(m_grid[index]->getActionData());
-            uiManagerInstance.addDisabledColorToGridSquare(index, gridSquareSelectedColor);
+            uiManagerInstance.addDisabledColorToGridSquare(index, SELECTED_GRID_SQUARE_COLOR);
             uiManagerInstance.setGameGridSquares({});
         }
         break;

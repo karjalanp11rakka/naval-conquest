@@ -26,7 +26,6 @@ class GameGrid;
 class Game;
 
 using SelectSquareCallback = std::function<float(Game*, std::size_t, std::size_t)>;
-//This used to be more flexible and had templates but it has now been changed to be more explicit because the actions will only need this single callback
 class SelectSquareCallbackManager
 {
 private:
@@ -93,11 +92,12 @@ public:
     using IndicesList = std::vector<std::pair<std::size_t, std::size_t>>;
 protected:
     void setGameGridSquares(IndicesList&& activeSquares);
+    virtual bool usable(Game* gameInstance) const {return true;}
 public:
     ActionTypes use(Game* gameInstance) override final;
     virtual float callback(Game* gameInstance, std::size_t x, std::size_t y) const = 0;
 };
-template<int32_t Price>
+template<std::int32_t Price>
 class BuyAction : public Action
 {
 private:
@@ -117,11 +117,14 @@ class MoveAction final : public SelectOnGridAction<Radius, true, SelectOnGridTyp
 {
 private:
     const std::string_view m_name = "MOVE";
+protected:
+    bool usable(Game* gameInstance) const override;
 public:
     std::string_view getName() const override {return m_name;}
     float callback(Game* gameInstance, std::size_t x, std::size_t y) const override;
+    glm::vec3 getColor(Game* gameInstance) const override;
 };
-template<int32_t Price, typename UpgradeClass>
+template<std::int32_t Price, typename UpgradeClass>
 class UpgradeAction final : public BuyAction<Price>, public SingletonAction<UpgradeAction<Price, UpgradeClass>>
 {
     const std::string_view m_name = "UPGRADE";

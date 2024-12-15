@@ -27,6 +27,7 @@ void UnitObject::updateModelMatrix()
 
 void UnitObject::initialize()
 {
+    updateModelMatrix();
     addToRenderEngine(Object3DRenderTypes::renderLastly);
 
     m_actionData.resize(m_actions.size());
@@ -73,42 +74,89 @@ T constructObject(std::string_view mesh, std::string_view vShader, std::string_v
         std::forward<Args>(args)...);
 }
 
-static constexpr Material TEAM_ONE_DEFAULT_MAT {glm::vec3(.1f, .6f, .1f), .3f, 150.f, .5f};
-static constexpr Material TEAM_ONE_SECONDARY_MAT {glm::vec3(.7f, .8f, .1f), .2f, 220.f, .8f};
-static constexpr Material TEAM_TWO_DEFAULT_MAT {glm::vec3(.6f, .1f, .6f), .3f, 150.f, .5f};
-static constexpr Material TEAM_TWO_SECONDARY_MAT {glm::vec3(.9f, .1f, .1f), .2f, 220.f, .8f};
-static constexpr Material DARK_MAT {glm::vec3(.1f, .1f, .1f), .5f, 100.f, .3f};
+static constexpr Material TEAM_ONE_DEFAULT_MAT {glm::vec3(.1f, .7f, .1f), .2f, 150.f, .5f};
+static constexpr Material TEAM_ONE_SECONDARY_MAT {glm::vec3(.9f, .8f, .1f), .5f, 220.f, .8f};
+static constexpr Material TEAM_TWO_DEFAULT_MAT {glm::vec3(.7f, .1f, .7f), .2f, 150.f, .5f};
+static constexpr Material TEAM_TWO_SECONDARY_MAT {glm::vec3(.9f, .1f, .1f), .5f, 220.f, .8f};
+
+static constexpr Material BLACK_MAT {glm::vec3(.1f, .1f, .1f), .5f, 100.f, .3f};
+static constexpr Material DARK_GRAY_MAT {glm::vec3(.3f, .3f, .3f), .5f, 150.f, .4f};
+static constexpr Material GRAY_MAT {glm::vec3(.5f, .5f, .5f), .2f, 200.f, .7f};
+static constexpr Material LIGHT_GRAY_MAT {glm::vec3(.6f, .6f, .6f), .4f, 220.f, .8f};
+
+static constexpr Material SAND_YELLOW_MAT {glm::vec3(.8f, .8f, .7f), .5f, 120.f, .3f};
+
+Base::Base(Game* game, bool teamOne)
+    : UnitObject(game, teamOne,
+    //actions
+    {&UpgradeAction<100, BaseUpgrade1>::get()},
+    //3D object parts
+    constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BUILDING_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BUILDING_ROOF_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_GROUND_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_GROUND_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_HUT_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_ISLAND_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, SAND_YELLOW_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_STORAGES_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, LIGHT_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_TANKS_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT)) {}
+
+BaseUpgrade1::BaseUpgrade1(Game* game, bool teamOne)
+    : UnitObject(game, teamOne,
+    {&UpgradeAction<200, BaseUpgrade2>::get()},
+    constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BUILDING_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BUILDING_ROOF_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_GROUND_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_GROUND_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_HUT_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_HUT_2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_ISLAND_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, SAND_YELLOW_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_STORAGES_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, LIGHT_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_TANKS_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_TANKS_2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT)) {}
+
+BaseUpgrade2::BaseUpgrade2(Game* game, bool teamOne)
+    : UnitObject(game, teamOne,
+    {},
+    constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BUILDING_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_BUILDING_ROOF_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_GROUND_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_GROUND_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_HUT_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_HUT_2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_ISLAND_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, SAND_YELLOW_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_STORAGES_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, LIGHT_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_STORAGES_2_UPGRADE_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, LIGHT_GRAY_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_TANKS_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_TANKS_2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
+    constructObject<LitObject>(assets::MODELS_BASE_TANKS_3_UPGRADE_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT)) {}
+
 
 static constexpr int AIRCRAFT_CARRIER_MOVE_RADIUS = 2;
 AircraftCarrierUnit::AircraftCarrierUnit(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne, 
-    //actions
     {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), &UpgradeAction<900, AircraftCarrierUpgrade1>::get()},
-    //3D object parts
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
-    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_MAT))
-{
-    updateModelMatrix();
-}
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, BLACK_MAT)) {}
+
 AircraftCarrierUpgrade1::AircraftCarrierUpgrade1(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne, 
     {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS + 1>::get()},
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
-    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_MAT),
-    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
-    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_MAT))
-{
-    updateModelMatrix();
-}
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, BLACK_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
+    constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_2_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, BLACK_MAT)) {}
 
 static constexpr int SUBMARINE_CARRIER_MOVE_RADIUS = 6;
 SubmarineUnit::SubmarineUnit(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne, 
     {&MoveAction<SUBMARINE_CARRIER_MOVE_RADIUS>::get()},
     constructObject<LitObject>(assets::MODELS_SUBMARINE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
-    constructObject<LitObject>(assets::MODELS_SUBMARINE_SAIL_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT))
-{
-    updateModelMatrix();
-}
+    constructObject<LitObject>(assets::MODELS_SUBMARINE_SAIL_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT)) {}

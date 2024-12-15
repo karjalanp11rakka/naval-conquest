@@ -8,7 +8,9 @@
 #include <engine/shader.hpp>
 #include <engine/sceneLighting.hpp>
 
+#ifndef NDEBUG
 void checkCompileErrors(unsigned int shader, std::string_view type);
+#endif
 void addConstantsToShader(std::string_view input, std::string& output);
 
 Shader::Shader(std::string_view vertexString, std::string_view fragmentString)
@@ -25,20 +27,21 @@ Shader::Shader(std::string_view vertexString, std::string_view fragmentString)
     glShaderSource(fragment, 1, &fShaderCode, nullptr);
 
     glCompileShader(vertex);
-    checkCompileErrors(vertex, "VERTEX");
     glCompileShader(fragment);
-    checkCompileErrors(fragment, "FRAGMENT");
 
     m_id = glCreateProgram();
     glAttachShader(m_id, vertex);
     glAttachShader(m_id, fragment);
     glLinkProgram(m_id);
+#ifndef NDEBUG
+    checkCompileErrors(vertex, "VERTEX");
+    checkCompileErrors(fragment, "FRAGMENT");
     checkCompileErrors(m_id, "PROGRAM");
-
+#endif
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
-
+#ifndef NDEBUG
 void checkCompileErrors(unsigned int shader, std::string_view type)
 {
     int success;
@@ -62,6 +65,7 @@ void checkCompileErrors(unsigned int shader, std::string_view type)
         }
     }
 }
+#endif
 void addConstantsToShader(std::string_view input, std::string& output)
 {
     std::size_t firstLineEnd = input.find('\n');

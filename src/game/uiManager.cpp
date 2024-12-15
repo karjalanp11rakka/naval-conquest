@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <string>
+#include <format>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -41,8 +42,13 @@ UIManager::UIManager()
     static ButtonUIElement playButton(std::move(playButtonTextData), std::move(playButtonBackgroundData),
         [this]()
         {
-            static GameController& gameControllerInstance = GameController::getInstance();
             changeCurrentUI(m_gameUI);
+            for(int i {}; i < GRID_SIZE * GRID_SIZE; ++i)
+            {
+                m_gameUI->disableElement(m_gameGridSquares[i].get());
+                if(i % 2 == 0) m_gameUI->disableElement(m_gameGridLargeSquares[i / 2].get());
+            }
+            static GameController& gameControllerInstance = GameController::getInstance();
             gameControllerInstance.createGame(true);
 
         }, blue, highlightThickness);
@@ -128,30 +134,44 @@ UIManager::UIManager()
         }, blue, highlightThickness, "DARK BACKGROUND (OFF)", &m_darkBackgroundEnabled);
 
     std::vector<UIElement*> gameElements;
-    gameElements.reserve(GRID_SIZE * GRID_SIZE + GAME_ACTION_BUTTONS_COUNT + GAME_STATUS_TEXTS_COUNT);
+    gameElements.reserve(GRID_SIZE * GRID_SIZE + GAME_ACTION_BUTTONS_COUNT + GAME_STATUS_TEXTS_COUNT + GRID_SIZE * GRID_SIZE / 2);
 
     std::size_t gameElementIndex {};
     for(std::size_t y {}; y < GRID_SIZE; ++y)
     {
-        for(std::size_t x {}; x < GRID_SIZE; ++x)
+        for(std::size_t x {}; x < GRID_SIZE; ++x, ++gameElementIndex)
         {
-            glm::mat4 model(1.f);
-            model = glm::translate(model, GameGrid::gridLocationToPosition(std::make_pair(x, y)));
-            model = glm::translate(model, glm::vec3(0.f, .001f, 0.f));
-            model = glm::rotate(model, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-            model = glm::scale(model, glm::vec3(0.9f / GRID_SIZE));
+            glm::mat4 squareModel(1.f);
+            squareModel = glm::translate(squareModel, GameGrid::gridLocationToPosition(std::make_pair(x, y)));
+            squareModel = glm::translate(squareModel, glm::vec3(0.f, .001f, 0.f));
+            squareModel = glm::rotate(squareModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+            squareModel = glm::scale(squareModel, glm::vec3(0.9f / GRID_SIZE));
 
             m_gameGridSquares[gameElementIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
-            {
-                static GameController& gameControllerInstance = GameController::getInstance();
-                gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
-            }, std::move(model), 
-                glm::vec3(.4f, .4f, .5f), yellow);
+                {
+                    static GameController& gameControllerInstance = GameController::getInstance();
+                    gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
+                }, std::move(squareModel), glm::vec3(.4f, .4f, .5f), yellow);
 
-            gameElements.push_back(m_gameGridSquares[gameElementIndex++].get());
+            gameElements.push_back(m_gameGridSquares[gameElementIndex].get());
+        
+            if(x % 2 != 0 || y % 2 != 0) continue;
+            glm::mat4 largeSquareModel(1.f);
+            largeSquareModel = glm::translate(largeSquareModel, 
+                {-1.f + SQUARE_SIZE * x + SQUARE_SIZE, 0.f, -1.f + SQUARE_SIZE * y + SQUARE_SIZE});
+            largeSquareModel = glm::translate(largeSquareModel, glm::vec3(0.f, .001f, 0.f));
+            largeSquareModel = glm::rotate(largeSquareModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+            largeSquareModel = glm::scale(largeSquareModel, glm::vec3(0.9f / GRID_SIZE * 2.f));
+
+            std::size_t currentLargeSquareIndex = gameElementIndex / 2;
+            m_gameGridLargeSquares[currentLargeSquareIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
+                {
+                    static GameController& gameControllerInstance = GameController::getInstance();
+                    gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
+                }, std::move(largeSquareModel), glm::vec3(.4f, .4f, .5f), yellow);
+            gameElements.push_back(m_gameGridLargeSquares[currentLargeSquareIndex].get());
         }
     }
-    m_enabledGameElements.set();
 
     constexpr float actionButtonSpacing = .3f;
     for(std::size_t i {}; i < GAME_ACTION_BUTTONS_COUNT; ++i)
@@ -182,6 +202,7 @@ UIManager::UIManager()
             actionButtonWidth, actionButtonHeight);
         gameElements.push_back(m_gameActionButtons[i].get());
     }
+
     TextData playerTurnTextData
     {
         .position = {-.8f, .9f},
@@ -198,6 +219,14 @@ UIManager::UIManager()
     };
     m_moneyText = std::make_unique<TextUIElement>(std::move(moneyTextData));
     gameElements.push_back(m_moneyText.get());
+    TextData movesTextData
+    {
+        .position = {0.f, .9f},
+        .textColor = infoTextColor,
+        .scale = .8f,
+    };
+    m_movesText = std::make_unique<TextUIElement>(std::move(movesTextData));
+    gameElements.push_back(m_movesText.get());
 
     m_gameUI = std::make_unique<UIPreset>(std::move(gameElements));
     m_menuUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&playButton, &settingsButton, &infoButton, &exitButton});
@@ -219,7 +248,15 @@ void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
 
 void UIManager::addDisabledColorToGridSquare(std::size_t index, const glm::vec3& color)
 {
-    m_gameGridSquares[index]->addDisabledColor(color);
+    if(m_enabledSquares.test(index))
+    {
+        m_gameGridSquares[index]->addDisabledColor(color);
+    }
+    else
+    {
+        assert(m_enabledLargeSquares.test(index / 2));
+        m_gameGridLargeSquares[index / 2]->addDisabledColor(color);
+    }
 }
 void UIManager::saveCurrentSelection()
 {
@@ -233,26 +270,45 @@ void UIManager::removeSavedSelection()
 {
     m_currentUI->removeSavedSelection();
 }
-void UIManager::updateGameStatusTexts(GameStatutsData gameData)
+void UIManager::updateGameStatusTexts(PlayerData playerData, bool playerOne)
 {
-    m_turnText->changeText(std::string("TURN: ") + (gameData.turn ? "PLAYER ONE" : "PLAYER TWO"));
-    m_moneyText->changeText("MONEY: " + std::to_string(gameData.money) + CURRENCY_SYMBOL);
+    m_turnText->changeText(std::format("TURN: {}", playerOne ? "PLAYER ONE" : "PLAYER TWO"));
+    m_moneyText->changeText(std::format("MONEY: {}{}", playerData.money, CURRENCY_SYMBOL));
+    m_movesText->changeText(std::format("MOVES: {}/{}", playerData.moves.first, playerData.moves.second));
 }
 void UIManager::removeDisabledColorToGridSquare(std::size_t index)
 {
-    m_gameGridSquares[index]->removeDisabledColor();
+    if(m_gameGridSquares[index]->hasDisabledColor())
+    {
+        m_gameGridSquares[index]->removeDisabledColor();
+    }
+    else
+    {
+        assert(m_gameGridLargeSquares[index / 2]->hasDisabledColor());
+        m_gameGridLargeSquares[index / 2]->removeDisabledColor();
+    }
 }
-void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSquares)
+void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSmallSquares, std::bitset<GRID_SIZE * GRID_SIZE / 2>&& activeLargeSquares)
 {
     if(m_currentUI != m_gameUI.get()) return;
-    for(int i {}; i < m_gameGridSquares.size(); ++i)
+    for(int i {}; i < GRID_SIZE * GRID_SIZE; ++i)
     {
-        if(m_enabledGameElements.test(i) && !activeSquares.test(i))
+        if(i % 2 == 0)
+        {
+            assert(!activeSmallSquares.test(i) || !activeLargeSquares.test(i / 2) && "Both large and small square cannot be enabled simultaneously");
+            if(m_enabledLargeSquares.test(i / 2) && !activeLargeSquares.test(i / 2))
+                m_gameUI->disableElement(m_gameGridLargeSquares[i / 2].get());
+            else if(!m_enabledLargeSquares.test(i / 2) && activeLargeSquares.test(i / 2))
+                m_gameUI->enableElement(m_gameGridLargeSquares[i / 2].get());        
+
+        }
+        if(m_enabledSquares.test(i) && !activeSmallSquares.test(i))
             m_gameUI->disableElement(m_gameGridSquares[i].get());
-        else if(!m_enabledGameElements.test(i) && activeSquares.test(i))
+        else if(!m_enabledSquares.test(i) && activeSmallSquares.test(i))
             m_gameUI->enableElement(m_gameGridSquares[i].get());
     }
-    m_enabledGameElements = std::move(activeSquares);
+    m_enabledSquares = std::move(activeSmallSquares);
+    m_enabledLargeSquares = std::move(activeLargeSquares);
 }
 
 void UIManager::enableGameActionButtons(const std::vector<std::pair<std::string_view, glm::vec3>>& data)

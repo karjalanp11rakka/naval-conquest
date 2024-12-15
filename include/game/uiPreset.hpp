@@ -47,7 +47,7 @@ public:
     virtual void update() = 0;
     virtual void onResize(int windowWidth, int windowHeight) {};
     const glm::vec2& getPosition() const {return m_position;}
-    bool interactable();
+    bool isInteractable();
 };
 
 struct TextData
@@ -131,6 +131,7 @@ public:
     void update() override {}
     void addDisabledColor(const glm::vec3& temporaryColor);
     void removeDisabledColor();
+    bool hasDisabledColor();
     void onResize(int windowWidth, int windowHeight) override {}
 };
 

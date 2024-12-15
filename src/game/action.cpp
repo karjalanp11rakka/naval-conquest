@@ -14,10 +14,10 @@ GameGrid& Action::getGameGrid(Game* gameInstance) const
     return gameInstance->m_grid;
 }
 
-static constexpr glm::vec3 DEFAULT_ACTION_COLOR {.2f, .8f, .6f};
+static constexpr glm::vec3 ACTION_DEFAULT_COLOR {.2f, .8f, .6f};
 glm::vec3 Action::getColor(Game*) const
 {
-    return DEFAULT_ACTION_COLOR;
+    return ACTION_DEFAULT_COLOR;
 }
 
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
@@ -33,6 +33,7 @@ void SelectOnGridAction<Radius, Blockable, SelectType>::setGameGridSquares(Indic
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
 ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameInstance)
 {
+    if(!usable(gameInstance)) return ActionTypes::nothing;
     SelectSquareCallback callback = [&](Game* gameInstance, std::size_t x, std::size_t y)
     {
         return this->callback(gameInstance, x, y);
@@ -88,10 +89,10 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
         {
             return x < GRID_SIZE && x >= 0;
         };
-        constexpr std::array<std::pair<int, int>, 4> directions =
+        static constexpr std::array<std::pair<int, int>, 4> directions =
         {
-            std::make_pair(1, -1), 
-            std::make_pair(1, 1), 
+            std::make_pair(1, -1),
+            std::make_pair(1, 1),
             std::make_pair(-1, 1), 
             std::make_pair(-1, -1)
         };
@@ -170,7 +171,7 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
     this->setGameGridSquares(std::move(squaresToActivate));
     return ActionTypes::selectSquare;
 }
-template<int32_t Price>
+template<std::int32_t Price>
 ActionTypes BuyAction<Price>::use(Game* gameInstance)
 {
     if(gameInstance->getMoney() < Price) return ActionTypes::nothing;
@@ -179,24 +180,31 @@ ActionTypes BuyAction<Price>::use(Game* gameInstance)
 
     return ActionTypes::immediate;
 }
-template<int32_t Price>
+template<std::int32_t Price>
 std::string_view BuyAction<Price>::getName() const
 {
     if(m_buyActionName.empty()) 
         m_buyActionName = std::string(getBuyActionName()) + '\n' + std::to_string(Price) + CURRENCY_SYMBOL;
     return m_buyActionName;
 }
-static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.7f, .5f, .5f};
-template<int32_t Price>
+static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.4f, .1f, .3f};
+template<std::int32_t Price>
 glm::vec3 BuyAction<Price>::getColor(Game* gameInstance) const
 {
     if(gameInstance->getMoney() < Price) return ACTION_UNUSABLE_COLOR;
     return Action::getColor(gameInstance);
+
+}
+template<int Radius>
+bool MoveAction<Radius>::usable(Game* gameInstance) const
+{
+    return gameInstance->canMove();
 }
 template<int Radius>
 float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y) const
 {
-    constexpr float PATH_MOVE_SPEED = .4f;
+    gameInstance->takeMove();
+    static constexpr float PATH_MOVE_SPEED = .4f;
 
     GameGrid& gameGrid = this->getGameGrid(gameInstance);
     auto selectedIndices = this->getSelectedUnitIndices(gameInstance);
@@ -205,7 +213,13 @@ float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_
     int steps = gameGrid.moveAlongPath(std::move(moveAlongPath), PATH_MOVE_SPEED);
     return steps * PATH_MOVE_SPEED;
 }
-template<int32_t Price, typename UgradeClass>
+template<int Radius>
+glm::vec3 MoveAction<Radius>::getColor(Game* gameInstance) const
+{
+    if(gameInstance->canMove()) return Action::getColor(gameInstance);
+    return ACTION_UNUSABLE_COLOR;
+}
+template<std::int32_t Price, typename UgradeClass>
 void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
 {
     GameGrid& gameGrid = this->getGameGrid(gameInstance);
@@ -217,7 +231,9 @@ void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
 #include <game/unitObject.hpp>
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class MoveAction<6>;
 template class MoveAction<2>;
-template class UpgradeAction<900,AircraftCarrierUpgrade1>;
+template class UpgradeAction<200,BaseUpgrade2>;
 template class MoveAction<2+1>;
+template class UpgradeAction<100,BaseUpgrade1>;
+template class MoveAction<6>;
+template class UpgradeAction<900,AircraftCarrierUpgrade1>;

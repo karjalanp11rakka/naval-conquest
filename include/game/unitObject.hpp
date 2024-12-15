@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <utility>
 #include <concepts>
+#include <type_traits>
 
 #include <glm/fwd.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -26,6 +27,8 @@ template<typename T>
 concept Object3DDelivered = std::derived_from<T, Object3D>;
 class UnitObject : public ObjectEntity
 {
+public:
+    using is_base = std::false_type;
 private:
     std::vector<Action*> m_actions;
     std::vector<std::pair<std::string_view, glm::vec3>> m_actionData;
@@ -52,6 +55,29 @@ public:
     const glm::vec3& getScale() const {return m_transform.scale;}
     const glm::quat& getRotation() const {return m_transform.rotation;}
     const std::vector<std::pair<std::string_view, glm::vec3>>& getActionData();
+};
+template<typename T>
+constexpr bool isBase()
+{
+    return std::is_same<typename T::is_base, std::true_type>::value;
+}
+class Base : public UnitObject
+{
+public:
+    using is_base = std::true_type;
+    Base(Game* game, bool teamOne);
+};
+class BaseUpgrade1 : public UnitObject
+{
+public:
+    using is_base = std::true_type;
+    BaseUpgrade1(Game* game, bool teamOne);
+};
+class BaseUpgrade2 : public UnitObject
+{
+public:
+    using is_base = std::true_type;
+    BaseUpgrade2(Game* game, bool teamOne);
 };
 
 class AircraftCarrierUnit : public UnitObject
