@@ -14,13 +14,13 @@
 #include <game/action.hpp>
 #include <game/gameController.hpp>
 
-inline constexpr int GAME_ACTION_BUTTONS_COUNT = 5;
+inline constexpr int GAME_ACTION_BUTTONS_MAX_COUNT = 5;
 enum class ButtonTypes
 {
-    GridSquare,
-    ActionButton
+    gridSquare,
+    actionButton,
+    endTurnButton
 };
-inline constexpr int GAME_STATUS_TEXTS_COUNT = 2;
 
 struct PlayerData;
 class UIPreset;
@@ -38,8 +38,9 @@ private:
     std::unique_ptr<UIPreset> m_menuUI, m_gameUI, m_settingsUI;
     std::array<std::unique_ptr<UIElement3D>, GRID_SIZE * GRID_SIZE> m_gameGridSquares;
     std::array<std::unique_ptr<UIElement3D>, GRID_SIZE * GRID_SIZE / 2> m_gameGridLargeSquares;
-    std::array<std::unique_ptr<ScalableButtonUIElement>, GAME_ACTION_BUTTONS_COUNT> m_gameActionButtons;
-    std::unique_ptr<TextUIElement> m_turnText, m_moneyText, m_movesText; 
+    std::array<std::unique_ptr<ScalableButtonUIElement>, GAME_ACTION_BUTTONS_MAX_COUNT> m_gameActionButtons;
+    std::unique_ptr<ScalableButtonUIElement> m_endTurnButton;
+    std::unique_ptr<TextUIElement> m_gameStatusText;
     UIPreset* m_currentUI;
     bool m_darkBackgroundEnabled {}, m_backButtonEnabled {};
     int m_enabledButtonsCount = std::ssize(m_gameActionButtons);
@@ -53,12 +54,13 @@ public:
     void saveCurrentSelection();
     void retrieveSavedSelection();
     void removeSavedSelection();
-    void updateGameStatusTexts(PlayerData playerData, bool playerOne);
+    void updateGameStatusTexts(std::string&& text);
     void addDisabledColorToGridSquare(std::size_t index, const glm::vec3& color);
     void removeDisabledColorToGridSquare(std::size_t index);
     void setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSmallSquares, std::bitset<GRID_SIZE * GRID_SIZE / 2>&& activeLargeSquares = {});
     void enableGameActionButtons(const std::vector<std::pair<std::string_view, glm::vec3>>& data);
     void disableGameActionButtons(bool disableBackButton);
+    void setEndTurnButton(bool enabled);
     void processInput(int key);
     void onWindowResize(int width, int height);
 };

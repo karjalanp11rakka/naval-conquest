@@ -163,6 +163,7 @@ private:
     std::optional<std::pair<float, std::function<void()>>> m_cooldown;
     void activatePlayerSquares();
     void updateStatusTexts();
+    void endTurn();
 public:
     Game(bool onePlayer);
     ~Game() = default;

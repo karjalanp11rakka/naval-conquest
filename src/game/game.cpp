@@ -3,6 +3,7 @@
 #include <cmath>
 #include <set>
 #include <limits>
+#include <format>
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/glm.hpp>
@@ -301,7 +302,6 @@ void Game::activatePlayerSquares()
             else setSquares.set(i);
         }
     }
-
     uiManagerInstance.setGameGridSquares(std::move(setSquares), std::move(setSquaresLarge));
 }
 
@@ -345,7 +345,7 @@ std::int32_t Game::getMoney() const
 void Game::addMoney(std::int32_t money)
 {
     if(m_playerOneToPlay) m_playerData.first.money += money;
-    else m_playerData.second.money -= money;
+    else m_playerData.second.money += money;
     updateStatusTexts();
 }
 void Game::takeMove()
@@ -362,8 +362,27 @@ bool Game::canMove()
 void Game::updateStatusTexts()
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
-    uiManagerInstance.updateGameStatusTexts(m_playerOneToPlay ? 
-        m_playerData.first : m_playerData.second, m_playerOneToPlay);
+    auto& playerData = m_playerOneToPlay ? m_playerData.first : m_playerData.second;
+    uiManagerInstance.updateGameStatusTexts(std::format("TURN: {1}{0}MONEY: {2}{3}{0}MOVES: {4}/{5}",
+        "        ",
+        m_playerOneToPlay ? "PLAYER ONE" : "PLAYER TWO", 
+        playerData.money, CURRENCY_SYMBOL,
+        playerData.moves.first, playerData.moves.second));
+}
+void Game::endTurn()
+{
+    if(m_playerOneToPlay) 
+    {
+        m_playerData.first.moves.first = m_playerData.first.moves.second;
+    }
+    else
+    {
+        m_playerData.second.moves.first = m_playerData.second.moves.second;
+    }
+    m_playerOneToPlay = !m_playerOneToPlay;
+    
+    activatePlayerSquares();
+    updateStatusTexts();
 }
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
@@ -377,10 +396,12 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         activatePlayerSquares();
         uiManagerInstance.disableGameActionButtons(true);
         uiManagerInstance.retrieveSavedSelection();
+        uiManagerInstance.setEndTurnButton(true);
     };
     switch (buttonType)
     {
-    case ButtonTypes::ActionButton:
+        using enum ButtonTypes;
+    case actionButton:
         assert(m_selectedUnitIndices);
         if(index == 0)
         {
@@ -404,24 +425,27 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             auto actionType = m_grid.at(m_selectedUnitIndices.value())->useAction(m_selectedActionIndex.value());
             switch (actionType)
             {
-            case ActionTypes::selectSquare:
+                using enum ActionTypes;
+            case selectSquare:
                 uiManagerInstance.saveCurrentSelection();
                 uiManagerInstance.disableGameActionButtons(false);
                 gameControllerInstance.getCamera()->stopZoom();
                 break;
-            case ActionTypes::immediate:
+            case immediate:
                 m_selectedActionIndex.reset();
                 gameControllerInstance.getCamera()->stopZoom();
                 returnToPlayerUnitSelection();
                 break;
-            case ActionTypes::nothing:
+            case nothing:
                 m_selectedActionIndex.reset();
                 break;
             }
         }
         break;
-    
-    case ButtonTypes::GridSquare:
+    case endTurnButton:
+        endTurn();
+        break;
+    case gridSquare:
         auto selectedActionSquare = GameGrid::convertIndexToLocation(index);
         if(m_selectedActionIndex)
         {
@@ -440,11 +464,13 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             {
                 activatePlayerSquares();
                 uiManagerInstance.retrieveSavedSelection();
+                uiManagerInstance.setEndTurnButton(true);
             });
         }
         else
         {
             gameControllerInstance.getCamera()->zoom(m_grid[index]->getPosition(), .3f, .5f, 1.f);
+            uiManagerInstance.setEndTurnButton(false);
             uiManagerInstance.saveCurrentSelection();
             static constexpr auto SELECTED_GRID_SQUARE_COLOR = glm::vec3(.7f, .9f, .2f);
             m_selectedUnitIndices = selectedActionSquare;

@@ -31,7 +31,7 @@ void UnitObject::initialize()
     addToRenderEngine(Object3DRenderTypes::renderLastly);
 
     m_actionData.resize(m_actions.size());
-    assert(m_actions.size() < GAME_ACTION_BUTTONS_COUNT && "Unit cannot have more actions than there are buttons");//the first button is back button so < instead of <=
+    assert(m_actions.size() < GAME_ACTION_BUTTONS_MAX_COUNT && "Unit cannot have more actions than there are buttons");//the first button is back button so < instead of <=
     std::transform(m_actions.begin(), m_actions.end(), m_actionData.begin(), [&](Action* action)
     {
         //color is not constant so it's only set it when returning data

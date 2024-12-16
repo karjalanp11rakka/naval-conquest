@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cassert>
 #include <string>
-#include <format>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -134,7 +133,8 @@ UIManager::UIManager()
         }, blue, highlightThickness, "DARK BACKGROUND (OFF)", &m_darkBackgroundEnabled);
 
     std::vector<UIElement*> gameElements;
-    gameElements.reserve(GRID_SIZE * GRID_SIZE + GAME_ACTION_BUTTONS_COUNT + GAME_STATUS_TEXTS_COUNT + GRID_SIZE * GRID_SIZE / 2);
+    //                           small and large grid squares                  action button    game status text and end turn button
+    gameElements.reserve(GRID_SIZE * GRID_SIZE + GRID_SIZE * GRID_SIZE / 2 + GAME_ACTION_BUTTONS_MAX_COUNT + 2);
 
     std::size_t gameElementIndex {};
     for(std::size_t y {}; y < GRID_SIZE; ++y)
@@ -150,7 +150,7 @@ UIManager::UIManager()
             m_gameGridSquares[gameElementIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
                 {
                     static GameController& gameControllerInstance = GameController::getInstance();
-                    gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
+                    gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::gridSquare);
                 }, std::move(squareModel), glm::vec3(.4f, .4f, .5f), yellow);
 
             gameElements.push_back(m_gameGridSquares[gameElementIndex].get());
@@ -167,18 +167,19 @@ UIManager::UIManager()
             m_gameGridLargeSquares[currentLargeSquareIndex] = std::make_unique<UIElement3D>([gameElementIndex]()
                 {
                     static GameController& gameControllerInstance = GameController::getInstance();
-                    gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::GridSquare);
+                    gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::gridSquare);
                 }, std::move(largeSquareModel), glm::vec3(.4f, .4f, .5f), yellow);
             gameElements.push_back(m_gameGridLargeSquares[currentLargeSquareIndex].get());
         }
     }
 
-    constexpr float actionButtonSpacing = .3f;
-    for(std::size_t i {}; i < GAME_ACTION_BUTTONS_COUNT; ++i)
+    constexpr float ACTION_BUTTON_WIDTH = .12f, ACTION_BUTTON_HEIGHT = .05f;
+    constexpr float ACTION_BUTTON_SPACING = .3f;
+    for(std::size_t i {}; i < GAME_ACTION_BUTTONS_MAX_COUNT; ++i)
     {
         TextData textData
         {
-            .position = {(-1.f + actionButtonSpacing / 2.f) + i * actionButtonSpacing, -1.f + actionButtonSpacing / 2.f},
+            .position = {(-1.f + ACTION_BUTTON_SPACING / 2.f) + i * ACTION_BUTTON_SPACING, -1.f + ACTION_BUTTON_SPACING / 2.f},
             .textColor = buttonTextColor,
             .scale = 1.f,
         };
@@ -192,41 +193,46 @@ UIManager::UIManager()
             backgroundData.backgroundColor = {.9f, .5f, .4f};
         }
 
-        constexpr float actionButtonWidth = .12f, actionButtonHeight = .05f;
         m_gameActionButtons[i] = std::make_unique<ScalableButtonUIElement>(std::move(textData), std::move(backgroundData), 
             [i]()
             {
                 static GameController& gameControllerInstance = GameController::getInstance();
-                gameControllerInstance.receiveGameInput(i, ButtonTypes::ActionButton);
+                gameControllerInstance.receiveGameInput(i, ButtonTypes::actionButton);
             }, yellow, .2f,
-            actionButtonWidth, actionButtonHeight);
+            ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
         gameElements.push_back(m_gameActionButtons[i].get());
     }
 
-    TextData playerTurnTextData
+    TextData endTurnTextData
     {
-        .position = {-.8f, .9f},
-        .textColor = infoTextColor,
-        .scale = .8f,
+        .text = "END TURN",
+        .position = {.8f, -.8f},
+        .textColor = buttonTextColor,
+        .scale = 1.f
     };
-    m_turnText = std::make_unique<TextUIElement>(std::move(playerTurnTextData));
-    gameElements.push_back(m_turnText.get());
-    TextData moneyTextData
+    TextBackgroundData endTurnBackgroundData
+    {
+        .backgroundColor = {.9f, .8f, .4f},
+        .backgroundScale = .6f
+    };
+
+    m_endTurnButton = std::make_unique<ScalableButtonUIElement>(std::move(endTurnTextData), std::move(endTurnBackgroundData), 
+        []()
+        {
+            static GameController& gameControllerInstance = GameController::getInstance();
+            gameControllerInstance.receiveGameInput(0, ButtonTypes::endTurnButton);
+        }, yellow, .2f,
+            ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
+    gameElements.push_back(m_endTurnButton.get());
+
+    TextData gameStatusTextData
     {
         .position = {-.4f, .9f},
         .textColor = infoTextColor,
         .scale = .8f,
     };
-    m_moneyText = std::make_unique<TextUIElement>(std::move(moneyTextData));
-    gameElements.push_back(m_moneyText.get());
-    TextData movesTextData
-    {
-        .position = {0.f, .9f},
-        .textColor = infoTextColor,
-        .scale = .8f,
-    };
-    m_movesText = std::make_unique<TextUIElement>(std::move(movesTextData));
-    gameElements.push_back(m_movesText.get());
+    m_gameStatusText = std::make_unique<TextUIElement>(std::move(gameStatusTextData));
+    gameElements.push_back(m_gameStatusText.get());
 
     m_gameUI = std::make_unique<UIPreset>(std::move(gameElements));
     m_menuUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&playButton, &settingsButton, &infoButton, &exitButton});
@@ -270,11 +276,9 @@ void UIManager::removeSavedSelection()
 {
     m_currentUI->removeSavedSelection();
 }
-void UIManager::updateGameStatusTexts(PlayerData playerData, bool playerOne)
+void UIManager::updateGameStatusTexts(std::string&& text)
 {
-    m_turnText->changeText(std::format("TURN: {}", playerOne ? "PLAYER ONE" : "PLAYER TWO"));
-    m_moneyText->changeText(std::format("MONEY: {}{}", playerData.money, CURRENCY_SYMBOL));
-    m_movesText->changeText(std::format("MOVES: {}/{}", playerData.moves.first, playerData.moves.second));
+    m_gameStatusText->changeText(std::move(text));
 }
 void UIManager::removeDisabledColorToGridSquare(std::size_t index)
 {
@@ -299,8 +303,7 @@ void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSm
             if(m_enabledLargeSquares.test(i / 2) && !activeLargeSquares.test(i / 2))
                 m_gameUI->disableElement(m_gameGridLargeSquares[i / 2].get());
             else if(!m_enabledLargeSquares.test(i / 2) && activeLargeSquares.test(i / 2))
-                m_gameUI->enableElement(m_gameGridLargeSquares[i / 2].get());        
-
+                m_gameUI->enableElement(m_gameGridLargeSquares[i / 2].get());
         }
         if(m_enabledSquares.test(i) && !activeSmallSquares.test(i))
             m_gameUI->disableElement(m_gameGridSquares[i].get());
@@ -333,7 +336,11 @@ void UIManager::disableGameActionButtons(bool disableBackButton)
     m_enabledButtonsCount = disableBackButton ? 0 : 1;
     m_backButtonEnabled = !disableBackButton;
 }
-
+void UIManager::setEndTurnButton(bool enabled)
+{
+    if(enabled) m_gameUI->enableElement(m_endTurnButton.get());
+    else m_gameUI->disableElement(m_endTurnButton.get());
+}
 void UIManager::processInput(int key)
 {
     m_currentUI->processInput(key);
