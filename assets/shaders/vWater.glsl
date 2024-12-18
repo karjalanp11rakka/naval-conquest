@@ -17,7 +17,7 @@ float random(float seed)
 void main()
 {
     zPosOffset = sin(random(aPos.x * aPos.y) * 100.f + time * 2.f);
-    vec4 modelPosition = model * vec4(aPos.x, aPos.y, aPos.z + zPosOffset / 150.f, 1.0f);
+    vec4 modelPosition = model * vec4(aPos.x, aPos.y, aPos.z + .0075f + zPosOffset / 150.f, 1.f);
     FragPos = modelPosition.xyz / modelPosition.w;
 
     gl_Position = projection * view * modelPosition;

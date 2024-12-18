@@ -6,6 +6,8 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include <engine/renderEngine.hpp>
 #include <game/uiManager.hpp>
@@ -14,14 +16,14 @@
 #include <game/gameController.hpp>
 #include <game/game.hpp>
 
+constexpr glm::vec3 BLUE(.1f, .2f, .9f);
+constexpr glm::vec3 ORANGE(.9f, .6f, .1f);
 UIManager::UIManager()
 {  
     RenderEngine& renderEngineInstance = RenderEngine::getInstance();
     GLFWController& glfwControllerInstance = GLFWController::getInstance();
     renderEngineInstance.addRenderCallback([this](){m_currentUI->update();});
 
-    constexpr glm::vec3 blue(.1f, .2f, .9f);
-    constexpr glm::vec3 yellow(.9f, .6f, .1f);
     constexpr glm::vec3 buttonTextColor(.7f, .9f, .9f);
     constexpr glm::vec3 infoTextColor(.9f, .9f, .2f);
     constexpr float highlightThickness = .55f;
@@ -35,7 +37,7 @@ UIManager::UIManager()
     };
     TextBackgroundData playButtonBackgroundData
     {
-        .backgroundColor = yellow,
+        .backgroundColor = ORANGE,
         .backgroundScale = 2.6f,
     };
     static ButtonUIElement playButton(std::move(playButtonTextData), std::move(playButtonBackgroundData),
@@ -50,7 +52,7 @@ UIManager::UIManager()
             static GameController& gameControllerInstance = GameController::getInstance();
             gameControllerInstance.createGame(true);
 
-        }, blue, highlightThickness);
+        }, BLUE, highlightThickness);
     
     TextData settingsButtonTextData
     {
@@ -61,11 +63,11 @@ UIManager::UIManager()
     };
     TextBackgroundData settingsButtonBackgroundData
     {
-        .backgroundColor = yellow,
+        .backgroundColor = ORANGE,
         .backgroundScale = 2.6f,
     };
     static ButtonUIElement settingsButton(std::move(settingsButtonTextData), std::move(settingsButtonBackgroundData),
-        [this](){changeCurrentUI(m_settingsUI);}, blue, highlightThickness);
+        [this](){changeCurrentUI(m_settingsUI);}, BLUE, highlightThickness);
     
     TextData infoButtonTextData
     {
@@ -76,11 +78,11 @@ UIManager::UIManager()
     };
     TextBackgroundData infoButtonBackroundData
     {
-        .backgroundColor = yellow,
+        .backgroundColor = ORANGE,
         .backgroundScale = 2.6f
     };
     static ButtonUIElement infoButton(std::move(infoButtonTextData), std::move(infoButtonBackroundData),
-        [](){}, blue, highlightThickness);
+        [](){}, BLUE, highlightThickness);
 
     TextData exitButtonTextData
     {
@@ -95,7 +97,7 @@ UIManager::UIManager()
         .backgroundScale = 1.4f,
     };
     static ButtonUIElement exitButton(std::move(exitButtonTextData), std::move(exitbuttonBackgroundData),
-        [&](){glfwControllerInstance.close();}, blue, highlightThickness);
+        [&](){glfwControllerInstance.close();}, BLUE, highlightThickness);
 
     TextData backButtonTextData
     {
@@ -110,7 +112,7 @@ UIManager::UIManager()
         .backgroundScale = 1.4f,
     };
     static ButtonUIElement backButton(std::move(backButtonTextData), std::move(backButtonBackgroundData),
-        [this](){changeCurrentUI(m_menuUI);}, blue, highlightThickness);
+        [this](){changeCurrentUI(m_menuUI);}, BLUE, highlightThickness);
 
     TextData darkBGButtonTextData
     {
@@ -130,7 +132,7 @@ UIManager::UIManager()
         [&, defaultBackgroundColor]()
         {
             renderEngineInstance.setBackgroundColor(m_darkBackgroundEnabled ? glm::vec3(.7f, .6f, .4f) : defaultBackgroundColor);
-        }, blue, highlightThickness, "DARK BACKGROUND (OFF)", &m_darkBackgroundEnabled);
+        }, BLUE, highlightThickness, "DARK BACKGROUND (OFF)", &m_darkBackgroundEnabled);
 
     std::vector<UIElement*> gameElements;
     //                           small and large grid squares                  action button    game status text and end turn button
@@ -151,7 +153,7 @@ UIManager::UIManager()
                 {
                     static GameController& gameControllerInstance = GameController::getInstance();
                     gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::gridSquare);
-                }, std::move(squareModel), glm::vec3(.4f, .4f, .5f), yellow);
+                }, std::move(squareModel), glm::vec3(.4f, .4f, .5f), ORANGE);
 
             gameElements.push_back(m_gameGridSquares[gameElementIndex].get());
         
@@ -168,7 +170,7 @@ UIManager::UIManager()
                 {
                     static GameController& gameControllerInstance = GameController::getInstance();
                     gameControllerInstance.receiveGameInput(gameElementIndex, ButtonTypes::gridSquare);
-                }, std::move(largeSquareModel), glm::vec3(.4f, .4f, .5f), yellow);
+                }, std::move(largeSquareModel), glm::vec3(.4f, .4f, .5f), ORANGE);
             gameElements.push_back(m_gameGridLargeSquares[currentLargeSquareIndex].get());
         }
     }
@@ -198,7 +200,7 @@ UIManager::UIManager()
             {
                 static GameController& gameControllerInstance = GameController::getInstance();
                 gameControllerInstance.receiveGameInput(i, ButtonTypes::actionButton);
-            }, yellow, .2f,
+            }, ORANGE, .2f,
             ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
         gameElements.push_back(m_gameActionButtons[i].get());
     }
@@ -221,13 +223,13 @@ UIManager::UIManager()
         {
             static GameController& gameControllerInstance = GameController::getInstance();
             gameControllerInstance.receiveGameInput(0, ButtonTypes::endTurnButton);
-        }, yellow, .2f,
+        }, ORANGE, .2f,
             ACTION_BUTTON_WIDTH, ACTION_BUTTON_HEIGHT);
     gameElements.push_back(m_endTurnButton.get());
 
     TextData gameStatusTextData
     {
-        .position = {-.4f, .9f},
+        .position = {-.0f, .9f},
         .textColor = infoTextColor,
         .scale = .8f,
     };
@@ -314,7 +316,7 @@ void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSm
     m_enabledLargeSquares = std::move(activeLargeSquares);
 }
 
-void UIManager::enableGameActionButtons(const std::vector<std::pair<std::string_view, glm::vec3>>& data)
+void UIManager::enableGameActionButtons(const std::vector<ActionData>& data)
 {
     assert(m_enabledButtonsCount <= 1 && "Buttons have to be disabled before they can be enabled.");
     if(m_enabledButtonsCount == 0)
@@ -324,8 +326,9 @@ void UIManager::enableGameActionButtons(const std::vector<std::pair<std::string_
     m_enabledButtonsCount = data.size() + 1;
     for(std::size_t i {1}; i < m_enabledButtonsCount; ++i)//ignore the first one which is the back button
     {
-        m_gameActionButtons[i]->changeText(std::string(data[i - 1].first));
-        m_gameActionButtons[i]->setBackgroundColor(data[i - 1].second);
+        m_gameActionButtons[i]->changeText(std::string(data[i - 1].text));
+        m_gameActionButtons[i]->setBackgroundColor(data[i - 1].color);
+        m_gameActionButtons[i]->setInfoText(data[i - 1].infoText, ORANGE);
         m_gameUI->enableElement(m_gameActionButtons[i].get());
     }
 }
@@ -340,6 +343,10 @@ void UIManager::setEndTurnButton(bool enabled)
 {
     if(enabled) m_gameUI->enableElement(m_endTurnButton.get());
     else m_gameUI->disableElement(m_endTurnButton.get());
+}
+void UIManager::moveSelection()
+{
+    m_currentUI->processInput(GLFW_KEY_RIGHT);
 }
 void UIManager::processInput(int key)
 {

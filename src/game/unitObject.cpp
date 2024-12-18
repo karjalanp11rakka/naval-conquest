@@ -1,5 +1,6 @@
 #include <cassert>
 #include <algorithm>
+#include <cstdint>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -32,10 +33,10 @@ void UnitObject::initialize()
 
     m_actionData.resize(m_actions.size());
     assert(m_actions.size() < GAME_ACTION_BUTTONS_MAX_COUNT && "Unit cannot have more actions than there are buttons");//the first button is back button so < instead of <=
-    std::transform(m_actions.begin(), m_actions.end(), m_actionData.begin(), [&](Action* action)
+    std::transform(m_actions.begin(), m_actions.end(), m_actionData.begin(), [&](Action* action) -> ActionData
     {
         //color is not constant so it's only set it when returning data
-        return std::make_pair(std::string_view(action->getName()), glm::vec3());
+        return {std::string_view(action->getName()), {}, action->getInfoText()};
     });
 }
 UnitObject::~UnitObject()
@@ -56,11 +57,11 @@ void UnitObject::setRotation(glm::quat rotation)
     m_transform.rotation = rotation;
     updateModelMatrix();
 }
-const std::vector<std::pair<std::string_view, glm::vec3>>& UnitObject::getActionData()
+const std::vector<ActionData>& UnitObject::getActionData()
 {
     for(int i {}; i < m_actionData.size(); ++i)
     {
-        m_actionData[i].second = m_actions[i]->getColor(m_gameInstance);
+        m_actionData[i].color = m_actions[i]->getColor(m_gameInstance);
     }
     return m_actionData;
 }
@@ -89,7 +90,7 @@ static constexpr Material SAND_YELLOW_MAT {glm::vec3(.8f, .8f, .7f), .5f, 120.f,
 Base::Base(Game* game, bool teamOne)
     : UnitObject(game, teamOne,
     //actions
-    {&UpgradeAction<100, BaseUpgrade1>::get()},
+    {&BaseUpgradeAction<900, BaseUpgrade1, 300, 3>::get()},
     //3D object parts
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
@@ -104,7 +105,7 @@ Base::Base(Game* game, bool teamOne)
 
 BaseUpgrade1::BaseUpgrade1(Game* game, bool teamOne)
     : UnitObject(game, teamOne,
-    {&UpgradeAction<200, BaseUpgrade2>::get()},
+    {&BaseUpgradeAction<1800, BaseUpgrade2, 500, 4>::get()},
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BUILDING_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
@@ -140,7 +141,7 @@ BaseUpgrade2::BaseUpgrade2(Game* game, bool teamOne)
 static constexpr int AIRCRAFT_CARRIER_MOVE_RADIUS = 2;
 AircraftCarrierUnit::AircraftCarrierUnit(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne, 
-    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), &UpgradeAction<900, AircraftCarrierUpgrade1>::get()},
+    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), &UpgradeAction<600, AircraftCarrierUpgrade1>::get()},
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, BLACK_MAT)) {}

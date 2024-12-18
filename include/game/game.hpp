@@ -89,7 +89,7 @@ public:
     void moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2);
     void moveAt(Loc loc1, Loc loc2);
     std::optional<std::unordered_set<std::size_t>*> getCombinedLocations(std::size_t index);
-    Path findPath(Loc startPos, Loc movePos, bool avoidObstacles = true);
+    [[nodiscard]] Path findPath(Loc startPos, Loc movePos, bool avoidObstacles = true);
     int moveAlongPath(Path&& path, float speed, bool useRotation = true);//return the number of steps
     int size() const {return std::ssize(m_base);}
     UnitObject* operator[](std::size_t index) const noexcept;
@@ -146,11 +146,13 @@ public:
         return Iterator(m_base.end());
     }
 };
-inline constexpr std::int32_t PLAYER_STARTING_MONEY = 1000;
+inline constexpr std::int32_t PLAYER_STARTING_MONEY = 600;
+inline constexpr std::int32_t PLAYER_STARTING_TURN_MONEY = 200;
 struct PlayerData
 {
     std::int32_t money {PLAYER_STARTING_MONEY};
     std::pair<int, int> moves {std::make_pair(2, 2)};
+    std::int32_t turnMoney = PLAYER_STARTING_TURN_MONEY;
 };
 class Game
 {
@@ -170,6 +172,7 @@ public:
     void update();
     std::int32_t getMoney() const;
     void addMoney(std::int32_t money);
+    void setTurnData(std::int32_t money, int maxMoves);
     void takeMove();
     bool canMove();
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);

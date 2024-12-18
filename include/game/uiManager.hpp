@@ -58,9 +58,10 @@ public:
     void addDisabledColorToGridSquare(std::size_t index, const glm::vec3& color);
     void removeDisabledColorToGridSquare(std::size_t index);
     void setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSmallSquares, std::bitset<GRID_SIZE * GRID_SIZE / 2>&& activeLargeSquares = {});
-    void enableGameActionButtons(const std::vector<std::pair<std::string_view, glm::vec3>>& data);
+    void enableGameActionButtons(const std::vector<ActionData>& data);
     void disableGameActionButtons(bool disableBackButton);
     void setEndTurnButton(bool enabled);
+    void moveSelection();
     void processInput(int key);
     void onWindowResize(int width, int height);
 };

@@ -57,7 +57,7 @@ void main()
         result += CalculatePointLight(lights[i], norm, FragPos, viewDir);
     
     result *= material.color;
-    FragColor = vec4(result, 1.0f);
+    FragColor = vec4(result, 1.f);
 }
 
 vec3 CalculatePointLight(PointLight pointLight, vec3 normal, vec3 fragPos, vec3 viewDir)
@@ -74,7 +74,7 @@ vec3 CalculatePointLight(PointLight pointLight, vec3 normal, vec3 fragPos, vec3 
     vec3 specular = material.specularStrength * spec * pointLight.color;
 
     float distance = length(pointLight.position - fragPos);
-    float attenuation = 1.0 / (pointLight.strength + pointLight.linear * distance + pointLight.quadratic * (distance * distance));
+    float attenuation = 1. / (pointLight.strength + pointLight.linear * distance + pointLight.quadratic * (distance * distance));
 
     ambient *= attenuation;
     diffuse *= attenuation;

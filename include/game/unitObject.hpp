@@ -6,6 +6,7 @@
 #include <utility>
 #include <concepts>
 #include <type_traits>
+#include <tuple>
 
 #include <glm/fwd.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -21,6 +22,8 @@ struct Transform
 };
 
 class Action;
+struct ActionData;
+
 enum class ActionTypes;
 
 template<typename T>
@@ -31,7 +34,7 @@ public:
     using is_base = std::false_type;
 private:
     std::vector<Action*> m_actions;
-    std::vector<std::pair<std::string_view, glm::vec3>> m_actionData;
+    std::vector<ActionData> m_actionData;
     void initialize();
 protected:
     Transform m_transform {};
@@ -54,7 +57,7 @@ public:
     const glm::vec3& getPosition() const {return m_transform.position;}
     const glm::vec3& getScale() const {return m_transform.scale;}
     const glm::quat& getRotation() const {return m_transform.rotation;}
-    const std::vector<std::pair<std::string_view, glm::vec3>>& getActionData();
+    const std::vector<ActionData>& getActionData();
 };
 template<typename T>
 constexpr bool isBase()

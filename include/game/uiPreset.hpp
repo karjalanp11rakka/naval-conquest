@@ -106,12 +106,19 @@ class ScalableButtonUIElement : public ButtonUIElement
 {
 private:
     float m_width {}, m_height {};
+    std::string_view m_infoText;
+    glm::vec3 m_infoTextColor {};
+    bool m_useInfoText {};
 public:
     ScalableButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness, float width, float height)
         : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_width(width), m_height(height) {}
 
+    void update() override;
     void setBackgroundColor(const glm::vec3& color);
     void onResize(int windowWidth, int windowHeight) override;
+    void setInfoText(std::string_view text, glm::vec3 color);
+    void focus() override;
+    void defocus() override;
 };
 
 class UIElement3D : public UIElement

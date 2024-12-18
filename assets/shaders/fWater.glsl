@@ -6,5 +6,5 @@ in float zPosOffset;
 
 void main()
 {
-    FragColor = vec4(0.3f, 0.4f + cos(zPosOffset / 10.f) / 10.f, 0.8f + (0.1f + zPosOffset / 10.f), 1.0f);
+    FragColor = vec4(.3f, .4f + cos(zPosOffset / 10.f) / 10.f, .8f + (0.1f + zPosOffset / 10.f), 1.f);
 }

@@ -75,12 +75,13 @@ void RenderEngine::addObject(Object* objPtr, Object3DRenderTypes renderType)
     }
     switch (renderType)
     {
-    case Object3DRenderTypes::normal:
+        using enum Object3DRenderTypes; 
+    case normal:
         processObjectsVector(m_objects3DNormal);
         break;
-    case Object3DRenderTypes::noDepthTest:
+    case noDepthTest:
         processObjectsVector(m_objects3DnoDepth);
-    case Object3DRenderTypes::renderLastly:
+    case renderLastly:
         processObjectsVector(m_objects3Dlastl);
     }
 }

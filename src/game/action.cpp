@@ -193,7 +193,6 @@ glm::vec3 BuyAction<Price>::getColor(Game* gameInstance) const
 {
     if(gameInstance->getMoney() < Price) return ACTION_UNUSABLE_COLOR;
     return Action::getColor(gameInstance);
-
 }
 template<int Radius>
 bool MoveAction<Radius>::usable(Game* gameInstance) const
@@ -220,20 +219,25 @@ glm::vec3 MoveAction<Radius>::getColor(Game* gameInstance) const
     return ACTION_UNUSABLE_COLOR;
 }
 template<std::int32_t Price, typename UgradeClass>
-void UpgradeAction<Price, UgradeClass>::buy(Game* gameInstance)
+void UpgradeActionTemplate<Price, UgradeClass>::buy(Game* gameInstance)
 {
     GameGrid& gameGrid = this->getGameGrid(gameInstance);
     auto indices = this->getSelectedUnitIndices(gameInstance);
     gameGrid.initializeAt<UgradeClass>(indices, gameGrid.at(indices)->isTeamOne());
+    upgrade(gameInstance);
 }
-
+template<std::int32_t Price, typename UpgradeClass, std::int32_t NewTurnMoney, int NewMaxMoves>
+void BaseUpgradeAction<Price, UpgradeClass, NewTurnMoney, NewMaxMoves>::upgrade(Game* gameInstance)
+{
+    gameInstance->setTurnData(NewTurnMoney, NewMaxMoves);
+}
 
 #include <game/unitObject.hpp>
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
+template class UpgradeAction<600,AircraftCarrierUpgrade1>;
+template class BaseUpgradeAction<900,BaseUpgrade1,300,3>;
 template class MoveAction<2>;
-template class UpgradeAction<200,BaseUpgrade2>;
+template class BaseUpgradeAction<1800,BaseUpgrade2,500,4>;
 template class MoveAction<2+1>;
-template class UpgradeAction<100,BaseUpgrade1>;
 template class MoveAction<6>;
-template class UpgradeAction<900,AircraftCarrierUpgrade1>;

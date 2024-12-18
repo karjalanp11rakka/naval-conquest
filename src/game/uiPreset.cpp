@@ -26,6 +26,20 @@
 static constexpr float TEXT_SIZE_MULTIPLIER {.002f};
 static constexpr float SAME_ROW_EPSILON {.01f};
 
+void drawText(GLTtext* textPtr, const char* text, GLfloat x, GLfloat y, GLfloat scale, glm::vec3 color)
+{
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
+    int width {glfwControllerInstance.getWidth()}, height {glfwControllerInstance.getHeight()};
+    float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER};
+    gltBeginDraw();
+    gltColor(color.x, color.y, color.z, 1.f);
+    gltSetText(textPtr, text);
+    gltDrawText2DAligned(textPtr, 
+        (GLfloat)(width / 2.f) + (x / 2 * width),
+        (GLfloat)(height / 2.f) + (y / 2 * -height),
+         scale * sizeMultiplier, GLT_CENTER, GLT_CENTER);
+    gltEndDraw();
+}
 void InteractableBackground::configureShaders() const 
 {
     unsigned int colorLoc = glGetUniformLocation(m_shader->getID(), "color");
@@ -93,24 +107,10 @@ TextUIElement::~TextUIElement()
 void TextUIElement::update()
 {
     if(!m_enabled) return;
-    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
-    gltBeginDraw();
-
-    int width {glfwControllerInstance.getWidth()}, height {glfwControllerInstance.getHeight()};
-    float sizeMultiplier {(height < width ? height : width) * TEXT_SIZE_MULTIPLIER};
-
     if(m_textData.text == "") return;
 
-    gltColor(m_textData.textColor.x, 
-        m_textData.textColor.y, m_textData.textColor.z, 1.f);    
-    gltSetText(m_text, m_textData.text.data());
-    gltDrawText2DAligned(m_text,
-        (GLfloat)(width / 2.f) + (m_textData.position.x / 2 * width),
-        (GLfloat)(height / 2.f) + (m_textData.position.y / 2 * -height),
-        m_textData.scale * sizeMultiplier,
-        GLT_CENTER, GLT_CENTER);
-
-    gltEndDraw();
+    drawText(m_text, m_textData.text.data(), m_textData.position.x,
+        m_textData.position.y, m_textData.scale, m_textData.textColor);
 }
 void TextUIElement::changeText(std::string&& text)
 {
@@ -185,6 +185,28 @@ void ScalableButtonUIElement::setBackgroundColor(const glm::vec3& color)
 {
     m_backgroundObject->setColor(color);
 }
+void ScalableButtonUIElement::update()
+{
+    if(!m_enabled) return;
+    if(m_useInfoText && m_infoText != "")
+    {
+        static constexpr float INFO_TEXT_OFFSET = .15f;
+        static constexpr float INFO_TEXT_SCALE = .6f;
+        drawText(m_text, m_infoText.data(), m_textData.position.x, 
+            m_textData.position.y + INFO_TEXT_OFFSET, INFO_TEXT_SCALE, m_infoTextColor);
+    }
+    TextUIElement::update();
+}
+void ScalableButtonUIElement::focus()
+{
+    ButtonUIElement::focus();
+    m_useInfoText = true;
+}
+void ScalableButtonUIElement::defocus()
+{
+    ButtonUIElement::defocus();
+    m_useInfoText = false;
+}
 void ScalableButtonUIElement::onResize(int windowWidth, int windowHeight)
 {
     float sizeMultiplier {(windowHeight > windowWidth ? (float)windowHeight : (float)windowWidth)};
@@ -192,6 +214,11 @@ void ScalableButtonUIElement::onResize(int windowWidth, int windowHeight)
     backgroundModel = glm::translate(backgroundModel, glm::vec3(m_textData.position.x, m_textData.position.y, 0.f));
     backgroundModel = glm::scale(backgroundModel, glm::vec3(m_width / (float)windowWidth * sizeMultiplier, m_height / float(windowHeight) * sizeMultiplier, 0.f));
     m_backgroundObject->setModel(std::move(backgroundModel));
+}
+void ScalableButtonUIElement::setInfoText(std::string_view text, glm::vec3 color)
+{
+    m_infoText = text;
+    m_infoTextColor = color;
 }
 
 UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model, 
@@ -259,9 +286,10 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
 
     std::pair<std::size_t, std::size_t> newElementIndices {};
 
+    using enum FocusMoveDirections;
     switch (focusMoveDirection)
     {
-    case FocusMoveDirections::up:
+    case up:
         if(m_focusIndices.first == 0)
         {
             newElementIndices.first = m_sortedElements.size() - 1;
@@ -272,7 +300,7 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
             newElementIndices.second = m_sortedElements[newElementIndices.first].size() - 1;
         else newElementIndices.second = m_focusIndices.second;
         break;
-    case FocusMoveDirections::down:
+    case down:
         if(m_focusIndices.first == m_sortedElements.size() - 1)
         {
             newElementIndices.first = 0;
@@ -285,7 +313,7 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
         }
         else newElementIndices.second = m_focusIndices.second;
         break;
-    case FocusMoveDirections::right:
+    case right:
         if(m_focusIndices.second == (m_sortedElements[m_focusIndices.first].size() - 1))
         {
             if(m_focusIndices.first == m_sortedElements.size() - 1)
@@ -301,7 +329,7 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
             newElementIndices.second = m_focusIndices.second + 1;
         }
         break;
-    case FocusMoveDirections::left:
+    case left:
         if(m_focusIndices.second == 0)
         {
             if(m_focusIndices.first == 0)
@@ -324,8 +352,8 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
     //if the next element is not interactable, recursion is used to move again
     if(!m_sortedElements[newElementIndices.first][newElementIndices.second]->isInteractable())
     {
-        moveFocusedElement((focusMoveDirection == FocusMoveDirections::right || focusMoveDirection == FocusMoveDirections::down)
-            ? FocusMoveDirections::right : FocusMoveDirections::left);
+        moveFocusedElement((focusMoveDirection == right || focusMoveDirection == down)
+            ? right : left);
         return;
     }
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
@@ -477,6 +505,7 @@ void UIPreset::processInput(int key)
 {
     switch (key)
     {
+        using enum FocusMoveDirections;
     case GLFW_KEY_ENTER:
     case GLFW_KEY_SPACE:
         if(m_interactableElementsCount)
@@ -484,16 +513,16 @@ void UIPreset::processInput(int key)
         break;
 
     case GLFW_KEY_UP:
-        moveFocusedElement(FocusMoveDirections::up);
+        moveFocusedElement(up);
         break;
     case GLFW_KEY_RIGHT:
-        moveFocusedElement(FocusMoveDirections::right);
+        moveFocusedElement(right);
         break;
     case GLFW_KEY_DOWN:
-        moveFocusedElement(FocusMoveDirections::down);
+        moveFocusedElement(down);
         break;
     case GLFW_KEY_LEFT:
-        moveFocusedElement(FocusMoveDirections::left);
+        moveFocusedElement(left);
         break;
     default: break;
     }

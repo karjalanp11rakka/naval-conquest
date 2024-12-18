@@ -21,6 +21,8 @@ class TemplateClass:
         self.min_template_count = min_template_count
     def __eq__(self, other):
         return self.name == other.name
+    def __lt__(self, other):
+        return len(self.name) > len(other.name) 
     def __hash__(self):
         return hash(self.name)
 
@@ -40,7 +42,7 @@ def ProcessLine(line: str) -> str:
     line = line.strip()
     return line
 
-def getTemplateClassesData(file) -> deque:
+def getTemplateClassesData(file):
     returnValue = deque()
     istemplate = False
     for line in file:
@@ -59,7 +61,7 @@ def getTemplateClassesData(file) -> deque:
         if "template" in line:
             istemplate = True
             returnValue.append(TemplateClass(line.count(",") - line.count("=") + 1))
-    return returnValue
+    return sorted(returnValue)
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -79,12 +81,12 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
                 for template_class in template_classes_data:
                     #find all occurances of the current template class
                     template_class_use_indices = []
-                    template_class_use_indices_start = 0
                     while True:
-                        index = line.find(template_class.name, template_class_use_indices_start)
+                        index = line.find(template_class.name)
                         if index == -1: break
                         template_class_use_indices.append(index)
-                        template_class_use_indices_start = index + 1
+                        line = line[:index] + ' ' * len(template_class.name) + line[index + len(template_class.name):]#avoid taking the same name multiple times
+
                     #save the instantiation template parameters
                     for template_class_use_index in template_class_use_indices:
                         instantiation_definition = "".join(line[template_class_use_index + len(template_class.name):].split())
@@ -122,7 +124,7 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
                         variable_name = re.search(r"(\S+)(?=\s*$)", line[:opening_curly_brace_index]).group(0)
                         variable_value = re.search(r".+(?=}\s*;)", line[opening_curly_brace_index + 1:]).group(0).strip()
                     constant_variables[variable_name] = variable_value
-    
+
         with open(os.path.join(ROOT_DIRECTORY, *TEMPLATE_CLASS_WRITE_PATHS[index]), "r") as read_file:
             lines = read_file.readlines()
             index_to_clear = -1

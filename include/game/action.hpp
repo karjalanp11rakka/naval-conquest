@@ -8,6 +8,7 @@
 #include <variant>
 #include <concepts>
 #include <functional>
+#include <format>
 #include <cstdint>
 #include <cassert>
 
@@ -54,29 +55,23 @@ public:
     }
 };
 
+struct ActionData
+{
+    std::string_view text;
+    glm::vec3 color {};
+    std::string_view infoText;
+};
 class Action
 {
 protected:
     std::pair<std::size_t, std::size_t> getSelectedUnitIndices(Game* game) const;
     GameGrid& getGameGrid(Game* game) const;
-public:
     virtual ~Action() = default;
+public:
     virtual ActionTypes use(Game* gameInstance) = 0;
     virtual std::string_view getName() const = 0;
-    virtual glm::vec3 getColor(Game*) const;
-};
-template<typename T>
-class SingletonAction
-{
-protected:
-    SingletonAction() = default;
-    ~SingletonAction() = default;
-public:
-    static T& get()
-    {
-        static T t;
-        return t;
-    }
+    virtual glm::vec3 getColor(Game* gameInstance) const;
+    virtual std::string_view getInfoText() const {return "";}
 };
 
 //abstract action classes
@@ -110,6 +105,28 @@ public:
     std::string_view getName() const override final;
     glm::vec3 getColor(Game* gameInstance) const override final;
 };
+template<std::int32_t Price, typename UpgradeClass>
+class UpgradeActionTemplate : public BuyAction<Price>
+{
+    const std::string_view m_name = "UPGRADE";
+protected:
+    std::string_view getBuyActionName() const override {return m_name;}
+    void buy(Game* gameInstance) override;
+    virtual void upgrade(Game* gameInstance) {};
+};
+template<typename T>
+class SingletonAction
+{
+protected:
+    SingletonAction() = default;
+    ~SingletonAction() = default;
+public:
+    static T& get()
+    {
+        static T t;
+        return t;
+    }
+};
 
 //actual actions
 template<int Radius>
@@ -125,10 +142,14 @@ public:
     glm::vec3 getColor(Game* gameInstance) const override;
 };
 template<std::int32_t Price, typename UpgradeClass>
-class UpgradeAction final : public BuyAction<Price>, public SingletonAction<UpgradeAction<Price, UpgradeClass>>
+class UpgradeAction final : public UpgradeActionTemplate<Price, UpgradeClass>, public SingletonAction<UpgradeAction<Price, UpgradeClass>> 
+{};
+template<std::int32_t Price, typename UpgradeClass, std::int32_t NewTurnMoney, int NewMaxMoves>
+class BaseUpgradeAction final : public UpgradeActionTemplate<Price, UpgradeClass>, public SingletonAction<BaseUpgradeAction<Price, UpgradeClass, NewTurnMoney, NewMaxMoves>> 
 {
-    const std::string_view m_name = "UPGRADE";
+private:
+    const std::string infoText = std::format("MONEY PER TURN + {}{}, MOVES PER TURN + {}", NewTurnMoney, CURRENCY_SYMBOL, NewMaxMoves);
 protected:
-    std::string_view getBuyActionName() const override {return m_name;}
-    void buy(Game* gameInstance) override;
+    void upgrade(Game* gameInstance) override;
+    std::string_view getInfoText() const override {return infoText;}
 };

@@ -321,6 +321,7 @@ Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer)
     m_grid.initializeAt<SubmarineUnit>(1, 2, false);
     activatePlayerSquares();
     uiManagerInstance.disableGameActionButtons(true);
+    uiManagerInstance.moveSelection();
 }
 void Game::update()
 {
@@ -348,6 +349,20 @@ void Game::addMoney(std::int32_t money)
     else m_playerData.second.money += money;
     updateStatusTexts();
 }
+void Game::setTurnData(std::int32_t money, int maxMoves)
+{
+    if(m_playerOneToPlay)
+    {
+        m_playerData.first.turnMoney = money;
+        m_playerData.first.moves.second = maxMoves;
+    }
+    else
+    {
+        m_playerData.second.turnMoney = money;
+        m_playerData.second.moves.second = maxMoves;
+    }
+    updateStatusTexts();
+}
 void Game::takeMove()
 {
     if(m_playerOneToPlay) --m_playerData.first.moves.first;
@@ -363,26 +378,32 @@ void Game::updateStatusTexts()
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
     auto& playerData = m_playerOneToPlay ? m_playerData.first : m_playerData.second;
-    uiManagerInstance.updateGameStatusTexts(std::format("TURN: {1}{0}MONEY: {2}{3}{0}MOVES: {4}/{5}",
+    uiManagerInstance.updateGameStatusTexts(
+        std::format("TURN: {1}{0}MONEY: {2}{3}{0}MOVES: {4}/{5}{0}MONEY PER TURN: {6}",
         "        ",
         m_playerOneToPlay ? "PLAYER ONE" : "PLAYER TWO", 
         playerData.money, CURRENCY_SYMBOL,
-        playerData.moves.first, playerData.moves.second));
+        playerData.moves.first, playerData.moves.second,
+        playerData.turnMoney));
 }
 void Game::endTurn()
 {
     if(m_playerOneToPlay) 
     {
         m_playerData.first.moves.first = m_playerData.first.moves.second;
+        m_playerData.first.money += m_playerData.first.turnMoney;
     }
     else
     {
         m_playerData.second.moves.first = m_playerData.second.moves.second;
+        m_playerData.second.money += m_playerData.second.turnMoney;
     }
     m_playerOneToPlay = !m_playerOneToPlay;
     
     activatePlayerSquares();
     updateStatusTexts();
+    static UIManager& uiManagerInstance = UIManager::getInstance();
+    uiManagerInstance.moveSelection();    
 }
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
