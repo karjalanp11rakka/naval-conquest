@@ -22,7 +22,7 @@ Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
     
     if(!meshPtr)
     {
-        switch (meshType)
+        switch(meshType)
         {
         case MeshType::cube:
             meshPtr = std::make_unique<Mesh>(meshtools::generateCube(normalMode));
@@ -48,7 +48,7 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
 }
 Mesh MeshManager::getFromOBJ(std::string_view objString)
 {
-    if (!m_loadedMeshes.contains(objString))
+    if(!m_loadedMeshes.contains(objString))
         m_loadedMeshes[objString] = meshtools::loadFromOBJ(objString);
 
     return m_loadedMeshes[objString];
@@ -421,7 +421,7 @@ std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, in
     for(std::size_t i {}; i < std::ssize(oldVerticePositions); ++i)
     {
         auto iterator = std::find(newVerticePositions.begin(), newVerticePositions.end(), oldVerticePositions[i]);
-        if (iterator == newVerticePositions.end())
+        if(iterator == newVerticePositions.end())
         {
             newVerticePositions.push_back(oldVerticePositions[i]);
             indices.push_back(std::size(newVerticePositions) - 1);
@@ -464,7 +464,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const u
         glm::vec3 v2 = tempVertices[i2] - tempVertices[i0];
         glm::vec3 faceNormal = glm::cross(v1, v2);
 
-        if (glm::dot(faceNormal, glm::normalize(tempVertices[i0])) < 0)
+        if(glm::dot(faceNormal, glm::normalize(tempVertices[i0])) < 0)
         {
             faceNormal = -faceNormal;
         }

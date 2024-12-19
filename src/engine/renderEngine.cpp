@@ -17,7 +17,7 @@
 RenderEngine::RenderEngine()
 {
     GLFWController& glfwControllerInstance = GLFWController::getInstance();
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cerr << "Failed to initialize GLAD\n"; 
         glfwControllerInstance.terminate();
@@ -73,7 +73,7 @@ void RenderEngine::addObject(Object* objPtr, Object3DRenderTypes renderType)
         processObjectsVector(m_objects2D);
         return;
     }
-    switch (renderType)
+    switch(renderType)
     {
         using enum Object3DRenderTypes; 
     case normal:
@@ -96,7 +96,7 @@ void RenderEngine::removeObject(Object* objPtr, Object3DRenderTypes renderType)
         processObjectsVector(m_objects2D);
         return;
     }
-    switch (renderType)
+    switch(renderType)
     {
     case Object3DRenderTypes::normal:
         processObjectsVector(m_objects3DNormal);

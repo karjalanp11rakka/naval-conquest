@@ -17,7 +17,7 @@ void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mo
 
 GLFWController::GLFWController()
 {
-    if (!glfwInit())
+    if(!glfwInit())
     {
         std::cerr << "Failed to initialize GLFW\n";
         return;
@@ -28,7 +28,7 @@ GLFWController::GLFWController()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     m_window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, WINDOW_NAME, nullptr, nullptr);
-    if (!m_window)
+    if(!m_window)
     {
         std::cerr << "Failed to create GLFW window\n"; 
         glfwTerminate();

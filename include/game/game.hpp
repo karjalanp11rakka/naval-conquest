@@ -18,9 +18,6 @@
 
 constexpr float SQUARE_SIZE = 2.f / GRID_SIZE;
 
-template<typename T>
-concept UnitDelivered = std::derived_from<T, UnitObject>;
-
 class Game;
 
 class GameGrid
@@ -42,16 +39,14 @@ private:
     std::vector<MoveAlongPathData> m_movements;
     std::vector<std::pair<std::unordered_set<std::size_t>, std::unique_ptr<UnitObject>*>> m_combinedLocations;//currently only for bases
     Game* const m_gameInstance;
-    void destroyAt(std::size_t index);
 public:
     GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
     ~GameGrid() = default;
     template<UnitDelivered T>
-    void initializeAt(std::size_t x, std::size_t y, bool teamOne)
+    UnitObject* initializeAt(std::size_t x, std::size_t y, bool teamOne)
     {
         std::size_t index = x + y * GRID_SIZE;
         auto& ptr = m_base[index];
-
         if constexpr(isBase<T>())
         {
             assert(x % 2 == 0 && y % 2 == 0);
@@ -75,22 +70,25 @@ public:
             ptr = std::make_unique<T>(m_gameInstance, teamOne);
             ptr->setPosition(gridLocationToPosition(std::make_pair(x, y)));
         }
+        return ptr.get();
     }
     template<UnitDelivered T>
-    void initializeAt(Loc loc, bool teamOne)
+    UnitObject* initializeAt(Loc loc, bool teamOne)
     {
-        initializeAt<T>(loc.first, loc.second, teamOne);
+        return initializeAt<T>(loc.first, loc.second, teamOne);
     }
     UnitObject* at(std::size_t x, std::size_t y) const;
     UnitObject* at(Loc loc) const;
     void update();
-    void destroyAt(std::size_t x, std::size_t y);
+    void destroy(UnitObject* ptr);
     void destroyAt(Loc loc);
+    void destroyAt(std::size_t index);
     void moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2);
     void moveAt(Loc loc1, Loc loc2);
     std::optional<std::unordered_set<std::size_t>*> getCombinedLocations(std::size_t index);
     [[nodiscard]] Path findPath(Loc startPos, Loc movePos, bool avoidObstacles = true);
     int moveAlongPath(Path&& path, float speed, bool useRotation = true);//return the number of steps
+    int moveAlongPath(Path&& path, float speed, UnitObject* moveObject, bool useRotation = true);
     int size() const {return std::ssize(m_base);}
     UnitObject* operator[](std::size_t index) const noexcept;
     static Loc convertIndexToLocation(std::size_t index);
@@ -172,9 +170,10 @@ public:
     void update();
     std::int32_t getMoney() const;
     void addMoney(std::int32_t money);
-    void setTurnData(std::int32_t money, int maxMoves);
+    void setTurnData(int maxMoves, std::int32_t money);
     void takeMove();
     bool canMove();
+    GameGrid& getGameGrid() {return m_grid;}
+    auto getSelectedUnitIndices() {return m_selectedUnitIndices;}
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);
-    friend class Action;
 };

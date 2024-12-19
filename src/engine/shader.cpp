@@ -46,10 +46,10 @@ void checkCompileErrors(unsigned int shader, std::string_view type)
 {
     int success;
     char infoLog[1024];
-    if (type != "PROGRAM")
+    if(type != "PROGRAM")
     {
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (!success)
+        if(!success)
         {
             glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
             std::cerr << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
@@ -58,7 +58,7 @@ void checkCompileErrors(unsigned int shader, std::string_view type)
     else
     {
         glGetProgramiv(shader, GL_LINK_STATUS, &success);
-        if (!success)
+        if(!success)
         {
             glGetProgramInfoLog(shader, 1024, nullptr, infoLog);
             std::cerr << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
@@ -72,6 +72,6 @@ void addConstantsToShader(std::string_view input, std::string& output)
     output.append(input.substr(0, firstLineEnd + 1));
     output.append("#define MAX_POINT_LIGHTS_LENGTH " + std::to_string(MAX_POINT_LIGHTS_LENGTH) + '\n');
     std::size_t secondLineEnd = input.find('\n', firstLineEnd + 1);
-    if (secondLineEnd == std::string_view::npos) return;
+    if(secondLineEnd == std::string_view::npos) return;
     output.append(input.substr(firstLineEnd + 1));
 }

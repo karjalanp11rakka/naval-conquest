@@ -91,7 +91,7 @@ TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback
     if(!initialized)
     {
         GLFWController& glfwControllerInstance = GLFWController::getInstance();
-        if (!gltInit())
+        if(!gltInit())
         {
             std::cerr << "Failed to initialize glText\n";
             glfwControllerInstance.terminate();
@@ -191,7 +191,7 @@ void ScalableButtonUIElement::update()
     if(m_useInfoText && m_infoText != "")
     {
         static constexpr float INFO_TEXT_OFFSET = .15f;
-        static constexpr float INFO_TEXT_SCALE = .6f;
+        static constexpr float INFO_TEXT_SCALE = .7f;
         drawText(m_text, m_infoText.data(), m_textData.position.x, 
             m_textData.position.y + INFO_TEXT_OFFSET, INFO_TEXT_SCALE, m_infoTextColor);
     }
@@ -287,7 +287,7 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
     std::pair<std::size_t, std::size_t> newElementIndices {};
 
     using enum FocusMoveDirections;
-    switch (focusMoveDirection)
+    switch(focusMoveDirection)
     {
     case up:
         if(m_focusIndices.first == 0)
@@ -503,7 +503,7 @@ void UIPreset::removeSavedSelection()
 
 void UIPreset::processInput(int key)
 {
-    switch (key)
+    switch(key)
     {
         using enum FocusMoveDirections;
     case GLFW_KEY_ENTER:

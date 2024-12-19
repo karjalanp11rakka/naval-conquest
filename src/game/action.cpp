@@ -5,15 +5,6 @@
 #include <game/game.hpp>
 #include <game/uiManager.hpp>
 
-std::pair<std::size_t, std::size_t> Action::getSelectedUnitIndices(Game* gameInstance) const
-{
-    return gameInstance->m_selectedUnitIndices.value();
-}
-GameGrid& Action::getGameGrid(Game* gameInstance) const
-{
-    return gameInstance->m_grid;
-}
-
 static constexpr glm::vec3 ACTION_DEFAULT_COLOR {.2f, .8f, .6f};
 glm::vec3 Action::getColor(Game*) const
 {
@@ -33,15 +24,15 @@ void SelectOnGridAction<Radius, Blockable, SelectType>::setGameGridSquares(Indic
 template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
 ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameInstance)
 {
-    if(!usable(gameInstance)) return ActionTypes::nothing;
+    if(!isUsable(gameInstance)) return ActionTypes::nothing;
     SelectSquareCallback callback = [&](Game* gameInstance, std::size_t x, std::size_t y)
     {
         return this->callback(gameInstance, x, y);
     }; 
     SelectSquareCallbackManager::getInstance().bindCallback(std::move(callback));
 
-    GameGrid& gameGrid = this->getGameGrid(gameInstance);
-    auto indices = this->getSelectedUnitIndices(gameInstance);
+    GameGrid& gameGrid = gameInstance->getGameGrid();
+    auto indices = gameInstance->getSelectedUnitIndices().value();
     IndicesList squaresToActivate;
     using BlockMask = std::pair<std::bitset<Radius * 2 - 2>, std::bitset<Radius * 2 - 2>>;
     std::optional<BlockMask> blockMask;
@@ -172,42 +163,60 @@ ActionTypes SelectOnGridAction<Radius, Blockable, SelectType>::use(Game* gameIns
     return ActionTypes::selectSquare;
 }
 template<std::int32_t Price>
+bool BuyActionInterface<Price>::usable(Game* gameInstance) const
+{
+    return gameInstance->getMoney() >= Price;
+}
+template<std::int32_t Price>
+std::string_view BuyActionInterface<Price>::getName() const
+{
+    if(m_buyActionName.empty()) 
+        m_buyActionName = std::format("{}\n{}{}", getBuyActionName(), Price, CURRENCY_SYMBOL);
+    return m_buyActionName;
+}
+template<std::int32_t Price>
+void BuyActionInterface<Price>::takeMoney(Game* gameInstance)
+{
+    gameInstance->addMoney(-Price);
+    assert(gameInstance->getMoney() >= 0);
+}
+static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.4f, .1f, .3f};
+template<std::int32_t Price>
+glm::vec3 BuyActionInterface<Price>::getColor(Game* gameInstance) const
+{
+    if(usable(gameInstance)) return Action::getColor(gameInstance);
+    return ACTION_UNUSABLE_COLOR;
+}
+template<std::int32_t Price>
 ActionTypes BuyAction<Price>::use(Game* gameInstance)
 {
-    if(gameInstance->getMoney() < Price) return ActionTypes::nothing;
-    gameInstance->addMoney(-Price);
+    if(!this->usable(gameInstance)) return ActionTypes::nothing;
+    this->takeMoney(gameInstance);
     buy(gameInstance);
 
     return ActionTypes::immediate;
 }
-template<std::int32_t Price>
-std::string_view BuyAction<Price>::getName() const
+template<std::int32_t Price, typename UgradeClass>
+void UpgradeActionInterface<Price, UgradeClass>::buy(Game* gameInstance)
 {
-    if(m_buyActionName.empty()) 
-        m_buyActionName = std::string(getBuyActionName()) + '\n' + std::to_string(Price) + CURRENCY_SYMBOL;
-    return m_buyActionName;
-}
-static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.4f, .1f, .3f};
-template<std::int32_t Price>
-glm::vec3 BuyAction<Price>::getColor(Game* gameInstance) const
-{
-    if(gameInstance->getMoney() < Price) return ACTION_UNUSABLE_COLOR;
-    return Action::getColor(gameInstance);
+    GameGrid& gameGrid = gameInstance->getGameGrid();
+    auto indices = gameInstance->getSelectedUnitIndices().value();
+    gameGrid.initializeAt<UgradeClass>(indices, gameGrid.at(indices)->isTeamOne());
+    upgrade(gameInstance);
 }
 template<int Radius>
-bool MoveAction<Radius>::usable(Game* gameInstance) const
+bool MoveAction<Radius>::isUsable(Game* gameInstance) const
 {
     return gameInstance->canMove();
 }
+static constexpr float PATH_MOVE_SPEED = .4f;
 template<int Radius>
-float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y) const
+float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y)
 {
     gameInstance->takeMove();
-    static constexpr float PATH_MOVE_SPEED = .4f;
 
-    GameGrid& gameGrid = this->getGameGrid(gameInstance);
-    auto selectedIndices = this->getSelectedUnitIndices(gameInstance);
-
+    GameGrid& gameGrid = gameInstance->getGameGrid();
+    auto selectedIndices = gameInstance->getSelectedUnitIndices().value();
     GameGrid::Path moveAlongPath = gameGrid.findPath(selectedIndices, std::make_pair(x, y));
     int steps = gameGrid.moveAlongPath(std::move(moveAlongPath), PATH_MOVE_SPEED);
     return steps * PATH_MOVE_SPEED;
@@ -218,26 +227,55 @@ glm::vec3 MoveAction<Radius>::getColor(Game* gameInstance) const
     if(gameInstance->canMove()) return Action::getColor(gameInstance);
     return ACTION_UNUSABLE_COLOR;
 }
-template<std::int32_t Price, typename UgradeClass>
-void UpgradeActionTemplate<Price, UgradeClass>::buy(Game* gameInstance)
+template<std::int32_t Worth>
+ActionTypes SellAction<Worth>::use(Game* gameInstance)
 {
-    GameGrid& gameGrid = this->getGameGrid(gameInstance);
-    auto indices = this->getSelectedUnitIndices(gameInstance);
-    gameGrid.initializeAt<UgradeClass>(indices, gameGrid.at(indices)->isTeamOne());
-    upgrade(gameInstance);
+    gameInstance->addMoney(Worth);
+    gameInstance->getGameGrid().destroyAt(gameInstance->getSelectedUnitIndices().value());
+    return ActionTypes::immediate;
 }
-template<std::int32_t Price, typename UpgradeClass, std::int32_t NewTurnMoney, int NewMaxMoves>
-void BaseUpgradeAction<Price, UpgradeClass, NewTurnMoney, NewMaxMoves>::upgrade(Game* gameInstance)
+template<int Radius, std::int32_t Price, typename BuyUnit>
+bool BuyUnitAction<Radius, Price, BuyUnit>::isUsable(Game* gameInstance) const
 {
-    gameInstance->setTurnData(NewTurnMoney, NewMaxMoves);
+    return this->usable(gameInstance);
+}
+template<int Radius, std::int32_t Price, typename BuyUnit>
+std::string_view BuyUnitAction<Radius, Price, BuyUnit>::getInfoText() const
+{
+    static constexpr std::string_view infoText = unitToString<BuyUnit>();
+    return infoText;
+}
+template<int Radius, std::int32_t Price, typename BuyUnit>
+float BuyUnitAction<Radius, Price, BuyUnit>::callback(Game* gameInstance, std::size_t x, std::size_t y)
+{
+    this->takeMoney(gameInstance);
+
+    auto& gameGrid = gameInstance->getGameGrid();
+    auto startPos = gameInstance->getSelectedUnitIndices().value();
+    auto obj = gameGrid.initializeAt<BuyUnit>(x, y, 
+        gameGrid.at(startPos)->isTeamOne());
+    int steps = gameGrid.moveAlongPath(gameGrid.findPath(startPos, 
+        std::make_pair(x, y)), PATH_MOVE_SPEED, obj);
+
+    return PATH_MOVE_SPEED * 1;
+}
+template<std::int32_t Price, typename UpgradeClass, int NewMaxMoves, std::int32_t NewTurnMoney>
+void BaseUpgradeAction<Price, UpgradeClass, NewMaxMoves, NewTurnMoney>::upgrade(Game* gameInstance)
+{
+    gameInstance->setTurnData(NewMaxMoves, NewTurnMoney);
 }
 
 #include <game/unitObject.hpp>
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class UpgradeAction<600,AircraftCarrierUpgrade1>;
-template class BaseUpgradeAction<900,BaseUpgrade1,300,3>;
-template class MoveAction<2>;
-template class BaseUpgradeAction<1800,BaseUpgrade2,500,4>;
 template class MoveAction<2+1>;
+template class BuyUnitAction<5,400,AircraftCarrierUnit>;
+template class UpgradeAction<600,AircraftCarrierUpgrade1>;
+template class BaseUpgradeAction<900,BaseUpgrade1,3,300>;
+template class SellAction<75>;
+template class SellAction<100>;
+template class SellAction<50>;
+template class BuyUnitAction<5,250,SubmarineUnit>;
+template class MoveAction<2>;
 template class MoveAction<6>;
+template class BaseUpgradeAction<1800,BaseUpgrade2,4,500>;

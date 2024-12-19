@@ -35,21 +35,25 @@ public:
 private:
     std::vector<Action*> m_actions;
     std::vector<ActionData> m_actionData;
+    int m_maxHealth;
+    int m_health;
+    bool m_teamOne;
     void initialize();
 protected:
     Transform m_transform {};
-    bool m_teamOne;
     void updateModelMatrix();
     Game* m_gameInstance;
 public:
     template<Object3DDelivered... UnitParts>
-    UnitObject(Game* gameInstance, bool teamOne, std::vector<Action*>&& actions, UnitParts&&... parts)
-        : m_gameInstance(gameInstance), m_teamOne(teamOne), m_actions(std::move(actions)), ObjectEntity(std::forward<UnitParts>(parts)...)
+    UnitObject(Game* gameInstance, bool teamOne, int health, std::vector<Action*>&& actions, UnitParts&&... parts)
+        : m_gameInstance(gameInstance), m_teamOne(teamOne), m_health(health), m_maxHealth(health), m_actions(std::move(actions)), ObjectEntity(std::forward<UnitParts>(parts)...)
     {
         initialize();
     }
     virtual ~UnitObject();
-
+    void addHealth(int damage);
+    std::pair<int, int> getHealth();
+    void destroy();
     ActionTypes useAction(std::size_t actionIndex);
     void setPosition(glm::vec3 position);
     void setRotation(glm::quat rotation);
@@ -59,11 +63,7 @@ public:
     const glm::quat& getRotation() const {return m_transform.rotation;}
     const std::vector<ActionData>& getActionData();
 };
-template<typename T>
-constexpr bool isBase()
-{
-    return std::is_same<typename T::is_base, std::true_type>::value;
-}
+
 class Base : public UnitObject
 {
 public:
@@ -98,3 +98,22 @@ class SubmarineUnit : public UnitObject
 public:
     SubmarineUnit(Game* game, bool teamOne);
 };
+template<typename T>
+concept UnitDelivered = std::derived_from<T, UnitObject>;
+
+template<UnitDelivered T>
+constexpr std::string_view unitToString()
+{
+    if constexpr (std::is_base_of_v<T, AircraftCarrierUnit>)
+        return "AIRCRAFT CARRIER";
+    else if constexpr (std::is_base_of_v<T, SubmarineUnit>)
+        return "SUBMARINE";
+    else
+        return "";
+}
+
+template<typename T>
+constexpr bool isBase()
+{
+    return std::is_same_v<typename T::is_base, std::true_type>;
+}
