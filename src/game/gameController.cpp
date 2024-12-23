@@ -52,21 +52,38 @@ GameController::~GameController() {}
 
 void GameController::update() 
 {
-    if(m_currentGame) m_currentGame->update();
-}
-void GameController::receiveGameInput(std::size_t index, ButtonTypes buttonType)
-{
-    if(m_currentGame) m_currentGame->receiveGameInput(index, buttonType);
-}
+    static GLFWController& glfwControllerInstance = GLFWController::getInstance();
+    float deltaTime = glfwControllerInstance.getDeltaTime();
+    auto prev = m_updates.before_begin();
+    for(auto it = m_updates.begin(); it != m_updates.end();) 
+    {
+        if((*it)(deltaTime))
+            it = m_updates.erase_after(prev);
+        else
+        {
+            ++it;
+            ++prev;
+        }
+    }
 
-void GameController::onWindowResize(int width, int height)
+}
+void GameController::addUpdateFunction(std::function<bool(float)>&& func)
 {
-    static UIManager& uiManagerInstance = UIManager::getInstance();
-    uiManagerInstance.onWindowResize(width, height);
+    m_updates.push_front(std::move(func));
 }
 void GameController::createGame(bool onePlayer)
 {
     m_currentGame = std::make_unique<Game>(onePlayer);
+}
+
+void GameController::receiveGameInput(std::size_t index, ButtonTypes buttonType)
+{
+    if(m_currentGame) m_currentGame->receiveGameInput(index, buttonType);
+}
+void GameController::onWindowResize(int width, int height)
+{
+    static UIManager& uiManagerInstance = UIManager::getInstance();
+    uiManagerInstance.onWindowResize(width, height);
 }
 
 void inputCallback(int key)

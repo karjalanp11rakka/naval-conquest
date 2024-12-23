@@ -24,6 +24,7 @@ public:
         m_objects.reserve(sizeof...(args));
         (m_objects.push_back(std::make_unique<UnitParts>(std::forward<UnitParts>(args))), ...); 
     }
+    virtual ~ObjectEntity() {};
     void addToRenderEngine(Object3DRenderTypes renderType = Object3DRenderTypes::normal);
     void removeFromRenderEngine();
 };
@@ -85,32 +86,32 @@ public:
     void draw() const override;
 };
 
-class AbstractColorSetter
+class ColorSetterInterface
 {
 protected:
     glm::vec3 m_color;
-    AbstractColorSetter(glm::vec3 color) : m_color(color) {}
+    ColorSetterInterface(glm::vec3 color) : m_color(color) {}
 public:
-    virtual ~AbstractColorSetter() = default;
-    void setColor(const glm::vec3& color) {m_color = color;}
+    virtual ~ColorSetterInterface() = default;
+    void setColor(glm::vec3 color) {m_color = color;}
 };
 
-class UnlitObject : public Object3D, public AbstractColorSetter
+class UnlitObject : public Object3D, public ColorSetterInterface
 {
 protected:
     void configureShaders() const override;
 public:
-    UnlitObject(Mesh mesh, const glm::vec3& color, bool useTime = false);
+    UnlitObject(Mesh mesh, glm::vec3 color, bool useTime = false);
 
     void draw() const override;
 };
 
-class Object2D : public Object, public AbstractColorSetter
+class Object2D : public Object, public ColorSetterInterface
 {
 protected:
     void configureShaders() const override; 
 public:
-    Object2D(Mesh mesh, Shader* shader, const glm::vec3& color, bool useTime = false);
+    Object2D(Mesh mesh, Shader* shader, glm::vec3 color, bool useTime = false);
 
     void draw() const override;
 };

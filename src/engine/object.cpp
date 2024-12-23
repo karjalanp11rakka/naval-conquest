@@ -138,12 +138,12 @@ void LitObject::draw() const
     drawMesh();
 }
 
-UnlitObject::UnlitObject(Mesh mesh, const glm::vec3& color, bool useTime)
+UnlitObject::UnlitObject(Mesh mesh, glm::vec3 color, bool useTime)
     : Object3D(mesh, ShaderManager::getInstance().getShader(assets::SHADERS_VSIMPLE_GLSL,
-    assets::SHADERS_FSIMPLEUNLIT_GLSL), useTime), AbstractColorSetter(color) {}
+    assets::SHADERS_FSIMPLEUNLIT_GLSL), useTime), ColorSetterInterface(color) {}
 
-Object2D::Object2D(Mesh mesh, Shader* shader, const glm::vec3& color, bool useTime)
-        : Object(mesh, shader, useTime), AbstractColorSetter(color) {}
+Object2D::Object2D(Mesh mesh, Shader* shader, glm::vec3 color, bool useTime)
+        : Object(mesh, shader, useTime), ColorSetterInterface(color) {}
 
 void UnlitObject::configureShaders() const
 {

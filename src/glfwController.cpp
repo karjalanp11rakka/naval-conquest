@@ -85,6 +85,7 @@ void GLFWController::close()
 
 void GLFWController::terminate()
 {
+    if(m_window) glfwDestroyWindow(m_window);
     glfwTerminate();
 }
 

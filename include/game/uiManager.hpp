@@ -7,7 +7,6 @@
 #include <functional>
 #include <vector>
 #include <string_view>
-#include <cstdint>
 
 #include <glm/glm.hpp>
 
@@ -27,6 +26,9 @@ class UIPreset;
 class UIElement3D;
 class TextUIElement;
 class ScalableButtonUIElement;
+
+inline constexpr auto SELECTED_GRID_SQUARE_COLOR = glm::vec3(.7f, .9f, .2f);
+inline constexpr auto SELECTED_GRID_NONINTERACTABLE_COLOR = glm::vec3(.3f, .1f, .8f);
 
 class UIManager
 {
@@ -55,8 +57,9 @@ public:
     void retrieveSavedSelection();
     void removeSavedSelection();
     void updateGameStatusTexts(std::string&& text);
-    void addDisabledColorToGridSquare(std::size_t index, const glm::vec3& color);
-    void removeDisabledColorToGridSquare(std::size_t index);
+    void makeGridSquareNonInteractable(std::size_t index, glm::vec3 color);
+    void makeLargeGridSquareNonInteractable(std::size_t index, glm::vec3 color);
+    // void makeGridSquareInteractable(std::size_t index);
     void setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSmallSquares, std::bitset<GRID_SIZE * GRID_SIZE / 2>&& activeLargeSquares = {});
     void enableGameActionButtons(const std::vector<ActionData>& data);
     void disableGameActionButtons(bool disableBackButton);

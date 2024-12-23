@@ -1,11 +1,8 @@
 #include <cassert>
 #include <algorithm>
-#include <cstdint>
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
-#include <engine/renderEngine.hpp>
 #include <game/unitObject.hpp>
 #include <game/game.hpp>
 #include <engine/shaderManager.hpp>
@@ -13,11 +10,11 @@
 #include <game/uiManager.hpp>
 #include <game/action.hpp>
 #include <assets.hpp>
+#include <game/gameController.hpp>
 
 void UnitObject::initialize()
 {
-    updateModelMatrix();
-    addToRenderEngine(Object3DRenderTypes::renderLastly);
+    setScale(glm::vec3(1.f / GRID_SIZE));
 
     m_actionData.resize(m_actions.size());
     assert(m_actions.size() < GAME_ACTION_BUTTONS_MAX_COUNT && "Unit cannot have more actions than there are buttons");//the first button is back button so < instead of <=
@@ -27,22 +24,11 @@ void UnitObject::initialize()
         return {std::string_view(action->getName()), {}, action->getInfoText()};
     });
 }
-void UnitObject::updateModelMatrix()
-{
-    glm::mat4 model(1.f);
-    model = glm::translate(model, m_transform.position);
-    model *= glm::mat4_cast(m_transform.rotation);
-    model = glm::scale(model, m_transform.scale);  
-    for(auto& obj : m_objects)
-    {
-        obj->setModel(model);
-    }
-}
 void UnitObject::addHealth(int damage)
 {
     m_health += damage;
     if(m_health > m_maxHealth) m_health = m_maxHealth;
-    if(m_health < 0) destroy();
+    if(m_health <= 0) destroy();
 }
 std::pair<int, int> UnitObject::getHealth()
 {
@@ -52,23 +38,9 @@ void UnitObject::destroy()
 {
     m_gameInstance->getGameGrid().destroy(this);
 }
-UnitObject::~UnitObject()
-{
-    removeFromRenderEngine();
-}
 ActionTypes UnitObject::useAction(std::size_t actionIndex)
 {
     return m_actions[actionIndex]->use(m_gameInstance);
-}
-void UnitObject::setPosition(glm::vec3 position)
-{
-    m_transform.position = position;
-    updateModelMatrix();
-}
-void UnitObject::setRotation(glm::quat rotation)
-{
-    m_transform.rotation = rotation;
-    updateModelMatrix();
 }
 const std::vector<ActionData>& UnitObject::getActionData()
 {
@@ -77,15 +49,6 @@ const std::vector<ActionData>& UnitObject::getActionData()
         m_actionData[i].color = m_actions[i]->getColor(m_gameInstance);
     }
     return m_actionData;
-}
-
-template<ObjectDelivered T, typename... Args>
-T constructObject(std::string_view mesh, std::string_view vShader, std::string_view fShader, Args&&... args)
-{
-    static MeshManager& meshManagerInstance = MeshManager::getInstance();
-    static ShaderManager& shaderManagerInstance = ShaderManager::getInstance();
-    return T(meshManagerInstance.getFromOBJ(mesh), shaderManagerInstance.getShader(vShader, fShader), 
-        std::forward<Args>(args)...);
 }
 
 static constexpr Material TEAM_ONE_DEFAULT_MAT {glm::vec3(.1f, .7f, .1f), .2f, 150.f, .5f};
@@ -106,9 +69,9 @@ Base::Base(Game* game, bool teamOne)
     //health
     BASE_HEALTH,
     //actions
-    {&BuyUnitAction<BUY_UNIT_RADIUS, 250, SubmarineUnit>::get(), 
-    &BuyUnitAction<BUY_UNIT_RADIUS, 400, AircraftCarrierUnit>::get(), 
-    &BaseUpgradeAction<900, BaseUpgrade1, 3, 300>::get()},
+    {BuyUnitAction<250, BUY_UNIT_RADIUS, SubmarineUnit>::get(), 
+    BuyUnitAction<400, BUY_UNIT_RADIUS, AircraftCarrierUnit>::get(), 
+    BaseUpgradeAction<900, BaseUpgrade1, 3, 300>::get()},
     //3D object parts
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
@@ -124,8 +87,8 @@ Base::Base(Game* game, bool teamOne)
 BaseUpgrade1::BaseUpgrade1(Game* game, bool teamOne)
     : UnitObject(game, teamOne,
     BASE_HEALTH,
-    {&BuyUnitAction<BUY_UNIT_RADIUS, 250, SubmarineUnit>::get(), &BuyUnitAction<BUY_UNIT_RADIUS, 400, AircraftCarrierUnit>::get(), 
-    &BaseUpgradeAction<1800, BaseUpgrade2, 4, 500>::get()},
+    {BuyUnitAction<250, BUY_UNIT_RADIUS, SubmarineUnit>::get(), BuyUnitAction<400, BUY_UNIT_RADIUS, AircraftCarrierUnit>::get(), 
+    BaseUpgradeAction<1800, BaseUpgrade2, 4, 500>::get()},
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BUILDING_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
@@ -142,7 +105,7 @@ BaseUpgrade1::BaseUpgrade1(Game* game, bool teamOne)
 BaseUpgrade2::BaseUpgrade2(Game* game, bool teamOne)
     : UnitObject(game, teamOne,
     BASE_HEALTH,
-    {&BuyUnitAction<BUY_UNIT_RADIUS, 250, SubmarineUnit>::get(), &BuyUnitAction<BUY_UNIT_RADIUS, 400, AircraftCarrierUnit>::get()},
+    {BuyUnitAction<250, BUY_UNIT_RADIUS, SubmarineUnit>::get(), BuyUnitAction<400, BUY_UNIT_RADIUS, AircraftCarrierUnit>::get()},
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BARRIER_2_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
     constructObject<LitObject>(assets::MODELS_BASE_BUILDING_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, DARK_GRAY_MAT),
@@ -160,11 +123,11 @@ BaseUpgrade2::BaseUpgrade2(Game* game, bool teamOne)
 
 
 static constexpr int AIRCRAFT_CARRIER_MOVE_RADIUS = 2;
-static constexpr int AIRCRAFT_CARRIER_HEALTH = 150;
+static constexpr int AIRCRAFT_CARRIER_HEALTH = 200;
 AircraftCarrierUnit::AircraftCarrierUnit(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne,
     AIRCRAFT_CARRIER_HEALTH,
-    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), &UpgradeAction<600, AircraftCarrierUpgrade1>::get(), &SellAction<75>::get()},
+    {MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS>::get(), AttackAction<75, 6, 150>::get(), UpgradeAction<600, AircraftCarrierUpgrade1>::get(), SellAction<75>::get()},
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, BLACK_MAT)) {}
@@ -172,7 +135,7 @@ AircraftCarrierUnit::AircraftCarrierUnit(Game* gameInstance, bool teamOne)
 AircraftCarrierUpgrade1::AircraftCarrierUpgrade1(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne, 
     AIRCRAFT_CARRIER_HEALTH,
-    {&MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS + 1>::get(), &SellAction<100>::get()},
+    {MoveAction<AIRCRAFT_CARRIER_MOVE_RADIUS + 1>::get(), AttackAction<75, 7, 250>::get(), SellAction<100>::get()},
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_UPGRADE_1_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_BRIDGE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT),
     constructObject<LitObject>(assets::MODELS_AIRCRAFT_CARRIER_ANTENNA_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, BLACK_MAT),
@@ -184,6 +147,6 @@ static constexpr int SUBMARINE_HEALTH = 100;
 SubmarineUnit::SubmarineUnit(Game* gameInstance, bool teamOne) 
     : UnitObject(gameInstance, teamOne,
     SUBMARINE_HEALTH, 
-    {&MoveAction<SUBMARINE_MOVE_RADIUS>::get(), &SellAction<50>::get()},
+    {MoveAction<SUBMARINE_MOVE_RADIUS>::get(), AttackAction<40, 3, 75>::get(), SellAction<50>::get()},
     constructObject<LitObject>(assets::MODELS_SUBMARINE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_DEFAULT_MAT : TEAM_TWO_DEFAULT_MAT),
     constructObject<LitObject>(assets::MODELS_SUBMARINE_SAIL_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, teamOne ? TEAM_ONE_SECONDARY_MAT : TEAM_TWO_SECONDARY_MAT)) {}

@@ -44,11 +44,11 @@ public:
     void removeObject(Object* objPtr, Object3DRenderTypes renderType = Object3DRenderTypes::normal);
     void setLighting(SceneLighting&& lighting);
     SceneLighting* getLighting() const;
-    void setBackgroundColor(const glm::vec3& color) {m_backgroundColor = color;}
+    void setBackgroundColor(glm::vec3 color) {m_backgroundColor = color;}
     void assignCamera(Camera* camera) {m_camera = camera;}
-    void addRenderCallback(const std::function<void()>& callback);
-    const glm::vec3& getCameraPos() const;
-    const glm::mat4& getProjection() const;
-    const glm::mat4& getView() const; 
+    void addRenderCallback(std::function<void()>&& callback);
+    glm::vec3 getCameraPos() const;
+    glm::mat4 getProjection() const;
+    glm::mat4 getView() const; 
     void onWindowResize(int width, int height);
 };

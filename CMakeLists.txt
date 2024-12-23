@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(myproj VERSION 0.1 LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(USE_TOOLS "Run the Python scripts in 'tools' before building the project" OFF)

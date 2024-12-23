@@ -8,27 +8,15 @@
 #include <type_traits>
 #include <tuple>
 
-#include <glm/fwd.hpp>
-#include <glm/gtc/quaternion.hpp>
-
-#include <engine/object.hpp>
-#include <game/gameController.hpp>
-
-struct Transform
-{
-    glm::vec3 position {};
-    glm::vec3 scale {glm::vec3(1.f / GRID_SIZE)};
-    glm::quat rotation {};
-};
+#include <game/gameObject.hpp>
 
 class Action;
 struct ActionData;
+class Game;
 
 enum class ActionTypes;
 
-template<typename T>
-concept Object3DDelivered = std::derived_from<T, Object3D>;
-class UnitObject : public ObjectEntity
+class UnitObject : public GameObject
 {
 public:
     using is_base = std::false_type;
@@ -39,28 +27,19 @@ private:
     int m_health;
     bool m_teamOne;
     void initialize();
-protected:
-    Transform m_transform {};
-    void updateModelMatrix();
     Game* m_gameInstance;
 public:
-    template<Object3DDelivered... UnitParts>
-    UnitObject(Game* gameInstance, bool teamOne, int health, std::vector<Action*>&& actions, UnitParts&&... parts)
-        : m_gameInstance(gameInstance), m_teamOne(teamOne), m_health(health), m_maxHealth(health), m_actions(std::move(actions)), ObjectEntity(std::forward<UnitParts>(parts)...)
+    template<Object3DDelivered... ObjectParts>
+    UnitObject(Game* gameInstance, bool teamOne, int health, std::vector<Action*>&& actions, ObjectParts&&... parts)
+        : m_gameInstance(gameInstance), m_teamOne(teamOne), m_health(health), m_maxHealth(health), m_actions(std::move(actions)), GameObject(std::forward<ObjectParts>(parts)...)
     {
         initialize();
     }
-    virtual ~UnitObject();
     void addHealth(int damage);
     std::pair<int, int> getHealth();
     void destroy();
     ActionTypes useAction(std::size_t actionIndex);
-    void setPosition(glm::vec3 position);
-    void setRotation(glm::quat rotation);
     bool isTeamOne() const noexcept {return m_teamOne;}
-    const glm::vec3& getPosition() const {return m_transform.position;}
-    const glm::vec3& getScale() const {return m_transform.scale;}
-    const glm::quat& getRotation() const {return m_transform.rotation;}
     const std::vector<ActionData>& getActionData();
 };
 
@@ -104,9 +83,9 @@ concept UnitDelivered = std::derived_from<T, UnitObject>;
 template<UnitDelivered T>
 constexpr std::string_view unitToString()
 {
-    if constexpr (std::is_base_of_v<T, AircraftCarrierUnit>)
+    if constexpr(std::is_same_v<T, AircraftCarrierUnit>) 
         return "AIRCRAFT CARRIER";
-    else if constexpr (std::is_base_of_v<T, SubmarineUnit>)
+    else if constexpr(std::is_same_v<T, SubmarineUnit>)
         return "SUBMARINE";
     else
         return "";

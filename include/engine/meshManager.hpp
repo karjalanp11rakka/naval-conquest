@@ -57,11 +57,3 @@ public:
     Mesh getGrid(int size, NormalMode normals);
     Mesh getFromOBJ(std::string_view objString);
 };
-
-namespace meshtools
-{
-    Mesh generateCube(NormalMode normalMode);
-    Mesh generateTetrahedron(NormalMode normalMode);
-    Mesh generateGrid(int gridSize, bool normals);
-    Mesh loadFromOBJ(std::string_view objString);
-}

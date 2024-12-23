@@ -15,7 +15,9 @@ public:
     Camera(glm::vec3&& position);
     void onWindowResize(int width, int height);
     virtual void update() {};
-    friend class RenderEngine;
+    glm::mat4 getProjection() const {return m_projection;}
+    glm::mat4 getView() const {return m_view;}
+    glm::vec3 getPosition() const {return m_position;}
 };
 
 class OrbitingCamera : public Camera

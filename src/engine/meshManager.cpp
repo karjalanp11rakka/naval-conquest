@@ -14,6 +14,11 @@
 
 #include <engine/meshManager.hpp>
 
+Mesh generateCube(NormalMode normalMode);
+Mesh generateTetrahedron(NormalMode normalMode);
+Mesh generateGrid(int gridSize, bool normals);
+Mesh loadFromOBJ(std::string_view objString);
+
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {
     auto& meshVariations {m_meshes[meshType]};
@@ -25,10 +30,10 @@ Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
         switch(meshType)
         {
         case MeshType::cube:
-            meshPtr = std::make_unique<Mesh>(meshtools::generateCube(normalMode));
+            meshPtr = std::make_unique<Mesh>(generateCube(normalMode));
             break;
         case MeshType::tetrahedron:
-            meshPtr = std::make_unique<Mesh>(meshtools::generateTetrahedron(normalMode));
+            meshPtr = std::make_unique<Mesh>(generateTetrahedron(normalMode));
             break;
         }
     }
@@ -43,13 +48,13 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
         gridVariations.flatNormalsMesh : gridVariations.noNormalsMesh;
 
     if(!gridPtr)
-        gridPtr = std::make_unique<Mesh>(meshtools::generateGrid(size, normals));
+        gridPtr = std::make_unique<Mesh>(generateGrid(size, normals));
     return *gridPtr;
 }
 Mesh MeshManager::getFromOBJ(std::string_view objString)
 {
     if(!m_loadedMeshes.contains(objString))
-        m_loadedMeshes[objString] = meshtools::loadFromOBJ(objString);
+        m_loadedMeshes[objString] = loadFromOBJ(objString);
 
     return m_loadedMeshes[objString];
 }
@@ -63,7 +68,7 @@ void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength);
 template <const float* vertices, int length>
 Mesh makeMesh(NormalMode normals);
 
-Mesh meshtools::generateCube(NormalMode normalMode)
+Mesh generateCube(NormalMode normalMode)
 {
     static constexpr float vertices[] 
     {
@@ -120,7 +125,7 @@ Mesh meshtools::generateCube(NormalMode normalMode)
     return makeMesh<vertices, length>(normalMode);
 }
 
-Mesh meshtools::generateTetrahedron(NormalMode normalMode)
+Mesh generateTetrahedron(NormalMode normalMode)
 {
     static constexpr float vertices[]
     {
@@ -185,7 +190,7 @@ Mesh makeMesh(NormalMode normalMode)
         std::ssize(indices), false), static_cast<unsigned int>(indices.size())};
 }
 
-Mesh meshtools::generateGrid(int gridSize, bool normals)
+Mesh generateGrid(int gridSize, bool normals)
 {
     if(gridSize == 1)
     {
@@ -262,7 +267,7 @@ Mesh meshtools::generateGrid(int gridSize, bool normals)
 }
 
 //this loader is incomplete and only works when elements are in specific order
-Mesh meshtools::loadFromOBJ(std::string_view objString)
+Mesh loadFromOBJ(std::string_view objString)
 {
     auto addVerticePositions {[](const std::string& line, std::vector<float>& positions) -> void
     {

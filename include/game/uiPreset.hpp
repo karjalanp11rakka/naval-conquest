@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <optional>
 #include <stack>
+#include <unordered_set>
 
 #include <glm/glm.hpp>
 #include <engine/object.hpp>
@@ -23,7 +24,7 @@ protected:
     glm::vec3 m_highlightColor;
     void configureShaders() const override;
 public:
-    InteractableBackground(Mesh mesh, Shader* shader, const glm::vec3& color, const glm::vec3& highlightColor, float highlightThickness)
+    InteractableBackground(Mesh mesh, Shader* shader, glm::vec3 color, glm::vec3 highlightColor, float highlightThickness)
         : Object2D(mesh, shader, color), m_highlightColor(highlightColor), m_highlightThickness(highlightThickness) {}
     void setUseHighlight(bool value) {m_useHighlight = value;}
     void draw() const override;
@@ -36,7 +37,7 @@ protected:
     std::function<void()> m_callback;
     glm::vec2 m_position;
 public:
-    UIElement(std::function<void()> callback, const glm::vec2& position)
+    UIElement(std::function<void()>&& callback, const glm::vec2& position)
         : m_callback(callback), m_position(position) {}
     virtual ~UIElement();
     virtual void trigger() {m_callback();}
@@ -64,7 +65,7 @@ protected:
     GLTtext* m_text {};
     TextData m_textData {};
 public:
-    TextUIElement(TextData&& textData, std::function<void()> callback = nullptr);
+    TextUIElement(TextData&& textData, std::function<void()>&& callback = nullptr);
     ~TextUIElement();
     void focus() override {}
     void defocus() override {}
@@ -84,7 +85,7 @@ protected:
     glm::vec3 m_highlightColor;
     TextBackgroundData m_textBackgroundData;
 public:
-    ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness = 0.f);
+    ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness = 0.f);
     void enable() override;
     void disable() override;
     void focus() override;
@@ -97,9 +98,9 @@ private:
     std::string m_enabledText;
     bool* m_turnedOn;
 public:
-    SettingUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness,
+    SettingUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness,
     std::string&& enabledText, bool* turnedOn)
-        : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_enabledText(std::move(enabledText)), m_turnedOn(turnedOn) {}
+        : ButtonUIElement(std::move(textData), std::move(backgroundData), std::move(callback), highlightColor, highlightThickness), m_enabledText(std::move(enabledText)), m_turnedOn(turnedOn) {}
     void trigger() override;
 };
 class ScalableButtonUIElement : public ButtonUIElement
@@ -110,35 +111,38 @@ private:
     glm::vec3 m_infoTextColor {};
     bool m_useInfoText {};
 public:
-    ScalableButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness, float width, float height)
-        : ButtonUIElement(std::move(textData), std::move(backgroundData), callback, highlightColor, highlightThickness), m_width(width), m_height(height) {}
+    ScalableButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness, float width, float height)
+        : ButtonUIElement(std::move(textData), std::move(backgroundData), std::move(callback), highlightColor, highlightThickness), m_width(width), m_height(height) {}
 
     void update() override;
-    void setBackgroundColor(const glm::vec3& color);
+    void setBackgroundColor(glm::vec3 color);
     void onResize(int windowWidth, int windowHeight) override;
     void setInfoText(std::string_view text, glm::vec3 color);
     void focus() override;
     void defocus() override;
 };
 
+class UIPreset;
 class UIElement3D : public UIElement
 {
 private:
     std::unique_ptr<UnlitObject> m_object;
     glm::vec3 m_defaultColor {}, m_highlightColor {};
-    bool m_hasDisabledColor {};
+    std::function<void()> m_savedCallback {};
+
 public:
-    UIElement3D(std::function<void()> callback, glm::mat4&& model, 
-        const glm::vec3& defaultColor, const glm::vec3& highlightColor);
+    UIElement3D(std::function<void()>&& callback, glm::mat4&& model, 
+        glm::vec3 defaultColor, glm::vec3 highlightColor);
 
     void enable() override;
     void disable() override;
     void focus() override;
     void defocus() override;
     void update() override {}
-    void addDisabledColor(const glm::vec3& temporaryColor);
-    void removeDisabledColor();
-    bool hasDisabledColor();
+    void setInteractability(bool interactable);
+    void setInteractability(bool interactable, UIPreset* uiPresetInstance);
+    void addTemporaryColor(glm::vec3 color);
+    void removeTemporaryColor();
     void onResize(int windowWidth, int windowHeight) override {}
 };
 
@@ -158,17 +162,20 @@ private:
     std::stack<std::pair<std::size_t, std::size_t>> m_retrieveIndices;
     void updateBackgroundsUniforms(int width, int height);
     void moveFocusedElement(FocusMoveDirections focusMoveDirection);//Changes the focusedElementIndex and outlined object to the next UIElement if nextElement is true, otherwise to the previous element
+    void changeInteractablesCount(bool add, std::pair<std::size_t, std::size_t> changeIndices);
 public:
     UIPreset(std::vector<UIElement*>&& unsortedElements);
     void enable();
     void disable();
     void update();
-    void disableElement(UIElement* ptr);
-    void enableElement(UIElement* ptr);
+    void disableElements(std::unordered_set<UIElement*>&& ptrs);
+    void enableElements(std::unordered_set<UIElement*>&& ptrs);
     void saveCurrentSelection();
     void retrieveSavedSelection();
     void removeSavedSelection();
+    bool isFocusedElement(UIElement* ptr);
     void processInput(int key);
     void onWindowResize(int width, int height);
     static void terminate();
+    friend void UIElement3D::setInteractability(bool interactable, UIPreset* uiPresetInstance);
 };

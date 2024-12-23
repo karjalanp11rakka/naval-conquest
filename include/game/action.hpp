@@ -9,7 +9,6 @@
 #include <concepts>
 #include <functional>
 #include <format>
-#include <cstdint>
 #include <cassert>
 
 #include <glm/glm.hpp>
@@ -76,21 +75,20 @@ public:
 enum class SelectOnGridTypes
 {
     cross,
-    area
+    area,
+    selectEnemyUnit,
 };
-template<int Radius, bool Blockable, SelectOnGridTypes SelectType>
+template<int Radius, SelectOnGridTypes SelectType, bool Blockable = false>
 class SelectOnGridAction : virtual public Action
 {
-public:
-    using IndicesList = std::vector<std::pair<std::size_t, std::size_t>>;
+    static_assert(!Blockable || SelectType != SelectOnGridTypes::selectEnemyUnit, "Unit selecting cannot be blockable");
 protected:
-    void setGameGridSquares(IndicesList&& activeSquares);
     virtual bool isUsable(Game* gameInstance) const {return true;}
 public:
     ActionTypes use(Game* gameInstance) override final;
     virtual float callback(Game* gameInstance, std::size_t x, std::size_t y) = 0;
 };
-template<std::int32_t Price>
+template<int Price>
 class BuyActionInterface : virtual public Action
 {
 private:
@@ -103,7 +101,7 @@ public:
     std::string_view getName() const override final;
     glm::vec3 getColor(Game* gameInstance) const override final;
 };
-template<std::int32_t Price>
+template<int Price>
 class BuyAction : virtual public BuyActionInterface<Price>
 {
 protected:
@@ -111,7 +109,7 @@ protected:
 public:
     ActionTypes use(Game* gameInstance) override final;
 };
-template<std::int32_t Price, typename UpgradeClass>
+template<int Price, typename UpgradeClass>
 class UpgradeActionInterface : virtual public BuyAction<Price>
 {
     const std::string_view m_name = "UPGRADE";
@@ -127,16 +125,16 @@ protected:
     SingletonAction() = default;
     ~SingletonAction() = default;
 public:
-    static T& get()
+    static T* get()
     {
         static T t;
-        return t;
+        return &t;
     }
 };
 
 //actual actions
 template<int Radius>
-class MoveAction final : virtual public SelectOnGridAction<Radius, true, SelectOnGridTypes::area>, public SingletonAction<MoveAction<Radius>>
+class MoveAction final : virtual public SelectOnGridAction<Radius, SelectOnGridTypes::area, true>, public SingletonAction<MoveAction<Radius>>
 {
 private:
     const std::string_view m_name = "MOVE";
@@ -147,17 +145,41 @@ public:
     float callback(Game* gameInstance, std::size_t x, std::size_t y) override;
     glm::vec3 getColor(Game* gameInstance) const override;
 };
-template<std::int32_t Worth>
-class SellAction final : virtual public Action, virtual public SingletonAction<SellAction<Worth>>
+template<int Worth>
+class SellAction final : virtual public Action, public SingletonAction<SellAction<Worth>>
 {
 private:
-    const std::string m_name = std::format("SELL\n{}{}", Worth, CURRENCY_SYMBOL);
-protected:
+    const std::string m_name = std::format("SELL\n+{}{}", Worth, CURRENCY_SYMBOL);
+public:
     std::string_view getName() const override {return m_name;}
     ActionTypes use(Game* gameInstance) override;
 };
-template<int Radius, std::int32_t Price, typename BuyUnit>
-class BuyUnitAction final : virtual public SelectOnGridAction<Radius, true, SelectOnGridTypes::area>, virtual public BuyActionInterface<Price>, public SingletonAction<BuyUnitAction<Radius, Price, BuyUnit>>
+template<int Price, typename UpgradeClass>
+class UpgradeAction final : virtual public UpgradeActionInterface<Price, UpgradeClass>, public SingletonAction<UpgradeAction<Price, UpgradeClass>> 
+{};
+template<int Price, typename UpgradeClass, int NewMaxMoves, int NewTurnMoney>
+class BaseUpgradeAction final : virtual public UpgradeActionInterface<Price, UpgradeClass>, public SingletonAction<BaseUpgradeAction<Price, UpgradeClass, NewMaxMoves, NewTurnMoney>> 
+{
+private:
+    std::string infoText = std::format("MOVES PER TURN: {}, MONEY PER TURN: {}{}", NewMaxMoves, NewTurnMoney, CURRENCY_SYMBOL);
+protected:
+    void upgrade(Game* gameInstance) override;
+    std::string_view getInfoText() const override {return infoText;}
+};
+template<int Price, int Radius, int Damage>
+class AttackAction final : virtual public SelectOnGridAction<Radius, SelectOnGridTypes::selectEnemyUnit>, virtual public BuyActionInterface<Price>, public SingletonAction<AttackAction<Price, Radius, Damage>>
+{
+    const std::string_view m_name = "ATTACK";
+    const std::string_view m_infoText = "LAUNCH A MISSILE AT AN ENEMY";
+protected:
+    std::string_view getBuyActionName() const override {return m_name;}
+    bool isUsable(Game* gameInstance) const override;
+public:
+    float callback(Game* gameInstance, std::size_t x, std::size_t y) override;
+    std::string_view getInfoText() const override {return m_infoText;}
+};
+template<int Price, int Radius, typename BuyUnit>
+class BuyUnitAction final : virtual public SelectOnGridAction<Radius, SelectOnGridTypes::area, true>, virtual public BuyActionInterface<Price>, public SingletonAction<BuyUnitAction<Price, Radius, BuyUnit>>
 {
 private:
     const std::string_view m_name = "BUY UNIT";
@@ -167,16 +189,4 @@ protected:
 public:
     float callback(Game* gameInstance, std::size_t x, std::size_t y) override;
     std::string_view getInfoText() const override;
-};
-template<std::int32_t Price, typename UpgradeClass>
-class UpgradeAction final : virtual public UpgradeActionInterface<Price, UpgradeClass>, public SingletonAction<UpgradeAction<Price, UpgradeClass>> 
-{};
-template<std::int32_t Price, typename UpgradeClass, int NewMaxMoves, std::int32_t NewTurnMoney>
-class BaseUpgradeAction final : virtual public UpgradeActionInterface<Price, UpgradeClass>, public SingletonAction<BaseUpgradeAction<Price, UpgradeClass, NewMaxMoves, NewTurnMoney>> 
-{
-private:
-    std::string infoText = std::format("MOVES PER TURN + {}, MONEY PER TURN + {}{}", NewMaxMoves, NewTurnMoney, CURRENCY_SYMBOL);
-protected:
-    void upgrade(Game* gameInstance) override;
-    std::string_view getInfoText() const override {return infoText;}
 };

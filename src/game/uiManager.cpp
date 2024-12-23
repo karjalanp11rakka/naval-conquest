@@ -46,8 +46,8 @@ UIManager::UIManager()
             changeCurrentUI(m_gameUI);
             for(int i {}; i < GRID_SIZE * GRID_SIZE; ++i)
             {
-                m_gameUI->disableElement(m_gameGridSquares[i].get());
-                if(i % 2 == 0) m_gameUI->disableElement(m_gameGridLargeSquares[i / 2].get());
+                m_gameUI->disableElements({m_gameGridSquares[i].get()});
+                if(i % 2 == 0) m_gameUI->disableElements({m_gameGridLargeSquares[i / 2].get()});
             }
             static GameController& gameControllerInstance = GameController::getInstance();
             gameControllerInstance.createGame(true);
@@ -253,18 +253,23 @@ void UIManager::changeCurrentUI(std::unique_ptr<UIPreset>& newUI)
     m_currentUI = newUI.get();
     m_currentUI->enable();
 }
-
-void UIManager::addDisabledColorToGridSquare(std::size_t index, const glm::vec3& color)
+void UIManager::makeGridSquareNonInteractable(std::size_t index, glm::vec3 color)
 {
-    if(m_enabledSquares.test(index))
-    {
-        m_gameGridSquares[index]->addDisabledColor(color);
-    }
-    else
-    {
-        assert(m_enabledLargeSquares.test(index / 2));
-        m_gameGridLargeSquares[index / 2]->addDisabledColor(color);
-    }
+    assert(m_currentUI == m_gameUI.get());
+    auto square = m_gameGridSquares[index].get();
+    if(!square->isInteractable()) return;
+    square->addTemporaryColor(color);
+    square->setInteractability(false, m_gameUI.get());
+    if(m_gameUI->isFocusedElement(square)) moveSelection();
+}
+void UIManager::makeLargeGridSquareNonInteractable(std::size_t index, glm::vec3 color)
+{
+    assert(m_currentUI == m_gameUI.get());
+    auto square = m_gameGridLargeSquares[index].get();
+    if(!square->isInteractable()) return;
+    square->addTemporaryColor(color);
+    square->setInteractability(false, m_gameUI.get());
+    if(m_gameUI->isFocusedElement(square)) moveSelection();
 }
 void UIManager::saveCurrentSelection()
 {
@@ -282,38 +287,33 @@ void UIManager::updateGameStatusTexts(std::string&& text)
 {
     m_gameStatusText->changeText(std::move(text));
 }
-void UIManager::removeDisabledColorToGridSquare(std::size_t index)
-{
-    if(m_gameGridSquares[index]->hasDisabledColor())
-    {
-        m_gameGridSquares[index]->removeDisabledColor();
-    }
-    else
-    {
-        assert(m_gameGridLargeSquares[index / 2]->hasDisabledColor());
-        m_gameGridLargeSquares[index / 2]->removeDisabledColor();
-    }
-}
 void UIManager::setGameGridSquares(std::bitset<GRID_SIZE * GRID_SIZE>&& activeSmallSquares, std::bitset<GRID_SIZE * GRID_SIZE / 2>&& activeLargeSquares)
 {
     if(m_currentUI != m_gameUI.get()) return;
+    std::unordered_set<UIElement*> elementsToEnable, elementsToDisable;
+
+    auto updateElements = [&](auto& enabledSet, auto& activeSet, auto& elements, auto index)
+    {
+        if(enabledSet.test(index) && !activeSet.test(index))
+            elementsToDisable.insert(elements[index].get());
+        else if(!enabledSet.test(index) && activeSet.test(index))
+            elementsToEnable.insert(elements[index].get());
+    };
+
     for(int i {}; i < GRID_SIZE * GRID_SIZE; ++i)
     {
         if(i % 2 == 0)
         {
             assert(!activeSmallSquares.test(i) || !activeLargeSquares.test(i / 2) && "Both large and small square cannot be enabled simultaneously");
-            if(m_enabledLargeSquares.test(i / 2) && !activeLargeSquares.test(i / 2))
-                m_gameUI->disableElement(m_gameGridLargeSquares[i / 2].get());
-            else if(!m_enabledLargeSquares.test(i / 2) && activeLargeSquares.test(i / 2))
-                m_gameUI->enableElement(m_gameGridLargeSquares[i / 2].get());
+            updateElements(m_enabledLargeSquares, activeLargeSquares, m_gameGridLargeSquares, i / 2);
         }
-        if(m_enabledSquares.test(i) && !activeSmallSquares.test(i))
-            m_gameUI->disableElement(m_gameGridSquares[i].get());
-        else if(!m_enabledSquares.test(i) && activeSmallSquares.test(i))
-            m_gameUI->enableElement(m_gameGridSquares[i].get());
+        updateElements(m_enabledSquares, activeSmallSquares, m_gameGridSquares, i);
     }
+
     m_enabledSquares = std::move(activeSmallSquares);
     m_enabledLargeSquares = std::move(activeLargeSquares);
+    m_gameUI->enableElements(std::move(elementsToEnable));
+    m_gameUI->disableElements(std::move(elementsToDisable));
 }
 
 void UIManager::enableGameActionButtons(const std::vector<ActionData>& data)
@@ -321,7 +321,7 @@ void UIManager::enableGameActionButtons(const std::vector<ActionData>& data)
     assert(m_enabledButtonsCount <= 1 && "Buttons have to be disabled before they can be enabled.");
     if(m_enabledButtonsCount == 0)
     {
-        if(!m_backButtonEnabled) m_gameUI->enableElement(m_gameActionButtons[0].get());
+        if(!m_backButtonEnabled) m_gameUI->enableElements({m_gameActionButtons[0].get()});
     }
     m_enabledButtonsCount = data.size() + 1;
     for(std::size_t i {1}; i < m_enabledButtonsCount; ++i)//ignore the first one which is the back button
@@ -329,20 +329,20 @@ void UIManager::enableGameActionButtons(const std::vector<ActionData>& data)
         m_gameActionButtons[i]->changeText(std::string(data[i - 1].text));
         m_gameActionButtons[i]->setBackgroundColor(data[i - 1].color);
         m_gameActionButtons[i]->setInfoText(data[i - 1].infoText, ORANGE);
-        m_gameUI->enableElement(m_gameActionButtons[i].get());
+        m_gameUI->enableElements({m_gameActionButtons[i].get()});
     }
 }
 void UIManager::disableGameActionButtons(bool disableBackButton)
 {
     for(std::size_t i {disableBackButton ? 0u : 1u}; i < m_enabledButtonsCount; ++i)
-        m_gameUI->disableElement(m_gameActionButtons[i].get());
+        m_gameUI->disableElements({m_gameActionButtons[i].get()});
     m_enabledButtonsCount = disableBackButton ? 0 : 1;
     m_backButtonEnabled = !disableBackButton;
 }
 void UIManager::setEndTurnButton(bool enabled)
 {
-    if(enabled) m_gameUI->enableElement(m_endTurnButton.get());
-    else m_gameUI->disableElement(m_endTurnButton.get());
+    if(enabled) m_gameUI->enableElements({m_endTurnButton.get()});
+    else m_gameUI->disableElements({m_endTurnButton.get()});
 }
 void UIManager::moveSelection()
 {

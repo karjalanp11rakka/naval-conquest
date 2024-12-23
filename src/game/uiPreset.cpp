@@ -83,7 +83,7 @@ bool UIElement::isInteractable()
         return true;
     return false;
 }
-TextUIElement::TextUIElement(TextData&& textData, std::function<void()> callback)
+TextUIElement::TextUIElement(TextData&& textData, std::function<void()>&& callback)
     : UIElement(std::move(callback), textData.position), m_textData(std::move(textData))
 {
     m_text = gltCreateText();
@@ -116,21 +116,21 @@ void TextUIElement::changeText(std::string&& text)
 {
     m_textData.text = std::move(text);
 }
-ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()> callback, const glm::vec3& highlightColor, float highlightThickness)
-    : TextUIElement(std::move(textData), callback), m_textBackgroundData(backgroundData), m_highlightColor(highlightColor)
+ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness)
+    : TextUIElement(std::move(textData), std::move(callback)), m_textBackgroundData(backgroundData), m_highlightColor(highlightColor)
 {    
     static auto uiElementShader {ShaderManager::getInstance().getShader(
         assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
 
     static MeshManager& meshManagerInstance = MeshManager::getInstance(); 
-    //interactive elements
+    //interactable elements
     if(m_callback)
     {
         m_backgroundObject =
             std::make_unique<InteractableBackground>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader,
             glm::vec3(m_textBackgroundData.backgroundColor.x, m_textBackgroundData.backgroundColor.y, m_textBackgroundData.backgroundColor.z), m_highlightColor, highlightThickness);
     }
-    //noninteractive elements
+    //non-interactable elements
     else
     {
         m_backgroundObject =
@@ -181,7 +181,7 @@ void SettingUIElement::trigger()
     *m_turnedOn = !*m_turnedOn;
     ButtonUIElement::trigger();
 }
-void ScalableButtonUIElement::setBackgroundColor(const glm::vec3& color)
+void ScalableButtonUIElement::setBackgroundColor(glm::vec3 color)
 {
     m_backgroundObject->setColor(color);
 }
@@ -221,9 +221,9 @@ void ScalableButtonUIElement::setInfoText(std::string_view text, glm::vec3 color
     m_infoTextColor = color;
 }
 
-UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model, 
-    const glm::vec3& defaultColor, const glm::vec3& highlightColor)
-    : UIElement(callback, glm::vec2(model[3].x, -model[3].z - 1.f)), m_defaultColor(defaultColor), m_highlightColor(highlightColor)
+UIElement3D::UIElement3D(std::function<void()>&& callback, glm::mat4&& model, 
+    glm::vec3 defaultColor, glm::vec3 highlightColor)
+    : UIElement(std::move(callback), glm::vec2(model[3].x, -model[3].z - 1.f)), m_defaultColor(defaultColor), m_highlightColor(highlightColor)
 {
     static MeshManager& meshManagerInstance = MeshManager::getInstance(); 
     m_object = std::make_unique<UnlitObject>(meshManagerInstance.getGrid(1, NormalMode::none), defaultColor);
@@ -232,43 +232,67 @@ UIElement3D::UIElement3D(std::function<void()> callback, glm::mat4&& model,
 void UIElement3D::enable()
 {
     UIElement::enable();
-    if(!m_hasDisabledColor)
-        m_object->addToRenderEngine(Object3DRenderTypes::noDepthTest);
-    else
-    {
-        m_hasDisabledColor = false;
-        m_object->setColor(m_defaultColor);
-    }
+    m_object->addToRenderEngine(Object3DRenderTypes::noDepthTest);
 }
 void UIElement3D::disable()
 {
     UIElement::disable();
-    if(!m_hasDisabledColor)
-        m_object->removeFromRenderEngine();
-}
-void UIElement3D::addDisabledColor(const glm::vec3& temporaryColor)
-{
-    m_hasDisabledColor = true;
-    m_object->setColor(temporaryColor);
-}
-void UIElement3D::removeDisabledColor()
-{
-    m_hasDisabledColor = false;
-    m_object->setColor(m_defaultColor);
+    removeTemporaryColor();
+    if(m_savedCallback) setInteractability(true);
     m_object->removeFromRenderEngine();
 }
-bool UIElement3D::hasDisabledColor()
+void UIElement3D::setInteractability(bool interactable)//used when the object is guaranteed to be disabled and there is no need to update the m_interactableElementsCount on the UIPreset instance
 {
-    return m_hasDisabledColor;
+    assert(!m_enabled);
+    if(interactable)
+    {
+        m_callback = std::move(m_savedCallback);
+        m_savedCallback = nullptr;
+    }
+    else
+    {
+        m_savedCallback = std::move(m_callback);
+        m_callback = nullptr;
+    }
+}
+void UIElement3D::setInteractability(bool interactable, UIPreset* uiPresetInstance)
+{
+    if(interactable)
+    {
+        m_callback = std::move(m_savedCallback);
+        m_savedCallback = nullptr;
+    }
+    else
+    {
+        m_savedCallback = std::move(m_callback);
+        m_callback = nullptr;
+    }
+    if(m_enabled)
+    {
+        for(int i {}; i < uiPresetInstance->m_sortedElements.size(); ++i)
+        {
+            for(int j {}; j < uiPresetInstance->m_sortedElements[i].size(); ++j)
+                if(uiPresetInstance->m_sortedElements[i][j] == this)
+                    uiPresetInstance->changeInteractablesCount(interactable, std::make_pair(i, j));
+        }
+    }
+}
+void UIElement3D::addTemporaryColor(glm::vec3 temporaryColor)
+{
+    m_object->setColor(temporaryColor);
+}
+void UIElement3D::removeTemporaryColor()
+{
+    m_object->setColor(m_defaultColor);
 }
 
 void UIElement3D::focus()
 {
-    if(!m_hasDisabledColor) m_object->setColor(m_highlightColor);
+    m_object->setColor(m_highlightColor);
 }
 void UIElement3D::defocus()
 {
-    if(!m_hasDisabledColor) m_object->setColor(m_defaultColor);
+    if(!m_savedCallback) m_object->setColor(m_defaultColor);
 }
 
 void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
@@ -281,7 +305,7 @@ void UIPreset::updateBackgroundsUniforms(int windowWidth, int windowHeight)
 }
 
 void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
-{
+{ 
     if(m_interactableElementsCount < 2) return;
 
     std::pair<std::size_t, std::size_t> newElementIndices {};
@@ -358,6 +382,25 @@ void UIPreset::moveFocusedElement(FocusMoveDirections focusMoveDirection)
     }
     m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
 }
+void UIPreset::changeInteractablesCount(bool add, std::pair<std::size_t, std::size_t> changeIndices)
+{
+    if(add)
+    {
+        if(!m_sortedElements[m_focusIndices.first][m_focusIndices.second]->isInteractable())
+        {
+            m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
+            m_focusIndices = changeIndices;
+            m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
+        }
+        ++m_interactableElementsCount;
+    }
+    else
+    {
+        if(m_focusIndices == changeIndices)
+            moveFocusedElement(FocusMoveDirections::right);
+        --m_interactableElementsCount;
+    }
+}
 
 UIPreset::UIPreset(std::vector<UIElement*>&& unsortedElements)
 {
@@ -412,14 +455,7 @@ void UIPreset::enable()
         {
             m_sortedElements[i][j]->enable();
             if(m_sortedElements[i][j]->isInteractable()) 
-            {   
-                if(!m_interactableElementsCount)
-                {
-                    m_focusIndices = std::make_pair(i, j);
-                    m_sortedElements[i][j]->focus();
-                }
-                ++m_interactableElementsCount;
-            }
+                changeInteractablesCount(true, std::make_pair(i, j));
         }
     }
     updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());
@@ -441,41 +477,37 @@ void UIPreset::update()
             element->update();
     }
 }
-void UIPreset::disableElement(UIElement* ptr)
+
+void UIPreset::disableElements(std::unordered_set<UIElement*>&& ptrs)
 {
     for(std::size_t i {}; i < m_sortedElements.size(); ++i)
     {
         for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
-            if(m_sortedElements[i][j] == ptr)
-            {
-                if(m_focusIndices == std::make_pair(i, j))
-                    moveFocusedElement(FocusMoveDirections::right);
-                if(m_sortedElements[i][j]->isInteractable()) --m_interactableElementsCount;
-                m_sortedElements[i][j]->disable();
-                return;
-            }
+            for(auto ptr : ptrs)
+                if(m_sortedElements[i][j] == ptr)
+                {
+                    if(m_sortedElements[i][j]->isInteractable())
+                        changeInteractablesCount(false, std::make_pair(i, j));
+                    m_sortedElements[i][j]->disable();
+                    ptrs.erase(ptr);
+                    break;
+                }
     }
 }
-void UIPreset::enableElement(UIElement* ptr)
+void UIPreset::enableElements(std::unordered_set<UIElement*>&& ptrs)
 {
     for(std::size_t i {}; i < m_sortedElements.size(); ++i)
     {
         for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
-            if(m_sortedElements[i][j] == ptr)
-            {
-                m_sortedElements[i][j]->enable();
-                if(m_sortedElements[i][j]->isInteractable())
+            for(auto ptr : ptrs)
+                if(m_sortedElements[i][j] == ptr)
                 {
-                    ++m_interactableElementsCount;
-                    if(m_interactableElementsCount == 1)
-                    {
-                        m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
-                        m_focusIndices = std::make_pair(i, j);
-                        m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
-                    }
+                    m_sortedElements[i][j]->enable();
+                    if(m_sortedElements[i][j]->isInteractable())
+                        changeInteractablesCount(true, std::make_pair(i, j));
+                    ptrs.erase(ptr);
+                    break;
                 }
-                return;
-            }
     }
 }
 void UIPreset::saveCurrentSelection()
@@ -484,13 +516,13 @@ void UIPreset::saveCurrentSelection()
 }
 void UIPreset::retrieveSavedSelection()
 {
-    auto& retrieveIndices = m_retrieveIndices.top();
-
     assert(!m_retrieveIndices.empty());
-    if(m_sortedElements[retrieveIndices.first][retrieveIndices.second]->isInteractable())
+    auto& retrieveIndices = m_retrieveIndices.top();
+    auto& retrieveElement = m_sortedElements[retrieveIndices.first][retrieveIndices.second];
+    if(retrieveElement->isInteractable())
     {
         m_sortedElements[m_focusIndices.first][m_focusIndices.second]->defocus();
-        m_sortedElements[retrieveIndices.first][retrieveIndices.second]->focus();
+        retrieveElement->focus();
         m_focusIndices = retrieveIndices;
     }
     m_retrieveIndices.pop();
@@ -499,6 +531,10 @@ void UIPreset::removeSavedSelection()
 {
     assert(!m_retrieveIndices.empty());
     m_retrieveIndices.pop();
+}
+bool UIPreset::isFocusedElement(UIElement* ptr)
+{
+    return m_sortedElements[m_focusIndices.first][m_focusIndices.second] == ptr;
 }
 
 void UIPreset::processInput(int key)

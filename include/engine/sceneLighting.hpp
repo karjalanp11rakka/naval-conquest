@@ -17,7 +17,7 @@ namespace lights
         float linear {};
         float quadratic {};
         float strength {};
-        PointLight(const glm::vec3& lightColor, const glm::vec3& lightPosition, float distance)
+        PointLight(glm::vec3 lightColor, glm::vec3 lightPosition, float distance)
             : color(lightColor), position(lightPosition)
         {
             interpolateCoefficients(distance, linear, quadratic);

@@ -8,9 +8,9 @@
 #include <utility>
 #include <functional>
 #include <optional>
-#include <cstdint>
 #include <deque>
 #include <unordered_set>
+#include <set>
 #include <type_traits>
 
 #include <game/unitObject.hpp>
@@ -28,17 +28,18 @@ public:
 private:
     struct MoveAlongPathData
     {
-        UnitObject* moveObject {};
+        GameObject* moveObject {};
         Path path;
         float speed {};
-        bool useRotation {};
+        bool resetRotationOnEnd {};
         float currentTime {};
         glm::vec3 lastPos {};
     };
     std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE> m_base;
     std::vector<MoveAlongPathData> m_movements;
-    std::vector<std::pair<std::unordered_set<std::size_t>, std::unique_ptr<UnitObject>*>> m_combinedLocations;//currently only for bases
+    std::vector<std::pair<std::set<std::size_t>, std::unique_ptr<UnitObject>*>> m_combinedLocations;//currently only for bases
     Game* const m_gameInstance;
+    bool update(float deltaTime);
 public:
     GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
     ~GameGrid() = default;
@@ -54,7 +55,7 @@ public:
             ptr = std::make_unique<T>(m_gameInstance, teamOne);
             assert(index % GRID_SIZE != GRID_SIZE - 1);
             assert(index + 1 < GRID_SIZE * GRID_SIZE);//there must be space for the base
-            m_combinedLocations.emplace_back(std::unordered_set<std::size_t>{index, index + 1, index + GRID_SIZE, 
+            m_combinedLocations.emplace_back(std::set<std::size_t>{index, index + 1, index + GRID_SIZE, 
                 index + 1 + GRID_SIZE}, &m_base[index]);
             ptr->setPosition({-1.f + SQUARE_SIZE * x + SQUARE_SIZE, 0.f, 
                 -1.f + SQUARE_SIZE * y + SQUARE_SIZE});
@@ -64,7 +65,7 @@ public:
 #ifndef NDEBUG
             for(auto& pair : m_combinedLocations)
             {
-                assert(pair.first.count(index) == 0 && "Unable to initialize to a position with a base");
+                assert(!pair.first.contains(index) && "Unable to initialize to a position with a base");
             }
 #endif
             ptr = std::make_unique<T>(m_gameInstance, teamOne);
@@ -79,18 +80,19 @@ public:
     }
     UnitObject* at(std::size_t x, std::size_t y) const;
     UnitObject* at(Loc loc) const;
-    void update();
     void destroy(UnitObject* ptr);
     void destroyAt(Loc loc);
     void destroyAt(std::size_t index);
     void moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2);
     void moveAt(Loc loc1, Loc loc2);
-    std::optional<std::unordered_set<std::size_t>*> getCombinedLocations(std::size_t index);
     [[nodiscard]] Path findPath(Loc startPos, Loc movePos, bool avoidObstacles = true);
-    int moveAlongPath(Path&& path, float speed, bool useRotation = true);//return the number of steps
-    int moveAlongPath(Path&& path, float speed, UnitObject* moveObject, bool useRotation = true);
-    int size() const {return std::ssize(m_base);}
-    UnitObject* operator[](std::size_t index) const noexcept;
+    int moveAlongPath(Path&& path, float speed, bool resetRotationOnEnd = true);//return the number of steps
+    int moveAlongPath(Path&& path, float speed, GameObject* moveObject, bool resetRotationOnEnd = true);
+    void setSquares(std::set<Loc>&& locations);
+    void setSquares(std::unordered_set<std::size_t>&& indices);
+    void makeSquareNonInteractable(std::size_t index, glm::vec3 color);
+    static constexpr int size() {return GRID_SIZE * GRID_SIZE;}
+    UnitObject* operator[](std::size_t index) const;
     static Loc convertIndexToLocation(std::size_t index);
     static std::size_t convertLocationToIndex(Loc loc);
     static glm::vec3 gridLocationToPosition(Loc loc);
@@ -144,13 +146,13 @@ public:
         return Iterator(m_base.end());
     }
 };
-inline constexpr std::int32_t PLAYER_STARTING_MONEY = 600;
-inline constexpr std::int32_t PLAYER_STARTING_TURN_MONEY = 200;
+inline constexpr int PLAYER_STARTING_MONEY = 600;
+inline constexpr int PLAYER_STARTING_TURN_MONEY = 200;
 struct PlayerData
 {
-    std::int32_t money {PLAYER_STARTING_MONEY};
+    int money {PLAYER_STARTING_MONEY};
     std::pair<int, int> moves {std::make_pair(2, 2)};
-    std::int32_t turnMoney = PLAYER_STARTING_TURN_MONEY;
+    int turnMoney = PLAYER_STARTING_TURN_MONEY;
 };
 class Game
 {
@@ -167,10 +169,9 @@ private:
 public:
     Game(bool onePlayer);
     ~Game() = default;
-    void update();
-    std::int32_t getMoney() const;
-    void addMoney(std::int32_t money);
-    void setTurnData(int maxMoves, std::int32_t money);
+    int getMoney() const;
+    void addMoney(int money);
+    void setTurnData(int maxMoves, int money);
     void takeMove();
     bool canMove();
     GameGrid& getGameGrid() {return m_grid;}

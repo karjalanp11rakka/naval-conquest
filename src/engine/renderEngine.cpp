@@ -120,21 +120,21 @@ SceneLighting* RenderEngine::getLighting() const
     return &defaultLights;
 }
 
-void RenderEngine::addRenderCallback(const std::function<void()>& callback)
+void RenderEngine::addRenderCallback(std::function<void()>&& callback)
 {
     m_renderCallbacks.push_front(callback);
 }
-const glm::vec3& RenderEngine::getCameraPos() const 
+glm::vec3 RenderEngine::getCameraPos() const 
 {
-    return m_camera->m_position;
+    return m_camera->getPosition();
 }
-const glm::mat4& RenderEngine::getProjection() const 
+glm::mat4 RenderEngine::getProjection() const 
 {
-    return m_camera->m_projection;
+    return m_camera->getProjection();
 }
-const glm::mat4& RenderEngine::getView() const 
+glm::mat4 RenderEngine::getView() const 
 {
-    return m_camera->m_view;
+    return m_camera->getView();
 }
 
 void RenderEngine::onWindowResize(int width, int height)
