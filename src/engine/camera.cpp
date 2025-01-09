@@ -5,8 +5,8 @@
 #include <engine/camera.hpp>
 #include <glfwController.hpp>
 
-Camera::Camera(glm::vec3&& position) 
-    : m_position(std::move(position)) 
+Camera::Camera(glm::vec3 position) 
+    : m_position(position) 
 {
     static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     onWindowResize(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());

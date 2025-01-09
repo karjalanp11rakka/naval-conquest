@@ -116,8 +116,8 @@ void TextUIElement::changeText(std::string&& text)
 {
     m_textData.text = std::move(text);
 }
-ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness)
-    : TextUIElement(std::move(textData), std::move(callback)), m_textBackgroundData(backgroundData), m_highlightColor(highlightColor)
+ButtonUIElement::ButtonUIElement(TextData&& textData, std::function<void()>&& callback, glm::vec3 backgroundColor, float backgroundScale, glm::vec3 highlightColor, float highlightThickness)
+    : TextUIElement(std::move(textData), std::move(callback)), m_backgroundColor(backgroundColor), m_backgroundScale(backgroundScale), m_highlightColor(highlightColor)
 {    
     static auto uiElementShader {ShaderManager::getInstance().getShader(
         assets::SHADERS_V2D_GLSL, assets::SHADERS_FSIMPLEUNLIT_GLSL)};
@@ -128,14 +128,14 @@ ButtonUIElement::ButtonUIElement(TextData&& textData, TextBackgroundData&& backg
     {
         m_backgroundObject =
             std::make_unique<InteractableBackground>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader,
-            glm::vec3(m_textBackgroundData.backgroundColor.x, m_textBackgroundData.backgroundColor.y, m_textBackgroundData.backgroundColor.z), m_highlightColor, highlightThickness);
+            glm::vec3(m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z), m_highlightColor, highlightThickness);
     }
     //non-interactable elements
     else
     {
         m_backgroundObject =
             std::make_unique<Object2D>(meshManagerInstance.getGrid(1, NormalMode::none), uiElementShader, 
-            glm::vec3(m_textBackgroundData.backgroundColor.x, m_textBackgroundData.backgroundColor.y, m_textBackgroundData.backgroundColor.z));
+            glm::vec3(m_backgroundColor.x, m_backgroundColor.y, m_backgroundColor.z));
     }
 }
 
@@ -146,23 +146,24 @@ void ButtonUIElement::enable()
 }
 void ButtonUIElement::disable()
 {
+    if(!m_enabled) return;
     UIElement::disable();
     m_backgroundObject->removeFromRenderEngine();
 }
 void ButtonUIElement::focus()
 {
     if(m_callback)
-        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(true);
+        static_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(true);
 }
 void ButtonUIElement::defocus()
 {
     if(m_callback)
-        dynamic_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(false);
+        static_cast<InteractableBackground*>(m_backgroundObject.get())->setUseHighlight(false);
 }
 
 void ButtonUIElement::onResize(int windowWidth, int windowHeight)
 {
-    float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_textBackgroundData.backgroundScale};
+    float sizeMultiplier {(windowHeight < windowWidth ? windowHeight : windowWidth) * TEXT_SIZE_MULTIPLIER * m_backgroundScale};
     glm::mat4 backgroundModel(1.f);
 
     gltSetText(m_text, m_textData.text.data());
@@ -172,7 +173,7 @@ void ButtonUIElement::onResize(int windowWidth, int windowHeight)
 
     backgroundModel = glm::translate(backgroundModel, glm::vec3(m_textData.position.x, m_textData.position.y, 0.f));
     backgroundModel = glm::scale(backgroundModel, glm::vec3(textWidth * sizeMultiplier, textHeight * sizeMultiplier, 0.f));
-    m_backgroundObject->setModel(std::move(backgroundModel));
+    m_backgroundObject->setModel(backgroundModel);
 }
 
 void SettingUIElement::trigger()
@@ -213,7 +214,7 @@ void ScalableButtonUIElement::onResize(int windowWidth, int windowHeight)
     glm::mat4 backgroundModel(1.f);
     backgroundModel = glm::translate(backgroundModel, glm::vec3(m_textData.position.x, m_textData.position.y, 0.f));
     backgroundModel = glm::scale(backgroundModel, glm::vec3(m_width / (float)windowWidth * sizeMultiplier, m_height / float(windowHeight) * sizeMultiplier, 0.f));
-    m_backgroundObject->setModel(std::move(backgroundModel));
+    m_backgroundObject->setModel(backgroundModel);
 }
 void ScalableButtonUIElement::setInfoText(std::string_view text, glm::vec3 color)
 {
@@ -227,7 +228,7 @@ UIElement3D::UIElement3D(std::function<void()>&& callback, glm::mat4&& model,
 {
     static MeshManager& meshManagerInstance = MeshManager::getInstance(); 
     m_object = std::make_unique<UnlitObject>(meshManagerInstance.getGrid(1, NormalMode::none), defaultColor);
-    m_object->setModel(std::move(model));
+    m_object->setModel(model);
 }
 void UIElement3D::enable()
 {
@@ -236,6 +237,7 @@ void UIElement3D::enable()
 }
 void UIElement3D::disable()
 {
+    if(!m_enabled) return;
     UIElement::disable();
     removeTemporaryColor();
     if(m_savedCallback) setInteractability(true);
@@ -405,7 +407,7 @@ void UIPreset::changeInteractablesCount(bool add, std::pair<std::size_t, std::si
 UIPreset::UIPreset(std::vector<UIElement*>&& unsortedElements)
 {
     //sort the elements to be iterable correctly for keyboard input
-    std::sort(unsortedElements.begin(), unsortedElements.end(), [](const auto& a, const auto& b) -> bool
+    std::stable_sort(unsortedElements.begin(), unsortedElements.end(), [](const auto& a, const auto& b) -> bool
     {
         //seperate 3D objects from the other UI elements
         bool is3D = static_cast<bool>(dynamic_cast<UIElement3D*>(a));
@@ -454,8 +456,15 @@ void UIPreset::enable()
         for(std::size_t j {}; j < m_sortedElements[i].size(); ++j)
         {
             m_sortedElements[i][j]->enable();
-            if(m_sortedElements[i][j]->isInteractable()) 
-                changeInteractablesCount(true, std::make_pair(i, j));
+            if(m_sortedElements[i][j]->isInteractable())
+            {
+                if(!m_interactableElementsCount)
+                {
+                    m_focusIndices = std::make_pair(i, j);
+                    m_sortedElements[m_focusIndices.first][m_focusIndices.second]->focus();
+                }
+                ++m_interactableElementsCount;
+            }
         }
     }
     updateBackgroundsUniforms(glfwControllerInstance.getWidth(), glfwControllerInstance.getHeight());

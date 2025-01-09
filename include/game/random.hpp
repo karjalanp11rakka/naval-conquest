@@ -2,6 +2,7 @@
 
 #include <random>
 #include <concepts>
+#include <utility>
 
 template<typename T>
 concept IsIntegral = std::is_integral_v<T>;
@@ -22,6 +23,7 @@ public:
     template<IsIntegral T>
     T get(T min, T max)
     {
+        if(min > max) std::swap(min, max);
         auto dist {std::uniform_int_distribution<T>(min, max)};
         return dist(m_mt);
     }

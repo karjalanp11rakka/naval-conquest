@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.10)
-project(myproj VERSION 0.1 LANGUAGES CXX C)
+cmake_minimum_required(VERSION 3.12)
+project(naval-conquest VERSION 1.0 LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(USE_TOOLS "Run the Python scripts in 'tools' before building the project" OFF)
@@ -50,3 +50,7 @@ add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/lib)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw glm glad)
+
+if(CMAKE_INSTALL_PREFIX)
+    install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+endif()

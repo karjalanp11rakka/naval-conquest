@@ -19,7 +19,9 @@ GLFWController::GLFWController()
 {
     if(!glfwInit())
     {
-        std::cerr << "Failed to initialize GLFW\n";
+        const char* description;
+        int code = glfwGetError(&description);
+        std::cerr << "Failed to initialize GLFW " << description << '\n';
         return;
     }
 
@@ -30,7 +32,9 @@ GLFWController::GLFWController()
     m_window = glfwCreateWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, WINDOW_NAME, nullptr, nullptr);
     if(!m_window)
     {
-        std::cerr << "Failed to create GLFW window\n"; 
+        const char* description;
+        int code = glfwGetError(&description);
+        std::cerr << "Failed to create GLFW window" << description << "\n"; 
         glfwTerminate();
         return;
     }

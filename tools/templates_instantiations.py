@@ -8,7 +8,7 @@ import re
 
 #The following data can be edited if the usage is to be extended
 TEMPLATE_CLASSES_DEFINE_PATHS = (("include", "game", "action.hpp"),)
-TEMPLATE_CLASSES_USE_PATHS = ((("src", "game", "unitObject.cpp"),),)#Single template classes directory can have several use directories. 
+TEMPLATE_CLASSES_USE_PATHS = ((("src", "game", "gridObject.cpp"),),)#Single template classes directory can have several use directories. 
 TEMPLATE_CLASS_WRITE_PATHS = (("src", "game", "action.cpp"),)
 
 assert(len(TEMPLATE_CLASSES_DEFINE_PATHS) == len(TEMPLATE_CLASSES_USE_PATHS) == len(TEMPLATE_CLASS_WRITE_PATHS))
@@ -65,12 +65,14 @@ def getTemplateClassesData(file):
 
 ROOT_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+math_regex = re.compile(r'[+\-*/]')
+
 for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
     #read template definitions and save the data as a list of TemplateClasses
     with open(os.path.join(ROOT_DIRECTORY, *define_path), "r") as define_file:
         template_classes_data = getTemplateClassesData(define_file)
 
-    templates_to_instantiate = set()
+    template_instantations = set()
     constant_variables = {}
     for use_path in TEMPLATE_CLASSES_USE_PATHS[index]:
         with open(os.path.join(ROOT_DIRECTORY, *use_path), "r") as use_file:
@@ -97,7 +99,7 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
                         
                         instantiation_template_argument_count = instantiation_definition.count(",") + 1
                         if instantiation_template_argument_count < template_class.min_template_count: raise Exception("Template class usage cannot have less parameters than the template class definition: " + line)
-                        templates_to_instantiate.add(TemplateClassInstantiation(template_class, instantiation_definition))
+                        template_instantations.add(TemplateClassInstantiation(template_class, instantiation_definition))
                 #get constants
                 use_file_line_words = line.split()
                 if "#define" == use_file_line_words[0]:
@@ -139,12 +141,24 @@ for index, define_path in enumerate(TEMPLATE_CLASSES_DEFINE_PATHS):
         lines.append(f"{COMMENT_FIRST_LINE}\n")
         lines.append("// Do not add or modify anything after these comments\n")
 
+        final_template_instantiations = set()
+
         #replace constants with their matching values
-        for template_to_inst in templates_to_instantiate:
+        for template_inst in template_instantations:
             for constant_name in sorted(constant_variables, key=len, reverse=True):
-                template_to_inst.template_parameters = template_to_inst.template_parameters.replace(constant_name, constant_variables[constant_name])
+                template_inst.template_parameters = template_inst.template_parameters.replace(constant_name, constant_variables[constant_name])
+            expressions = template_inst.template_parameters.split(',')
+            evaluated_values = []
+            #try to evaluate mathematical expressions like 2+1
+            for expr in expressions:
+                if math_regex.search(expr):
+                    evaluated_values.append(str(eval(expr)))
+                else: evaluated_values.append(expr)
+            template_inst = f"{template_inst.template_class.name}<{','.join(evaluated_values)}>"
+            if template_inst in final_template_instantiations: continue
+            final_template_instantiations.add(template_inst)
             #add template instantiation line
-            lines.append(f"template class {template_to_inst.template_class.name}<{template_to_inst.template_parameters}>;\n")
+            lines.append(f"template class {template_inst};\n")
 
         #write
         with open(os.path.join(ROOT_DIRECTORY, *TEMPLATE_CLASS_WRITE_PATHS[index]), "w") as write_file:

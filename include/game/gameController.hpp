@@ -25,6 +25,7 @@ private:
     std::unique_ptr<Object3D> m_waterObj;
     std::unique_ptr<OrbitingCamera> m_camera;
     std::forward_list<std::function<bool(float)>> m_updates;//return value is whether it should be removed and the argument is time
+    bool m_hasGame {};
 public:
     static GameController& getInstance()
     {
@@ -34,7 +35,9 @@ public:
 
     void update();
     void addUpdateFunction(std::function<bool(float)>&& func);
-    void createGame(bool onePlayer);
+    void createGame();
+    void destroyGame();
+    bool hasGame();
     OrbitingCamera* getCamera() {return m_camera.get();}
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);
     void onWindowResize(int width, int height);

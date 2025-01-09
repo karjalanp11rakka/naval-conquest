@@ -53,11 +53,7 @@ void Object::removeFromRenderEngine()
     static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
     renderEngineInstance.removeObject(this, m_renderType);
 }
-void Object::setModel(glm::mat4&& model)
-{
-    m_model = std::move(model);
-}
-void Object::setModel(const glm::mat4& model)
+void Object::setModel(glm::mat4 model)
 {
     m_model = model;
 }

@@ -1,4 +1,3 @@
-#include <span>
 #include <memory>
 #include <string>
 #include <utility>
@@ -35,7 +34,7 @@ GameController::GameController()
     glm::mat4 waterModel(1.f);
     m_waterObj->addToRenderEngine();
     waterModel = glm::rotate(waterModel, glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-    m_waterObj->setModel(std::move(waterModel));
+    m_waterObj->setModel(waterModel);
 
     lights::DirectionalLight dirLight {glm::vec3(.2f, -.9f, -.4f), glm::vec3(.9f, .9f, .7f), .6f};
     SceneLighting lighting(std::move(dirLight));  
@@ -65,17 +64,25 @@ void GameController::update()
             ++prev;
         }
     }
-
 }
 void GameController::addUpdateFunction(std::function<bool(float)>&& func)
 {
     m_updates.push_front(std::move(func));
 }
-void GameController::createGame(bool onePlayer)
+void GameController::createGame()
 {
-    m_currentGame = std::make_unique<Game>(onePlayer);
+    m_hasGame = true;
+    m_currentGame = std::make_unique<Game>();
 }
-
+void GameController::destroyGame()
+{
+    m_hasGame = false;
+    m_currentGame.reset();
+}
+bool GameController::hasGame()
+{
+    return m_hasGame;
+}
 void GameController::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
     if(m_currentGame) m_currentGame->receiveGameInput(index, buttonType);

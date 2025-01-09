@@ -73,19 +73,15 @@ public:
     void changeText(std::string&& text);
 };
 
-struct TextBackgroundData
-{
-    glm::vec3 backgroundColor {}; 
-    float backgroundScale {};
-};
 class ButtonUIElement : public TextUIElement
 {
 protected:
     std::unique_ptr<Object2D> m_backgroundObject;
     glm::vec3 m_highlightColor;
-    TextBackgroundData m_textBackgroundData;
+    glm::vec3 m_backgroundColor {};
+    float m_backgroundScale {};
 public:
-    ButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness = 0.f);
+    ButtonUIElement(TextData&& textData, std::function<void()>&& callback, glm::vec3 backgroundColor, float backgroundScale, glm::vec3 highlightColor, float highlightThickness = 0.f);
     void enable() override;
     void disable() override;
     void focus() override;
@@ -98,9 +94,8 @@ private:
     std::string m_enabledText;
     bool* m_turnedOn;
 public:
-    SettingUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness,
-    std::string&& enabledText, bool* turnedOn)
-        : ButtonUIElement(std::move(textData), std::move(backgroundData), std::move(callback), highlightColor, highlightThickness), m_enabledText(std::move(enabledText)), m_turnedOn(turnedOn) {}
+    SettingUIElement(TextData&& textData, std::function<void()>&& callback, glm::vec3 backgroundColor, float backgroundScale, glm::vec3 highlightColor, float highlightThickness, std::string&& enabledText, bool* turnedOn)
+        : ButtonUIElement(std::move(textData), std::move(callback), backgroundColor, backgroundScale, highlightColor, highlightThickness), m_enabledText(std::move(enabledText)), m_turnedOn(turnedOn) {}
     void trigger() override;
 };
 class ScalableButtonUIElement : public ButtonUIElement
@@ -111,8 +106,8 @@ private:
     glm::vec3 m_infoTextColor {};
     bool m_useInfoText {};
 public:
-    ScalableButtonUIElement(TextData&& textData, TextBackgroundData&& backgroundData, std::function<void()>&& callback, glm::vec3 highlightColor, float highlightThickness, float width, float height)
-        : ButtonUIElement(std::move(textData), std::move(backgroundData), std::move(callback), highlightColor, highlightThickness), m_width(width), m_height(height) {}
+    ScalableButtonUIElement(TextData&& textData, std::function<void()>&& callback, glm::vec3 backgroundColor, float backgroundScale, glm::vec3 highlightColor, float highlightThickness, float width, float height)
+        : ButtonUIElement(std::move(textData), std::move(callback), backgroundColor, backgroundScale, highlightColor, highlightThickness), m_width(width), m_height(height) {}
 
     void update() override;
     void setBackgroundColor(glm::vec3 color);
@@ -129,7 +124,6 @@ private:
     std::unique_ptr<UnlitObject> m_object;
     glm::vec3 m_defaultColor {}, m_highlightColor {};
     std::function<void()> m_savedCallback {};
-
 public:
     UIElement3D(std::function<void()>&& callback, glm::mat4&& model, 
         glm::vec3 defaultColor, glm::vec3 highlightColor);

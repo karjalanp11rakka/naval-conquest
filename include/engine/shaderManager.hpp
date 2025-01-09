@@ -10,21 +10,21 @@
 
 class Shader;
 
-struct StringPtrPairHash
+struct StringViewPairHash
 {
-    std::size_t operator()(const std::pair<const std::string_view*, const std::string_view*>& sp) const
+    std::size_t operator()(const std::pair<const std::string_view, const std::string_view> sp) const
     {
-        std::size_t hash1 = std::hash<std::string_view>()(*sp.first);
-        std::size_t hash2 = std::hash<std::string_view>()(*sp.second);
+        std::size_t hash1 = std::hash<std::string_view>()(sp.first);
+        std::size_t hash2 = std::hash<std::string_view>()(sp.second);
 
         return hash1 ^ (hash2 << 1); 
     }
 };
-struct StringPtrPairEqual 
+struct StringViewPairEqual 
 {
-    bool operator()(const std::pair<const std::string_view*, const std::string_view*>& first,
-                    const std::pair<const std::string_view*, const std::string_view*>& second) const {
-    return *first.first == *second.first && *first.second == *second.second;    }
+    bool operator()(const std::pair<const std::string_view, const std::string_view>& first,
+                    const std::pair<const std::string_view, const std::string_view>& second) const {
+    return first.first == second.first && first.second == second.second;    }
 };
 
 class ShaderManager
@@ -35,7 +35,7 @@ private:
     ShaderManager(const ShaderManager&) = delete;
     ShaderManager& operator=(const ShaderManager& other) = delete;
 
-    std::unordered_map<std::pair<const std::string_view*, const std::string_view*>, Shader, StringPtrPairHash, StringPtrPairEqual> m_shaders;
+    std::unordered_map<std::pair<std::string_view, std::string_view>, Shader, StringViewPairHash, StringViewPairEqual> m_shaders;
 public:
     static ShaderManager& getInstance()
     {

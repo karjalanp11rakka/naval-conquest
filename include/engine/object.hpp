@@ -10,27 +10,7 @@
 #include <engine/meshManager.hpp>
 #include <engine/renderEngine.hpp>
 
-class Object;
-template<typename T>
-concept ObjectDelivered = std::derived_from<T, Object>;
-class ObjectEntity
-{
-protected:
-    std::vector<std::unique_ptr<Object>> m_objects;
-public:
-    template<ObjectDelivered... UnitParts>
-    ObjectEntity(UnitParts&&... args)
-    {
-        m_objects.reserve(sizeof...(args));
-        (m_objects.push_back(std::make_unique<UnitParts>(std::forward<UnitParts>(args))), ...); 
-    }
-    virtual ~ObjectEntity() {};
-    void addToRenderEngine(Object3DRenderTypes renderType = Object3DRenderTypes::normal);
-    void removeFromRenderEngine();
-};
-
 class Shader;
-
 class Object
 {
 private:
@@ -49,8 +29,7 @@ public:
     virtual ~Object() {}
     void addToRenderEngine(Object3DRenderTypes renderType = Object3DRenderTypes::normal);
     void removeFromRenderEngine();
-    void setModel(glm::mat4&& model);
-    void setModel(const glm::mat4& model);
+    void setModel(glm::mat4 model);
     virtual void draw() const = 0;
 };
 
@@ -61,7 +40,6 @@ protected:
 public:
     Object3D(Mesh mesh, Shader* shader, bool useTime = false)
         : Object(mesh, shader, useTime) {}
-    Object3D(Object3D&&) = default;
 
     void draw() const override;
 };
@@ -82,7 +60,6 @@ protected:
 public:
     LitObject(Mesh mesh, Shader* shader, const Material& material, bool useTime = false) 
         : Object3D(mesh, shader, useTime), m_material(material) {}
-    LitObject(LitObject&&) = default;
     void draw() const override;
 };
 
@@ -114,4 +91,22 @@ public:
     Object2D(Mesh mesh, Shader* shader, glm::vec3 color, bool useTime = false);
 
     void draw() const override;
+};
+
+template<typename T>
+concept ObjectDelivered = std::derived_from<T, Object>;
+class ObjectEntity
+{
+protected:
+    std::vector<std::unique_ptr<Object>> m_objects;
+public:
+    template<ObjectDelivered... UnitParts>
+    ObjectEntity(UnitParts&&... args)
+    {
+        m_objects.reserve(sizeof...(args));
+        (m_objects.push_back(std::make_unique<UnitParts>(std::forward<UnitParts>(args))), ...); 
+    }
+    virtual ~ObjectEntity() {};
+    void addToRenderEngine(Object3DRenderTypes renderType = Object3DRenderTypes::normal);
+    void removeFromRenderEngine();
 };

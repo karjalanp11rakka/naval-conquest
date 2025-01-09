@@ -10,6 +10,7 @@
 #include <game/uiManager.hpp>
 #include <assets.hpp>
 #include <game/gameController.hpp>
+#include <game/random.hpp>
 
 static constexpr glm::vec3 ACTION_DEFAULT_COLOR {.2f, .8f, .6f};
 glm::vec3 Action::getColor(Game*) const
@@ -44,41 +45,54 @@ ActionTypes SelectOnGridAction<Radius, SelectType, Blockable>::use(Game* gameIns
 
     if constexpr(SelectType != SelectOnGridTypes::selectEnemyUnit)
     {
-        using BlockMask = std::pair<std::bitset<Radius * 2 - 2>, std::bitset<Radius * 2 - 2>>;
+        constexpr std::size_t blockMaskN = Radius * 2 - 2;
+        using BlockMask = std::pair<std::bitset<blockMaskN>, std::bitset<blockMaskN>>;
         std::optional<BlockMask> blockMask;
-        if(SelectType == SelectOnGridTypes::area) blockMask = BlockMask();
+        constexpr bool hasBlockMask = Blockable ? SelectType == SelectOnGridTypes::area : false;//blockMask.has_value() but constexpr
+        GridObject* self {};
+        if constexpr(Blockable)
+        {
+            self = gameGrid.at(indices);
+            if constexpr(hasBlockMask)
+                blockMask = BlockMask();
+        }
         auto addDirection = [&](bool vertical)
         {
             std::set<GameGrid::Loc> newIndices;
             std::size_t processedIndex = vertical ? indices.first : indices.second;
             
-            std::size_t i = static_cast<std::size_t>(std::max(static_cast<int>(processedIndex) - Radius, 0));
-            std::size_t startIndexOffset;
-            if(i == 0) startIndexOffset = std::abs(static_cast<int>(processedIndex) - Radius);
-            else startIndexOffset = 0;
+            std::size_t startIndex = static_cast<std::size_t>(std::max(static_cast<int>(processedIndex) - Radius, 0)); 
+            std::size_t startIndexOffset {};
+            if(startIndex == 0) startIndexOffset = std::abs(static_cast<int>(processedIndex) - Radius);
             std::size_t maxIndex = processedIndex + Radius + 1;
             auto targetIndex = std::min(static_cast<std::size_t>(GRID_SIZE), maxIndex);
-            for(; i < targetIndex; ++i)
+            for(std::size_t i = startIndex; i < targetIndex; ++i)
             {
                 if(i == processedIndex) continue;
                 std::pair<std::size_t, std::size_t> currentPos(vertical ? i : indices.first, vertical ? indices.second : i);
-                if(gameGrid.at(currentPos))
+                GridObject* currentLocObj = gameGrid.at(currentPos);
+                if(currentLocObj)
                 {
                     if constexpr(!Blockable) continue;
-                    assert(blockMask.has_value());
-                    if(i < processedIndex) 
+                    if(currentLocObj == self) continue;
+                    if(i < processedIndex)
                     {
-                        if(vertical) blockMask.value().first |= (1ULL << newIndices.size() + startIndexOffset) - 1;
-                        else blockMask.value().second |= (1ULL << newIndices.size() + startIndexOffset) - 1;
+                        if(hasBlockMask)
+                        {
+                            if(vertical) blockMask->first |= (1ull << startIndexOffset + i - startIndex) - 1;
+                            else blockMask->second |= (1ull << startIndexOffset + i - startIndex) - 1;
+                        }
                         newIndices.clear();
                         continue;
                     }
-                    int squaresLeft = maxIndex - i - 1;
-                    if(vertical) blockMask.value().first |= ((1ULL << squaresLeft) - 1) << (blockMask.value().first.size() - squaresLeft);
-                    else blockMask.value().second |= ((1ULL << squaresLeft) - 1) << (blockMask.value().second.size() - squaresLeft);
+                    if(hasBlockMask)
+                    {
+                        if(vertical) blockMask->first |= ((1ull << (maxIndex - 1 - i)) - 1) << blockMaskN / 2 + i - processedIndex - 1;
+                        else blockMask->second |= ((1ull << (maxIndex - 1 - i)) - 1) << blockMaskN / 2 + i - processedIndex - 1;
+                    }
                     break;
                 }
-                newIndices.insert(currentPos);   
+                newIndices.insert(currentPos);
             }
             squaresToEnable.insert(std::make_move_iterator(newIndices.begin()), std::make_move_iterator(newIndices.end()));
         };
@@ -92,15 +106,17 @@ ActionTypes SelectOnGridAction<Radius, SelectType, Blockable>::use(Game* gameIns
                 {
                     if constexpr(Blockable)
                     {
-                        if(gameGrid.at(x, y))
+                        auto& block = areaBlockMask.value();
+                        GridObject* currentLocObject = gameGrid.at(x, y);
+                        if(currentLocObject)
                         {
-                            assert(areaBlockMask.has_value());
-                            areaBlockMask.value().first.set(blockMaskX);
-                            areaBlockMask.value().second.set(blockMaskY);
+                            if(currentLocObject == self) return;
+                            block.first.set(blockMaskX);
+                            block.second.set(blockMaskY);
                             return;
                         }
-                        if(!areaBlockMask.value().first.test(blockMaskX)
-                            || !areaBlockMask.value().second.test(blockMaskY))
+                        if(!block.first.test(blockMaskX)
+                            || !block.second.test(blockMaskY))
                             squaresToEnable.insert(std::make_pair(x, y));
                     }
                     else
@@ -145,13 +161,13 @@ ActionTypes SelectOnGridAction<Radius, SelectType, Blockable>::use(Game* gameIns
     else //select enemy unit logic
     {
         std::unordered_set<std::size_t> squaresToDisplay;
-        bool isPlayerOne = gameGrid.at(indices)->isTeamOne();
+        auto targetTeam = gameGrid.at(indices)->getTeam() == GridObject::Team::playerOne ? GridObject::Team::playerTwo : GridObject::Team::playerOne;
         auto tryAddPosition = [&](std::size_t x, std::size_t y)
         {
             auto currentPosObject = gameGrid.at(x, y);
             GameGrid::Loc loc = std::make_pair(x, y);
             squaresToEnable.insert(loc);
-            if(!currentPosObject || currentPosObject->isTeamOne() == isPlayerOne)
+            if(!currentPosObject || currentPosObject->getTeam() != targetTeam)
                 squaresToDisplay.insert(GameGrid::convertLocationToIndex(loc));
         };
         auto addDirection = [&](bool vertical)
@@ -202,8 +218,14 @@ ActionTypes SelectOnGridAction<Radius, SelectType, Blockable>::use(Game* gameIns
     }
     return ActionTypes::selectSquare;
 }
+static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.4f, .1f, .3f};
+glm::vec3 ActionColorInterface::getColor(Game* gameInstance) const
+{
+    if(isUsable(gameInstance)) return Action::getColor(gameInstance);
+    return ACTION_UNUSABLE_COLOR;
+}
 template<int Price>
-bool BuyActionInterface<Price>::usable(Game* gameInstance) const
+bool BuyActionInterface<Price>::isUsable(Game* gameInstance) const
 {
     return gameInstance->getMoney() >= Price;
 }
@@ -220,17 +242,10 @@ void BuyActionInterface<Price>::takeMoney(Game* gameInstance)
     gameInstance->addMoney(-Price);
     assert(gameInstance->getMoney() >= 0);
 }
-static constexpr glm::vec3 ACTION_UNUSABLE_COLOR {.4f, .1f, .3f};
-template<int Price>
-glm::vec3 BuyActionInterface<Price>::getColor(Game* gameInstance) const
-{
-    if(usable(gameInstance)) return Action::getColor(gameInstance);
-    return ACTION_UNUSABLE_COLOR;
-}
 template<int Price>
 ActionTypes BuyAction<Price>::use(Game* gameInstance)
 {
-    if(!this->usable(gameInstance)) return ActionTypes::nothing;
+    if(!this->isUsable(gameInstance)) return ActionTypes::nothing;
     this->takeMoney(gameInstance);
     buy(gameInstance);
 
@@ -241,17 +256,17 @@ void UpgradeActionInterface<Price, UgradeClass>::buy(Game* gameInstance)
 {
     GameGrid& gameGrid = gameInstance->getGameGrid();
     auto indices = gameInstance->getSelectedUnitIndices().value();
-    gameGrid.initializeAt<UgradeClass>(indices, gameGrid.at(indices)->isTeamOne());
+    gameGrid.initializeAt<UgradeClass>(indices, gameGrid.at(indices)->getTeam() == GridObject::Team::playerOne);
     upgrade(gameInstance);
 }
-template<int Radius>
-bool MoveAction<Radius>::isUsable(Game* gameInstance) const
+template<int Radius, SelectOnGridTypes MoveType>
+bool MoveAction<Radius, MoveType>::isUsable(Game* gameInstance) const
 {
     return gameInstance->canMove();
 }
 static constexpr float PATH_MOVE_SPEED = .4f;
-template<int Radius>
-float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_t y)
+template<int Radius, SelectOnGridTypes MoveType>
+float MoveAction<Radius, MoveType>::callback(Game* gameInstance, std::size_t x, std::size_t y)
 {
     gameInstance->takeMove();
 
@@ -260,12 +275,6 @@ float MoveAction<Radius>::callback(Game* gameInstance, std::size_t x, std::size_
     GameGrid::Path moveAlongPath = gameGrid.findPath(selectedLocation, std::make_pair(x, y));
     int steps = gameGrid.moveAlongPath(std::move(moveAlongPath), PATH_MOVE_SPEED) + 1;//+1 for smooth delay
     return steps * PATH_MOVE_SPEED;
-}
-template<int Radius>
-glm::vec3 MoveAction<Radius>::getColor(Game* gameInstance) const
-{
-    if(gameInstance->canMove()) return Action::getColor(gameInstance);
-    return ACTION_UNUSABLE_COLOR;
 }
 template<int Worth>
 ActionTypes SellAction<Worth>::use(Game* gameInstance)
@@ -277,22 +286,31 @@ ActionTypes SellAction<Worth>::use(Game* gameInstance)
 template<int Price, int Radius, int Damage>
 bool AttackAction<Price, Radius, Damage>::isUsable(Game* gameInstance) const
 {
-    return this->usable(gameInstance);
+    if(m_usedTurn == gameInstance->getTurnNumber())
+    {
+        GameGrid& gameGrid = gameInstance->getGameGrid();
+        if(m_usedUnits.contains(gameGrid.at(gameInstance->getSelectedUnitIndices().value())))
+            return false;
+    }
+    else m_usedUnits.clear();
+    return BuyActionInterface<Price>::isUsable(gameInstance);
 }
 template<int Price, int Radius, int Damage>
 float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::size_t x, std::size_t y)
 {
-    static GameController& gameControllerInstance = GameController::getInstance();
-
-    static GameGrid& gameGrid = gameInstance->getGameGrid();
+    GameGrid& gameGrid = gameInstance->getGameGrid();
     auto selectedLocation = gameInstance->getSelectedUnitIndices().value();
+    m_usedTurn = gameInstance->getTurnNumber();
+    m_usedUnits.insert(gameGrid.at(selectedLocation));
+
+    this->takeMoney(gameInstance);
+    static GameController& gameControllerInstance = GameController::getInstance();
 
     static constexpr float MISSILE_MAX_HEIGHT = .4f;
     glm::vec3 upStartPos = GameGrid::gridLocationToPosition(selectedLocation);
     glm::vec3 upTargetPos = upStartPos + glm::vec3(0.f, MISSILE_MAX_HEIGHT, 0.f);
     glm::vec3 downTargetPos = GameGrid::gridLocationToPosition(std::make_pair(x ,y));
-    glm::vec3 downStartPos = downTargetPos + glm::vec3(0.f, MISSILE_MAX_HEIGHT, 0.f);
-    
+    glm::vec3 downStartPos = downTargetPos + glm::vec3(0.f, MISSILE_MAX_HEIGHT, 0.f);    
 
     static constexpr Material MISSILE_MAT {glm::vec3(.5f, .7f, .3f), .3f, 180.f, .6f};
     static constexpr Material MISSILE_STRIPES_MAT {glm::vec3(.9f, .9f, .1f), .6f, 90.f, .2f};
@@ -306,14 +324,14 @@ float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::siz
     else missileObject->addToRenderEngine();
     missileObject->setRotation(glm::angleAxis(glm::radians(-90.f), glm::vec3(0.f, .0f, 1.f)));
 
-    GameGrid::Path moveAlongPath = gameGrid.findPath(selectedLocation, std::make_pair(x, y));
+    GameGrid::Path moveAlongPath = gameGrid.findPath(selectedLocation, std::make_pair(x, y), false);
     static constexpr float UPWARDS_MOVEMENT_DURATION = .5f;
     static constexpr float MISSILE_FOLLOW_PATH_SPEED = .3f;
     float cooldown = UPWARDS_MOVEMENT_DURATION * 2 + moveAlongPath.size() * MISSILE_FOLLOW_PATH_SPEED;
 
     auto moveMissile = [missile = missileObject.get(), path = std::move(moveAlongPath), currentTime = 0.f, movePathWaitTime = 0.f, goingUp = true, goingDown = false, x, y, gameInstance, selectedLocation, upStartPos, upTargetPos, downTargetPos, downStartPos](float deltaTime) mutable -> bool
     {
-        static GameGrid& gameGrid = gameInstance->getGameGrid();
+        GameGrid& gameGrid = gameInstance->getGameGrid();
     
         if(goingUp || goingDown)
         {
@@ -331,9 +349,10 @@ float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::siz
                 else
                 {
                     //target is hit
-                    UnitObject* hitObject = gameGrid.at(x, y);
+                    auto hitObject = static_cast<UnitObject*>(gameGrid.at(x, y));
                     assert(hitObject);
-                    hitObject->addHealth(-Damage);
+                    static_assert(Damage >= 25); 
+                    hitObject->addHealth(Random::getInstance().get<int>(-Damage + 25, -Damage - 25));
                     missile->removeFromRenderEngine();
                     return true;
                 }
@@ -357,11 +376,6 @@ float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::siz
     };
     gameControllerInstance.addUpdateFunction(std::move(moveMissile));
     return cooldown;
-} 
-template<int Price, int Radius, typename BuyUnit>
-bool BuyUnitAction<Price, Radius, BuyUnit>::isUsable(Game* gameInstance) const
-{
-    return this->usable(gameInstance);
 }
 template<int Price, int Radius, typename BuyUnit>
 std::string_view BuyUnitAction<Price, Radius, BuyUnit>::getInfoText() const
@@ -377,7 +391,7 @@ float BuyUnitAction<Price, Radius, BuyUnit>::callback(Game* gameInstance, std::s
     auto& gameGrid = gameInstance->getGameGrid();
     auto startPos = gameInstance->getSelectedUnitIndices().value();
     auto obj = gameGrid.initializeAt<BuyUnit>(x, y, 
-        gameGrid.at(startPos)->isTeamOne());
+        gameGrid.at(startPos)->getTeam() == GridObject::Team::playerOne);
     int steps = gameGrid.moveAlongPath(gameGrid.findPath(startPos, 
         std::make_pair(x, y)), PATH_MOVE_SPEED, obj);
 
@@ -389,20 +403,27 @@ void BaseUpgradeAction<Price, UpgradeClass, NewMaxMoves, NewTurnMoney>::upgrade(
     gameInstance->setTurnData(NewMaxMoves, NewTurnMoney);
 }
 
-#include <game/unitObject.hpp>
+
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class BuyUnitAction<400,5,AircraftCarrierUnit>;
-template class SellAction<100>;
-template class BaseUpgradeAction<900,BaseUpgrade1,3,300>;
-template class AttackAction<75,6,150>;
-template class AttackAction<75,7,250>;
-template class SellAction<75>;
+template class MoveAction<3>;
+template class AttackAction<20,4,150>;
+template class MoveAction<3,SelectOnGridTypes::cross>;
+template class BuyUnitAction<350,5,ShipUnit>;
 template class MoveAction<6>;
-template class UpgradeAction<600,AircraftCarrierUpgrade1>;
-template class MoveAction<2+1>;
-template class SellAction<50>;
+template class BaseUpgradeAction<900,BaseUpgrade2,4,300>;
+template class MoveAction<4,SelectOnGridTypes::cross>;
+template class AttackAction<30,4,100>;
+template class SellAction<75>;
+template class UpgradeAction<400,SubmarineUnitUpgrade1>;
+template class BuyUnitAction<450,5,AircraftCarrierUnit>;
+template class SellAction<125>;
+template class AttackAction<20,3,100>;
 template class BuyUnitAction<250,5,SubmarineUnit>;
-template class MoveAction<2>;
-template class AttackAction<40,3,75>;
-template class BaseUpgradeAction<1800,BaseUpgrade2,4,500>;
+template class SellAction<100>;
+template class AttackAction<40,6,150>;
+template class UpgradeAction<600,AircraftCarrierUpgrade1>;
+template class MoveAction<5>;
+template class BaseUpgradeAction<600,BaseUpgrade1,3,250>;
+template class AttackAction<40,7,200>;
+template class SellAction<50>;

@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 
 #include <engine/object.hpp>
-#include <game/unitObject.hpp>
+#include <game/gridObject.hpp>
 #include <game/action.hpp>
 #include <game/game.hpp>
 #include <engine/renderEngine.hpp>
@@ -63,16 +63,16 @@ bool GameGrid::update(float deltaTime)
     if(m_movements.empty()) return true;
     return false;
 }
-
-UnitObject* GameGrid::at(std::size_t x, std::size_t y) const
+GameGrid::GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
+GridObject* GameGrid::at(std::size_t x, std::size_t y) const
 {
-    return this->operator[](x + y * GRID_SIZE);
+    return this->operator[](x + y * GRID_SIZE).first;
 }
-UnitObject* GameGrid::at(Loc loc) const
+GridObject* GameGrid::at(Loc loc) const
 {
-    return at(loc.first, loc.second);
+    return this->operator[](loc.first + loc.second * GRID_SIZE).first;
 }
-void GameGrid::destroy(UnitObject* ptr)
+void GameGrid::destroy(GridObject* ptr)
 {
     for(auto it = m_combinedLocations.begin(); it != m_combinedLocations.end(); ++it)
     {
@@ -96,7 +96,7 @@ void GameGrid::destroyAt(std::size_t index)
 {
     for(auto it = m_combinedLocations.begin(); it != m_combinedLocations.end(); ++it)
     {
-        if(it->first.contains(index))
+        if(std::find(it->first.begin(), it->first.end(), index) != it->first.end())
         {
             it->second->reset();
             m_combinedLocations.erase(it);
@@ -172,18 +172,23 @@ GameGrid::Path GameGrid::findPath(Loc startLoc, Loc moveLoc, bool avoidObstacles
 
     PathNode* startNode {};
     std::size_t startNodeIndex = convertLocationToIndex(startLoc);
-    nodes[startNodeIndex] = std::make_unique<PathNode>(0);
+    nodes[startNodeIndex] = std::make_unique<PathNode>();
+    startNode = nodes[startNodeIndex].get();
+    startNode->loc = startLoc;
+    startNode->gCost = 0;
+
     startNode = nodes[startNodeIndex].get();
     startNode->loc = startLoc;
     PathNode* endNode = initializeNode(moveLoc);
 
     startNode->hCost = calculateDistanceCost(startNode, endNode);
+    startNode->calculateFCost();
 
     std::set<PathNode*, ComparePathNodes> openList;
     openList.insert(startNode);
     std::unordered_set<PathNode*> closedList;
 
-    UnitObject* startLocUnit = at(startLoc), * moveLocUnit = at(moveLoc);//not considered as an obstacle
+    GridObject* startLocObject = at(startLoc), * moveLocUnit = at(moveLoc);//not considered as an obstacle
     while (!openList.empty())
     {
         auto currentNode = *openList.begin();
@@ -221,8 +226,8 @@ GameGrid::Path GameGrid::findPath(Loc startLoc, Loc moveLoc, bool avoidObstacles
                 continue;
             if(avoidObstacles)
             {
-                UnitObject* currentPosUnit = at(neighborLoc);
-                if(currentPosUnit && currentPosUnit != startLocUnit && currentPosUnit != moveLocUnit) continue;
+                auto currentPosObject = at(neighborLoc);
+                if(currentPosObject && currentPosObject != startLocObject && currentPosObject != moveLocUnit) continue;
             }
             std::size_t index = convertLocationToIndex(neighborLoc);
             PathNode* neighbourNode;
@@ -280,19 +285,19 @@ void GameGrid::setSquares(std::unordered_set<std::size_t>&& indices)
     static UIManager& uiManagerInstance = UIManager::getInstance();
     std::bitset<GRID_SIZE * GRID_SIZE> setSquares {};
     std::bitset<GRID_SIZE * GRID_SIZE / 2> setSquaresLarge {};
-    std::unordered_set<UnitObject*> usedObjects;
+    std::unordered_set<GridObject*> usedObjects;
 
     for(auto index : indices)
     {
-        UnitObject* currentObj {};
+        GridObject* currentObj {};
         bool indexIsCombined {};
         for(auto& comb : m_combinedLocations)
         {
-            if(comb.first.contains(index))
+            if(std::find(comb.first.begin(), comb.first.end(), index) != comb.first.end())
             {
                 currentObj = comb.second->get();
                 indexIsCombined = true;
-                index = *comb.first.begin();
+                index = *std::min_element(comb.first.begin(), comb.first.end());
                 break;
             }
         }
@@ -310,7 +315,7 @@ void GameGrid::makeSquareNonInteractable(std::size_t index, glm::vec3 color)
     static UIManager& uiManagerInstance = UIManager::getInstance();
     for(auto& comb : m_combinedLocations)
     {
-        if(comb.first.contains(index))
+        if(std::find(comb.first.begin(), comb.first.end(), index) != comb.first.end())
         {
             uiManagerInstance.makeLargeGridSquareNonInteractable(*comb.first.begin() / 2, color);
             return;
@@ -318,13 +323,13 @@ void GameGrid::makeSquareNonInteractable(std::size_t index, glm::vec3 color)
     }
     uiManagerInstance.makeGridSquareNonInteractable(index, color);
 }
-UnitObject* GameGrid::operator[](std::size_t index) const
+std::pair<GridObject*, std::size_t> GameGrid::operator[](std::size_t index) const
 {
     for(auto& comb : m_combinedLocations)
     {
-        if(comb.first.contains(index)) return comb.second->get();
+        if(std::find(comb.first.begin(), comb.first.end(), index) != comb.first.end()) return std::make_pair(comb.second->get(), comb.first[0]);
     }
-    return m_base[index].get();
+    return std::make_pair(m_base[index].get(), index);
 }
 GameGrid::Loc GameGrid::convertIndexToLocation(std::size_t index)
 {
@@ -353,28 +358,46 @@ void Game::activatePlayerSquares()
     std::unordered_set<std::size_t> indices;
     for(std::size_t i {}; i < m_grid.size(); ++i)
     {
-        if(m_grid[i] && m_grid[i]->isTeamOne() == m_playerOneToPlay)
+        auto atIndex = m_grid[i].first;
+        if(atIndex && atIndex->getTeam() == (m_playerOneToPlay ? GridObject::Team::playerOne : GridObject::Team::playerTwo))
             indices.insert(i);
     }
     m_grid.setSquares(std::move(indices));
 }
 
-Game::Game(bool onePlayer) : m_grid(this), m_onePlayer(onePlayer)
+Game::Game() : m_grid(this)
 {
     static RenderEngine& renderEngineInstance = RenderEngine::getInstance();
     static UIManager& uiManagerInstance = UIManager::getInstance();
-    updateStatusTexts();
-    m_grid.initializeAt<AircraftCarrierUnit>(0, 0, true);
-    m_grid.initializeAt<Base>(14, 14, true);
-    m_grid.initializeAt<Base>(14, 2, false);
-    m_grid.initializeAt<AircraftCarrierUnit>(9, 9, true);
-    m_grid.initializeAt<SubmarineUnit>(9, 3, true);
-    m_grid.initializeAt<AircraftCarrierUnit>(8, 9, true);
-    auto r = Random::getInstance().get<std::size_t>(0, GRID_SIZE - 1);
-    m_grid.initializeAt<AircraftCarrierUnit>(2, r, false);
-    m_grid.initializeAt<SubmarineUnit>(1, 2, false);
-    activatePlayerSquares();
+    static Random& randomInstance = Random::getInstance();
     uiManagerInstance.disableGameActionButtons(true);
+    updateStatusTexts();
+    
+    auto basesRandomSeed = randomInstance.get<std::size_t>(0, (GRID_SIZE - 2) / 2) * 2;
+    m_grid.initializeAt<Base>(0, basesRandomSeed, true);
+    int otherBaseY = (GRID_SIZE - 2) - basesRandomSeed;
+    m_grid.initializeAt<Base>(GRID_SIZE - 2, otherBaseY, false);
+    m_grid.initializeAt<SubmarineUnit>(GRID_SIZE - 3, otherBaseY + 1, false);
+
+    //generate islands
+    std::vector<GameGrid::Loc> validIslandIndices;
+    for(std::size_t x = 2; x < GRID_SIZE - 2; x += 2)//When there are no islands in the same column as the bases and not enough islands to fill a column, it is guaranteed that the path from base to another is not blocked.
+        for(std::size_t y {}; y < GRID_SIZE; y += 2)
+            {
+                if(!m_grid.at(x, y) && !m_grid.at(x + 1, y) && !m_grid.at(x, y + 1) && !m_grid.at(x + 1, y + 1))
+                    validIslandIndices.push_back(std::make_pair(x, y));
+            }
+    static constexpr std::size_t ISLAND_COUNT = 7;
+    static_assert(GRID_SIZE / 2 > ISLAND_COUNT);
+    assert(ISLAND_COUNT <= validIslandIndices.size());
+    for(std::size_t initializedIslands {}; initializedIslands != ISLAND_COUNT; ++initializedIslands)
+    {
+        auto islandIndex = randomInstance.get<std::size_t>(0, validIslandIndices.size() - 1);
+        m_grid.initializeAt<IslandObject>(validIslandIndices[islandIndex]);
+        validIslandIndices.erase(validIslandIndices.begin() + islandIndex);
+    }
+
+    activatePlayerSquares();
     uiManagerInstance.moveSelection();
 }
 int Game::getMoney() const
@@ -412,11 +435,17 @@ bool Game::canMove()
     if(m_playerOneToPlay) return m_playerData.first.moves.first;
     else return m_playerData.second.moves.first;
 }
+void Game::endGame(bool playerOneWins)
+{
+    static UIManager& uiManagerInstance = UIManager::getInstance();
+    uiManagerInstance.endGame(playerOneWins);
+    m_gameOver = true;
+}
 void Game::updateStatusTexts()
 {
     static UIManager& uiManagerInstance = UIManager::getInstance();
     auto& playerData = m_playerOneToPlay ? m_playerData.first : m_playerData.second;
-    auto selectedUnit = m_selectedUnitIndices.has_value() ? m_grid.at(m_selectedUnitIndices.value()) : nullptr;
+    UnitObject* selectedUnit = m_selectedUnitIndices.has_value() ? static_cast<UnitObject*>(m_grid.at(m_selectedUnitIndices.value())) : nullptr;
     uiManagerInstance.updateGameStatusTexts(
         std::format("TURN: {1}{0}MONEY: {2}{3}{0}MOVES: {4}/{5}{0}MONEY PER TURN: {6}\n\n{7}",
         "        ",
@@ -428,6 +457,7 @@ void Game::updateStatusTexts()
 }
 void Game::endTurn()
 {
+    ++m_turnNumber;  
     if(m_playerOneToPlay) 
     {
         m_playerData.first.moves.first = m_playerData.first.moves.second;
@@ -443,11 +473,11 @@ void Game::endTurn()
     activatePlayerSquares();
     updateStatusTexts();
     static UIManager& uiManagerInstance = UIManager::getInstance();
-    uiManagerInstance.moveSelection();    
+    uiManagerInstance.moveSelection();  
 }
 void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
 {
-    if(m_cooldown) return;
+    if(m_gameOver || m_cooldown) return;
     static UIManager& uiManagerInstance = UIManager::getInstance();
     static SelectSquareCallbackManager& actionCallbackManagerInstance = SelectSquareCallbackManager::getInstance();
     static GameController& gameControllerInstance = GameController::getInstance();
@@ -472,8 +502,9 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         {
             if(m_selectedActionIndex)
             {
-                uiManagerInstance.enableGameActionButtons(m_grid.at(m_selectedUnitIndices.value())->getActionData());
-                gameControllerInstance.getCamera()->zoom(m_grid.at(m_selectedUnitIndices.value())->getPosition(), .3f, .5f, 1.f);
+                UnitObject* selectedUnit = static_cast<UnitObject*>(m_grid.at(m_selectedUnitIndices.value()));
+                uiManagerInstance.enableGameActionButtons(selectedUnit->getActionData());
+                gameControllerInstance.getCamera()->zoom(selectedUnit->getPosition(), .3f, .5f, 1.f);
                 m_grid.setSquares({m_selectedUnitIndices.value()});
                 m_selectedActionIndex.reset();
                 uiManagerInstance.retrieveSavedSelection();
@@ -487,8 +518,9 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         }
         else
         {
+            UnitObject* selectedUnit = static_cast<UnitObject*>(m_grid.at(m_selectedUnitIndices.value()));
             m_selectedActionIndex = index - 1;
-            auto actionType = m_grid.at(m_selectedUnitIndices.value())->useAction(m_selectedActionIndex.value());
+            auto actionType = selectedUnit->useAction(m_selectedActionIndex.value());
             switch(actionType)
             {
                 using enum ActionTypes;
@@ -512,12 +544,12 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         endTurn();
         break;
     case gridSquare:
-        auto selectedActionSquare = GameGrid::convertIndexToLocation(index);
         if(m_selectedActionIndex)
         {
             //selected a a square for an action
             m_selectedActionIndex.reset();
             float cooldown {};
+            auto selectedActionSquare = GameGrid::convertIndexToLocation(index);
             actionCallbackManagerInstance.invoke(this, selectedActionSquare.first, selectedActionSquare.second, cooldown);
             uiManagerInstance.removeSavedSelection();
             uiManagerInstance.setGameGridSquares({});
@@ -526,6 +558,7 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
             //cooldown
             m_cooldown = std::make_pair(cooldown, [&]()
             {
+                if(this->m_gameOver) return;
                 activatePlayerSquares();
                 uiManagerInstance.setEndTurnButton(true);
                 uiManagerInstance.retrieveSavedSelection();
@@ -547,13 +580,15 @@ void Game::receiveGameInput(std::size_t index, ButtonTypes buttonType)
         else
         {
             //selected an unit
-            gameControllerInstance.getCamera()->zoom(m_grid[index]->getPosition(), .3f, .5f, 1.f);
-            uiManagerInstance.setEndTurnButton(false);
+            auto atSelectedIndex = m_grid[index];
+            UnitObject* selectedUnit = static_cast<UnitObject*>(atSelectedIndex.first);
+            gameControllerInstance.getCamera()->zoom(selectedUnit->getPosition(), .3f, .5f, 1.f);
             uiManagerInstance.saveCurrentSelection();
-            m_selectedUnitIndices = selectedActionSquare;
-            uiManagerInstance.enableGameActionButtons(m_grid[index]->getActionData());
+            m_selectedUnitIndices = GameGrid::convertIndexToLocation(atSelectedIndex.second);
+            uiManagerInstance.enableGameActionButtons(selectedUnit->getActionData());
             m_grid.makeSquareNonInteractable(index, SELECTED_GRID_SQUARE_COLOR);
             m_grid.setSquares({index});
+            uiManagerInstance.setEndTurnButton(false);
         }
         break;
     }

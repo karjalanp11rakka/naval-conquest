@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <array>
+#include <vector>
 #include <memory>
 #include <cstddef>
 #include <concepts>
@@ -13,13 +14,12 @@
 #include <set>
 #include <type_traits>
 
-#include <game/unitObject.hpp>
+#include <game/gridObject.hpp>
 #include <game/gameController.hpp>
 
 constexpr float SQUARE_SIZE = 2.f / GRID_SIZE;
 
 class Game;
-
 class GameGrid
 {
 public:
@@ -35,28 +35,41 @@ private:
         float currentTime {};
         glm::vec3 lastPos {};
     };
-    std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE> m_base;
+    std::array<std::unique_ptr<GridObject>, GRID_SIZE * GRID_SIZE> m_base;
     std::vector<MoveAlongPathData> m_movements;
-    std::vector<std::pair<std::set<std::size_t>, std::unique_ptr<UnitObject>*>> m_combinedLocations;//currently only for bases
+    std::vector<std::pair<std::vector<std::size_t>, std::unique_ptr<GridObject>*>> m_combinedLocations;//currently only for bases
     Game* const m_gameInstance;
     bool update(float deltaTime);
-public:
-    GameGrid(Game* gameInstance) : m_gameInstance(gameInstance) {}
-    ~GameGrid() = default;
-    template<UnitDelivered T>
-    UnitObject* initializeAt(std::size_t x, std::size_t y, bool teamOne)
+    template<typename T>
+    GridObject* initializeGridObjectAt(std::size_t x, std::size_t y, std::optional<bool> team = std::nullopt)
     {
         std::size_t index = x + y * GRID_SIZE;
         auto& ptr = m_base[index];
-        if constexpr(isBase<T>())
+        auto initialize = [&]()
+        {
+            if constexpr(std::is_base_of_v<NeutralObject, T>)
+            {
+                ptr = std::make_unique<T>();
+            }
+            else if constexpr(true)
+            {
+                static_assert(std::is_constructible_v<T, Game*, bool>);
+                assert(team.has_value());
+                ptr = std::make_unique<T>(m_gameInstance, team.value());
+            }
+        };
+        if constexpr(isLargeGridObject<T>())
         {
             assert(x % 2 == 0 && y % 2 == 0);
             destroyAt(index);
-            ptr = std::make_unique<T>(m_gameInstance, teamOne);
-            assert(index % GRID_SIZE != GRID_SIZE - 1);
-            assert(index + 1 < GRID_SIZE * GRID_SIZE);//there must be space for the base
-            m_combinedLocations.emplace_back(std::set<std::size_t>{index, index + 1, index + GRID_SIZE, 
-                index + 1 + GRID_SIZE}, &m_base[index]);
+            destroyAt(index + 1);
+            destroyAt(index + GRID_SIZE);
+            destroyAt(index + 1 + GRID_SIZE);
+            initialize();
+            bool reverseX = x < GRID_SIZE / 2;
+            std::vector<std::size_t> combinedLocation ;
+            m_combinedLocations.emplace_back(std::vector<std::size_t>
+                {index + (reverseX ? 1u : 0), index + (reverseX ? 0 : 1u), index + GRID_SIZE, index + 1u + GRID_SIZE}, &m_base[index]);
             ptr->setPosition({-1.f + SQUARE_SIZE * x + SQUARE_SIZE, 0.f, 
                 -1.f + SQUARE_SIZE * y + SQUARE_SIZE});
         }
@@ -68,19 +81,32 @@ public:
                 assert(!pair.first.contains(index) && "Unable to initialize to a position with a base");
             }
 #endif
-            ptr = std::make_unique<T>(m_gameInstance, teamOne);
+            initialize();
             ptr->setPosition(gridLocationToPosition(std::make_pair(x, y)));
         }
         return ptr.get();
     }
+public:
+    GameGrid(Game* gameInstance);
+    ~GameGrid() = default;
     template<UnitDelivered T>
-    UnitObject* initializeAt(Loc loc, bool teamOne)
+    UnitObject* initializeAt(std::size_t x, std::size_t y, bool playerOne)
     {
-        return initializeAt<T>(loc.first, loc.second, teamOne);
+        return static_cast<UnitObject*>(initializeGridObjectAt<T>(x, y, playerOne));
     }
-    UnitObject* at(std::size_t x, std::size_t y) const;
-    UnitObject* at(Loc loc) const;
-    void destroy(UnitObject* ptr);
+    template<UnitDelivered T>
+    UnitObject* initializeAt(Loc loc, bool playerOne)
+    {
+        return static_cast<UnitObject*>(initializeGridObjectAt<T>(loc.first, loc.second, playerOne));
+    }
+    template<NeutralDelivered T>
+    NeutralObject* initializeAt(Loc loc)
+    {
+        return static_cast<NeutralObject*>(initializeGridObjectAt<T>(loc.first, loc.second));
+    }
+    GridObject* at(std::size_t x, std::size_t y) const;
+    GridObject* at(Loc loc) const;
+    void destroy(GridObject* ptr);
     void destroyAt(Loc loc);
     void destroyAt(std::size_t index);
     void moveAt(std::size_t x1, std::size_t y1, std::size_t x2, std::size_t y2);
@@ -92,23 +118,23 @@ public:
     void setSquares(std::unordered_set<std::size_t>&& indices);
     void makeSquareNonInteractable(std::size_t index, glm::vec3 color);
     static constexpr int size() {return GRID_SIZE * GRID_SIZE;}
-    UnitObject* operator[](std::size_t index) const;
+    std::pair<GridObject*, std::size_t> operator[](std::size_t index) const;//the return value's second part corrects the index when GridObject is larger than one index
     static Loc convertIndexToLocation(std::size_t index);
     static std::size_t convertLocationToIndex(Loc loc);
     static glm::vec3 gridLocationToPosition(Loc loc);
     class Iterator
     {
     private:
-        typename std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE>::iterator m_iterator;
+        typename std::array<std::unique_ptr<GridObject>, GRID_SIZE * GRID_SIZE>::iterator m_iterator;
     public:
-        Iterator(typename std::array<std::unique_ptr<UnitObject>, GRID_SIZE * GRID_SIZE>::iterator iterator) 
+        Iterator(typename std::array<std::unique_ptr<GridObject>, GRID_SIZE * GRID_SIZE>::iterator iterator) 
             : m_iterator(iterator) {}
 
-        UnitObject* operator*() const
+        GridObject* operator*() const
         {
             return m_iterator->get();
         }
-        UnitObject* operator->() const
+        GridObject* operator->() const
         {
             return m_iterator->get();
         }
@@ -132,10 +158,10 @@ public:
         }
 
         using iterator_category = std::forward_iterator_tag;
-        using value_type = UnitObject*;
+        using value_type = GridObject*;
         using difference_type = std::ptrdiff_t;
-        using pointer = UnitObject*;
-        using reference = UnitObject&;
+        using pointer = GridObject*;
+        using reference = GridObject&;
     };
     Iterator begin()
     {
@@ -146,7 +172,7 @@ public:
         return Iterator(m_base.end());
     }
 };
-inline constexpr int PLAYER_STARTING_MONEY = 600;
+inline constexpr int PLAYER_STARTING_MONEY = 400;
 inline constexpr int PLAYER_STARTING_TURN_MONEY = 200;
 struct PlayerData
 {
@@ -157,9 +183,11 @@ struct PlayerData
 class Game
 {
 private:
-    bool m_onePlayer {true}, m_playerOneToPlay {true};
+    bool m_playerOneToPlay {true};
+    bool m_gameOver {};
     GameGrid m_grid;
     std::pair<PlayerData, PlayerData> m_playerData;
+    int m_turnNumber {};
     std::optional<GameGrid::Loc> m_selectedUnitIndices {};
     std::optional<std::size_t> m_selectedActionIndex {};
     std::optional<std::pair<float, std::function<void()>>> m_cooldown;
@@ -167,13 +195,15 @@ private:
     void updateStatusTexts();
     void endTurn();
 public:
-    Game(bool onePlayer);
+    Game();
     ~Game() = default;
     int getMoney() const;
     void addMoney(int money);
     void setTurnData(int maxMoves, int money);
     void takeMove();
     bool canMove();
+    int getTurnNumber() {return m_turnNumber;}
+    void endGame(bool playerOneWins);
     GameGrid& getGameGrid() {return m_grid;}
     auto getSelectedUnitIndices() {return m_selectedUnitIndices;}
     void receiveGameInput(std::size_t index, ButtonTypes buttonType);

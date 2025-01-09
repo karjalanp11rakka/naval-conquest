@@ -8,6 +8,7 @@
 #include <variant>
 #include <concepts>
 #include <functional>
+#include <unordered_set>
 #include <format>
 #include <cassert>
 
@@ -88,18 +89,24 @@ public:
     ActionTypes use(Game* gameInstance) override final;
     virtual float callback(Game* gameInstance, std::size_t x, std::size_t y) = 0;
 };
+class ActionColorInterface : virtual public Action
+{
+private:
+    virtual bool isUsable(Game* gameInstance) const = 0;
+public:
+    glm::vec3 getColor(Game* gameInstance) const override final;
+};
 template<int Price>
-class BuyActionInterface : virtual public Action
+class BuyActionInterface : virtual public ActionColorInterface
 {
 private:
     mutable std::string m_buyActionName;
 protected:
     virtual std::string_view getBuyActionName() const = 0;
-    bool usable(Game* gameInstance) const;
     void takeMoney(Game* gameInstance);
+    bool isUsable(Game* gameInstance) const override;
 public:
     std::string_view getName() const override final;
-    glm::vec3 getColor(Game* gameInstance) const override final;
 };
 template<int Price>
 class BuyAction : virtual public BuyActionInterface<Price>
@@ -112,7 +119,7 @@ public:
 template<int Price, typename UpgradeClass>
 class UpgradeActionInterface : virtual public BuyAction<Price>
 {
-    const std::string_view m_name = "UPGRADE";
+    static constexpr std::string_view m_name = "UPGRADE";
 protected:
     std::string_view getBuyActionName() const override {return m_name;}
     void buy(Game* gameInstance) override;
@@ -133,26 +140,28 @@ public:
 };
 
 //actual actions
-template<int Radius>
-class MoveAction final : virtual public SelectOnGridAction<Radius, SelectOnGridTypes::area, true>, public SingletonAction<MoveAction<Radius>>
+template<int Radius, SelectOnGridTypes MoveType = SelectOnGridTypes::area>
+class MoveAction final : virtual public SelectOnGridAction<Radius, MoveType, true>, virtual public ActionColorInterface, public SingletonAction<MoveAction<Radius, MoveType>>
 {
+    static_assert(MoveType != SelectOnGridTypes::selectEnemyUnit);
 private:
-    const std::string_view m_name = "MOVE";
+    static constexpr std::string_view m_name = "MOVE";
 protected:
     bool isUsable(Game* gameInstance) const override;
 public:
     std::string_view getName() const override {return m_name;}
     float callback(Game* gameInstance, std::size_t x, std::size_t y) override;
-    glm::vec3 getColor(Game* gameInstance) const override;
 };
 template<int Worth>
 class SellAction final : virtual public Action, public SingletonAction<SellAction<Worth>>
 {
 private:
     const std::string m_name = std::format("SELL\n+{}{}", Worth, CURRENCY_SYMBOL);
+    static constexpr std::string_view m_infoText = "CEDE THE UNIT";
 public:
     std::string_view getName() const override {return m_name;}
     ActionTypes use(Game* gameInstance) override;
+    std::string_view getInfoText() const override {return m_infoText;}
 };
 template<int Price, typename UpgradeClass>
 class UpgradeAction final : virtual public UpgradeActionInterface<Price, UpgradeClass>, public SingletonAction<UpgradeAction<Price, UpgradeClass>> 
@@ -166,11 +175,15 @@ protected:
     void upgrade(Game* gameInstance) override;
     std::string_view getInfoText() const override {return infoText;}
 };
+class GridObject;
 template<int Price, int Radius, int Damage>
 class AttackAction final : virtual public SelectOnGridAction<Radius, SelectOnGridTypes::selectEnemyUnit>, virtual public BuyActionInterface<Price>, public SingletonAction<AttackAction<Price, Radius, Damage>>
 {
-    const std::string_view m_name = "ATTACK";
-    const std::string_view m_infoText = "LAUNCH A MISSILE AT AN ENEMY";
+private:
+    int m_usedTurn {};
+    mutable std::unordered_set<GridObject*> m_usedUnits;
+    static constexpr std::string_view m_name = "ATTACK";
+    static constexpr std::string_view m_infoText = "LAUNCH MISSILE (1 USE PER TURN)";
 protected:
     std::string_view getBuyActionName() const override {return m_name;}
     bool isUsable(Game* gameInstance) const override;
@@ -182,10 +195,9 @@ template<int Price, int Radius, typename BuyUnit>
 class BuyUnitAction final : virtual public SelectOnGridAction<Radius, SelectOnGridTypes::area, true>, virtual public BuyActionInterface<Price>, public SingletonAction<BuyUnitAction<Price, Radius, BuyUnit>>
 {
 private:
-    const std::string_view m_name = "BUY UNIT";
+    static constexpr std::string_view m_name = "BUY UNIT";
 protected:
     std::string_view getBuyActionName() const override {return m_name;}
-    bool isUsable(Game* gameInstance) const override;
 public:
     float callback(Game* gameInstance, std::size_t x, std::size_t y) override;
     std::string_view getInfoText() const override;
