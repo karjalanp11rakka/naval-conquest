@@ -1,0 +1,42 @@
+name: naval-conquest
+base: core24
+version: '1.0'
+summary: Simple two-player local strategy game
+description: |
+  Naval Conquest is a simple two-player local strategy game powered by
+  OpenGL, where the goal is to shoot down the other player's base.
+grade: stable
+confinement: strict
+parts:
+  naval-conquest:
+    source: .
+    build-packages:
+      - git
+      - pkg-config
+      - libwayland-dev
+      - libx11-dev 
+      - libxkbcommon-dev 
+      - libegl1-mesa-dev
+      - libxrandr-dev
+      - libxinerama-dev
+      - libxcursor-dev
+      - libxi-dev
+      - libglfw3-dev
+    stage-packages:
+      - libglfw3
+    plugin: cmake
+    cmake-parameters:
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DFETCH_GLFW=Off
+      - -DCMAKE_BUILD_TYPE=Release
+lint:
+  ignore:
+    - classic
+    - library
+apps:
+  naval-conquest:
+    command: usr/bin/naval-conquest
+    plugs:
+      - opengl
+      - wayland
+      - x11

@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
-#include <string_view>
+#include <cstddef>
 
 #include <glad/glad.h>
 
@@ -29,7 +29,7 @@ enum class NormalMode
     smooth,
     flat
 };
-
+unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength, bool normals);
 class MeshManager
 {
 private:
@@ -45,15 +45,23 @@ private:
     };
     std::unordered_map<MeshType, MeshVariations> m_meshes;
     std::unordered_map<int, MeshVariations> m_gridMeshes;
-    std::unordered_map<std::string_view, Mesh> m_loadedMeshes;
+    std::unordered_map<const void*, Mesh> m_loadedMeshes;
 public:
     static MeshManager& getInstance()
     {
         static MeshManager instance;
         return instance;
     }
-
+    template<std::size_t V, std::size_t I>
+    Mesh getMesh(const std::array<float, V>& vertices, const std::array<unsigned int, I>& indices, bool useNormals)
+    {
+        if(!m_loadedMeshes.contains(&vertices))
+        {
+            m_loadedMeshes[&vertices] = {generateVAO(vertices.data(), vertices.size(), indices.data(), 
+                indices.size(), useNormals), static_cast<unsigned int>(indices.size())};
+        }
+        return m_loadedMeshes[&vertices];
+    }
     Mesh getMesh(MeshType meshType, NormalMode normalMode);
     Mesh getGrid(int size, NormalMode normals);
-    Mesh getFromOBJ(std::string_view objString);
 };

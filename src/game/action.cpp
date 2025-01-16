@@ -317,8 +317,8 @@ float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::siz
     static std::unique_ptr<GameObject> missileObject;
     if(!missileObject)
     {
-        missileObject = std::make_unique<GameObject>(constructObject<LitObject>(assets::MODELS_MISSILE_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_MAT),
-            constructObject<LitObject>(assets::MODELS_MISSILE_STRIPES_OBJ, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_STRIPES_MAT));
+        missileObject = std::make_unique<GameObject>(constructObject<LitObject>(MODELS_MISSILE, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_MAT),
+            constructObject<LitObject>(MODELS_MISSILE_STRIPES, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_STRIPES_MAT));
         missileObject->setScale(glm::vec3(1.f / GRID_SIZE));
     }
     else missileObject->addToRenderEngine();
@@ -406,24 +406,24 @@ void BaseUpgradeAction<Price, UpgradeClass, NewMaxMoves, NewTurnMoney>::upgrade(
 
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class MoveAction<3>;
-template class AttackAction<20,4,150>;
+template class AttackAction<20,3,100>;
+template class MoveAction<5>;
+template class BuyUnitAction<250,5,SubmarineUnit>;
+template class BuyUnitAction<450,5,AircraftCarrierUnit>;
+template class UpgradeAction<400,SubmarineUnitUpgrade1>;
+template class SellAction<125>;
+template class SellAction<100>;
+template class AttackAction<30,4,100>;
+template class AttackAction<40,7,200>;
 template class MoveAction<3,SelectOnGridTypes::cross>;
+template class AttackAction<20,4,150>;
 template class BuyUnitAction<350,5,ShipUnit>;
+template class SellAction<50>;
+template class UpgradeAction<600,AircraftCarrierUpgrade1>;
+template class AttackAction<40,6,150>;
+template class MoveAction<3>;
+template class BaseUpgradeAction<600,BaseUpgrade1,3,250>;
 template class MoveAction<6>;
 template class BaseUpgradeAction<900,BaseUpgrade2,4,300>;
-template class MoveAction<4,SelectOnGridTypes::cross>;
-template class AttackAction<30,4,100>;
 template class SellAction<75>;
-template class UpgradeAction<400,SubmarineUnitUpgrade1>;
-template class BuyUnitAction<450,5,AircraftCarrierUnit>;
-template class SellAction<125>;
-template class AttackAction<20,3,100>;
-template class BuyUnitAction<250,5,SubmarineUnit>;
-template class SellAction<100>;
-template class AttackAction<40,6,150>;
-template class UpgradeAction<600,AircraftCarrierUpgrade1>;
-template class MoveAction<5>;
-template class BaseUpgradeAction<600,BaseUpgrade1,3,250>;
-template class AttackAction<40,7,200>;
-template class SellAction<50>;
+template class MoveAction<4,SelectOnGridTypes::cross>;

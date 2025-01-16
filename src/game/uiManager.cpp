@@ -97,8 +97,7 @@ UIManager::UIManager()
     {
         .text = "DARK BACKGROUND (ON)",
         .position = {.0f, .3f},
-        .textColor = BUTTON_TEXT_COLOR,
-        .scale = 1.f,
+        .textColor = BUTTON_TEXT_COLOR
     };
     glm::vec3 defaultBackgroundColor(0.f);
     renderEngineInstance.setBackgroundColor(defaultBackgroundColor);
@@ -107,6 +106,18 @@ UIManager::UIManager()
         {
             renderEngineInstance.setBackgroundColor(m_darkBackgroundEnabled ? glm::vec3(.7f, .6f, .4f) : defaultBackgroundColor);
         }, {1.f, .6f, .1f}, 2.1f, BLUE, HIGHLIGHT_THICKNESS, "DARK BACKGROUND (OFF)", &m_darkBackgroundEnabled);
+
+    TextData fullscreenButtonTextData
+    {
+        .text = "MAXIMISE WINDOW",//UK spellings for game's text
+        .position = {.0f, .0f},
+        .textColor = BUTTON_TEXT_COLOR
+    };
+    static ButtonUIElement fullscreenButton(std::move(fullscreenButtonTextData),
+        [&glfwControllerInstance]()
+        {
+            glfwControllerInstance.maximize();    
+        }, {1.f, .6f, .1f}, 2.1f, BLUE, HIGHLIGHT_THICKNESS);
 
 
     TextData infoTextData
@@ -167,7 +178,6 @@ UIManager::UIManager()
         {
             .position = {(-1.f + ACTION_BUTTON_SPACING / 2.f) + i * ACTION_BUTTON_SPACING, -1.f + ACTION_BUTTON_SPACING / 2.f},
             .textColor = BUTTON_TEXT_COLOR,
-            .scale = 1.f,
         };
         if(i == 0) textData.text = "BACK";
 
@@ -185,8 +195,7 @@ UIManager::UIManager()
     {
         .text = "END TURN",
         .position = {.8f, -.8f},
-        .textColor = BUTTON_TEXT_COLOR,
-        .scale = 1.f
+        .textColor = BUTTON_TEXT_COLOR
     };
 
     m_endTurnButton = std::make_unique<ButtonUIElement>(std::move(endTurnTextData), 
@@ -216,8 +225,7 @@ UIManager::UIManager()
     {
         .text = "LEAVE",
         .position = {.0f, -.5f},
-        .textColor = BUTTON_TEXT_COLOR,
-        .scale = 1.f
+        .textColor = BUTTON_TEXT_COLOR
     };
     static ButtonUIElement leaveGameButton(std::move(leaveGameTextData), 
         [this]()
@@ -229,7 +237,7 @@ UIManager::UIManager()
 
     m_menuUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&playButton, &settingsButton, &infoButton, &exitButton});
     m_currentUI = m_menuUI.get();
-    m_settingsUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&darkBackgroundButton, &backButton});
+    m_settingsUI = std::make_unique<UIPreset>(std::vector<UIElement*>{&darkBackgroundButton, &fullscreenButton, &backButton});
     m_infoUI = std::make_unique<UIPreset>(std::vector<UIElement*>{m_infoText.get(), &backButton});
     m_gameUI = std::make_unique<UIPreset>(std::move(gameElements));
     m_gameOverUI = std::make_unique<UIPreset>(std::vector<UIElement*>{m_gameMiddleText.get(), &leaveGameButton});

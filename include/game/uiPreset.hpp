@@ -56,7 +56,7 @@ struct TextData
     std::string text;
     glm::vec2 position {};
     glm::vec3 textColor {};
-    float scale {};
+    float scale {1.f};
 };
 struct GLTtext;
 class TextUIElement : public UIElement

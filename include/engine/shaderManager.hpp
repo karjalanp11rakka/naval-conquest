@@ -17,14 +17,14 @@ struct StringViewPairHash
         std::size_t hash1 = std::hash<std::string_view>()(sp.first);
         std::size_t hash2 = std::hash<std::string_view>()(sp.second);
 
-        return hash1 ^ (hash2 << 1); 
+        return hash1 ^ (hash2 + 0x9e3779b9 + (hash1 << 6) + (hash1 >> 2)); 
     }
 };
 struct StringViewPairEqual 
 {
     bool operator()(const std::pair<const std::string_view, const std::string_view>& first,
                     const std::pair<const std::string_view, const std::string_view>& second) const {
-    return first.first == second.first && first.second == second.second;    }
+        return first.first == second.first && first.second == second.second;}
 };
 
 class ShaderManager

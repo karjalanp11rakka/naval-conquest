@@ -6,7 +6,6 @@
 #include <cassert>
 #include <string>
 #include <sstream>
-#include <cstddef>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
@@ -17,7 +16,6 @@
 Mesh generateCube(NormalMode normalMode);
 Mesh generateTetrahedron(NormalMode normalMode);
 Mesh generateGrid(int gridSize, bool normals);
-Mesh loadFromOBJ(std::string_view objString);
 
 Mesh MeshManager::getMesh(MeshType meshType, NormalMode normalMode)
 {
@@ -51,16 +49,8 @@ Mesh MeshManager::getGrid(int size, NormalMode normalMode)
         gridPtr = std::make_unique<Mesh>(generateGrid(size, normals));
     return *gridPtr;
 }
-Mesh MeshManager::getFromOBJ(std::string_view objString)
-{
-    if(!m_loadedMeshes.contains(objString))
-        m_loadedMeshes[objString] = loadFromOBJ(objString);
-
-    return m_loadedMeshes[objString];
-}
 
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals);
-unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength, bool normals);
 std::vector<unsigned int> generateIndices(std::unique_ptr<float[]>& vertices, int& verticesLength);
 void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength, const unsigned int indices[], int indicesLength);
 void addNormals(std::unique_ptr<float[]>& vertices, int& verticesLength);
@@ -266,118 +256,10 @@ Mesh generateGrid(int gridSize, bool normals)
     return {generateVAO(vertices.get(), verticesLength, indices.get(), indicesLength, normals), indicesLength};
 }
 
-//this loader is incomplete and only works when elements are in specific order
-Mesh loadFromOBJ(std::string_view objString)
-{
-    auto addVerticePositions {[](const std::string& line, std::vector<float>& positions) -> void
-    {
-        std::size_t startIndex {};
-        for(int i {}; i < 3; ++i)
-        {
-            startIndex = line.substr(startIndex, line.size() - startIndex).find(' ') + startIndex + 1;
-            std::size_t decimalLength = line.substr(startIndex, line.size() - startIndex - 1).find(' ');
-            std::istringstream valueStream(line.substr(startIndex, decimalLength));
-
-            float position;
-            valueStream >> position;
-            positions.push_back(position);
-        }
-    }};
-    std::istringstream fileStream(objString.data());
-    std::string line;
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> returnVertices;
-    std::vector<unsigned int> indices;
-    while (std::getline(fileStream, line))
-    {
-        line.erase(0, line.find_first_not_of(' '));
-        line.erase(line.find_last_not_of(' ') + 1);
-        if(line.empty() || line[0] == '#')
-            continue;
-        if(line.substr(0, 2) == "v ")
-        {
-            addVerticePositions(line, vertices);
-        }
-        if(line.size() > 3 && line.substr(0, 3) == "vn ")
-        {
-            addVerticePositions(line, normals);
-        }
-        if(line.substr(0, 2) == "f ")
-        {
-            //get vertices
-            bool useTextures {line[line.find('/') + 1] != '/'};
-            bool useNormals {normals.size() != 0};
-            std::size_t startIndex {};
-            std::vector<unsigned int> polygonIndices {}; 
-
-            auto spacePos = line.substr(startIndex, line.size() - startIndex).find(' ');
-            while(spacePos != std::string::npos)
-            {
-                startIndex = spacePos + startIndex + 1;
-                
-                std::size_t numberLength = line.substr(startIndex, line.size() - startIndex).find(useNormals ? '/' : ' ');
-                std::istringstream vertexPositionStream(line.substr(startIndex, numberLength));
-                unsigned int positionIndex {};
-                vertexPositionStream >> positionIndex;
-                --positionIndex;
-                
-                float vertex[6] = {vertices[positionIndex * 3], vertices[positionIndex * 3 + 1], vertices[positionIndex * 3 + 2]};
-
-                if(useNormals)
-                {
-                    std::size_t normalStartIndex;
-                    if(useTextures)
-                    {
-                        std::size_t textureStartIndex = startIndex + numberLength + 1;
-                        normalStartIndex = line.substr(textureStartIndex, line.size() - textureStartIndex).find('/') + textureStartIndex + 1;
-                    }
-                    else normalStartIndex = startIndex + numberLength + 2;
-                    std::size_t normalNumberLength = line.substr(normalStartIndex, line.size() - normalStartIndex).find(' ');
-                    std::istringstream normalIndexStream(line.substr(normalStartIndex, normalNumberLength));
-                    unsigned int normalIndex {};
-                    normalIndexStream >> normalIndex;
-                    --normalIndex;
-
-                    vertex[3] = normals[normalIndex * 3];
-                    vertex[4] = normals[normalIndex * 3 + 1];
-                    vertex[5] = normals[normalIndex * 3 + 2];
-                }
-
-                auto returnVerticesIterator = std::search(returnVertices.begin(), returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
-                std::size_t index {}; 
-                if(returnVerticesIterator != returnVertices.end() 
-                    && std::distance(returnVertices.begin(), returnVerticesIterator) % (useNormals ? 6 : 3) == 0)
-                    index = std::distance(returnVertices.begin(), returnVerticesIterator) / (useNormals ? 6 : 3);
-                else
-                {
-                    index = returnVertices.size() / (useNormals ? 6 : 3);
-                    returnVertices.insert(returnVertices.end(), vertex, vertex + (useNormals ? 6 : 3));
-                }
-                polygonIndices.push_back(index);
-
-                spacePos = line.substr(startIndex, line.size() - startIndex).find(' ');
-            }
-            //polygon triangulation
-            indices.reserve(indices.size() + (polygonIndices.size() - 2) * 3);
-
-            for (std::size_t i = 1; i < polygonIndices.size() - 1; ++i)
-            {
-                indices.push_back(polygonIndices[0]);
-                indices.push_back(polygonIndices[i]);
-                indices.push_back(polygonIndices[i + 1]);
-            }
-        }
-    }
-    return {generateVAO(returnVertices.data(), returnVertices.size(), indices.data(), 
-        indices.size(), normals.size()), static_cast<unsigned int>(indices.size())};
-}
-
 unsigned int generateVAO(const float vertices[], int verticesLength, bool normals)
 {
     return generateVAO(vertices, verticesLength, nullptr, 0, normals);
 }
-
 unsigned int generateVAO(const float vertices[], int verticesLength, const unsigned int indices[], int indicesLength, bool normals)
 {
     unsigned int EBO {}, VBO {}, VAO {};

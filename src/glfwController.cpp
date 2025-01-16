@@ -10,7 +10,7 @@
 #include <engine/renderEngine.hpp>
 #include <game/gameController.hpp>
 
-static constexpr char WINDOW_NAME[] = "3dProject";
+static constexpr char WINDOW_NAME[] = "Naval Conquest";
 static constexpr int DEFAULT_WINDOW_WIDTH {800}, DEFAULT_WINDOW_HEIGHT {600};
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -51,7 +51,6 @@ GLFWController::~GLFWController()
 {
     terminate();
 }
-
 void GLFWController::update()
 {
     m_currentTime = glfwGetTime();
@@ -76,32 +75,25 @@ void GLFWController::maximize()
 {
     glfwMaximizeWindow(m_window);
 }
-void GLFWController::unmaximize()
-{
-    glfwSetWindowSize(m_window, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-}
-
 void GLFWController::close()
 {
     static GLFWController& glfwControllerInstance = GLFWController::getInstance();
     glfwSetWindowShouldClose(glfwControllerInstance.m_window, true);
 }
-
 void GLFWController::terminate()
 {
     if(m_window) glfwDestroyWindow(m_window);
     glfwTerminate();
 }
-
 bool GLFWController::shouldClose() const
 {
     return glfwWindowShouldClose(m_window);
 }
-
 void GLFWController::addInputCallback(const std::function<void(int)>& callback)
 {
     m_inputCallbacks.push_front(callback);
 }
+
 void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     static GLFWController& glfwControllerInstance = GLFWController::getInstance();
@@ -111,7 +103,6 @@ void inputCallback(GLFWwindow* window, int key, int scancode, int action, int mo
             func(key);
     }
 }
-
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
     static GLFWController& glfwControllerInstance = GLFWController::getInstance();

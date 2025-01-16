@@ -1,5 +1,4 @@
 #include <algorithm>
-
 #include <engine/shaderManager.hpp>
 
 ShaderManager::~ShaderManager() {}

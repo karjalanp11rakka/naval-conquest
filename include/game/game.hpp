@@ -78,7 +78,7 @@ private:
 #ifndef NDEBUG
             for(auto& pair : m_combinedLocations)
             {
-                assert(!pair.first.contains(index) && "Unable to initialize to a position with a base");
+                assert(std::find(pair.first.begin(), pair.first.end(), index) == pair.first.end() && "Unable to initialize to a position with a base");
             }
 #endif
             initialize();

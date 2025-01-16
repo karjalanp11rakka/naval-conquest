@@ -26,7 +26,6 @@ public:
     }
     void update();
     void maximize();
-    void unmaximize();
     void close();
     void terminate();
     bool shouldClose() const;
