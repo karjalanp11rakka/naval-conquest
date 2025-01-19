@@ -36,19 +36,13 @@ namespace lights
 class SceneLighting
 {
 private:
-    std::vector<std::unique_ptr<lights::PointLight>> m_lights;
+    std::vector<const lights::PointLight*> m_lights;
     std::unique_ptr<lights::DirectionalLight> m_dirLight;
 public:
     SceneLighting() {}
     SceneLighting(lights::DirectionalLight&& directionLight);
-    SceneLighting(SceneLighting&& other) noexcept = default;
-    SceneLighting& operator=(SceneLighting&& other) noexcept = default;
-    SceneLighting(SceneLighting& other) = delete;
-    SceneLighting& operator=(SceneLighting& other) = delete;
-
     const auto& getPointLights() {return m_lights;}
-    lights::PointLight* addPointLight(lights::PointLight&& light);
+    void addPointLight(const lights::PointLight* light);
     void removePointLight(const lights::PointLight* lightPtr);
-    lights::DirectionalLight& changeDirectionalLight(lights::DirectionalLight&& light);
     auto getDirectionalLight() {return m_dirLight.get();}
 };

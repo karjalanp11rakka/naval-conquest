@@ -43,6 +43,19 @@ private:
     template<typename T>
     GridObject* initializeGridObjectAt(std::size_t x, std::size_t y, std::optional<bool> team = std::nullopt)
     {
+        if constexpr(isLargeGridObject<T>())
+        {
+            if(x % 2 != 0)
+            {
+                if(x > 0) --x;
+                else ++x;
+            }
+            if(y % 2 != 0)
+            {
+                if(y > 0) --y;
+                else ++y;
+            }
+        }
         std::size_t index = x + y * GRID_SIZE;
         auto& ptr = m_base[index];
         auto initialize = [&]()
@@ -60,14 +73,13 @@ private:
         };
         if constexpr(isLargeGridObject<T>())
         {
-            assert(x % 2 == 0 && y % 2 == 0);
             destroyAt(index);
             destroyAt(index + 1);
             destroyAt(index + GRID_SIZE);
             destroyAt(index + 1 + GRID_SIZE);
             initialize();
             bool reverseX = x < GRID_SIZE / 2;
-            std::vector<std::size_t> combinedLocation ;
+            std::vector<std::size_t> combinedLocation;
             m_combinedLocations.emplace_back(std::vector<std::size_t>
                 {index + (reverseX ? 1u : 0), index + (reverseX ? 0 : 1u), index + GRID_SIZE, index + 1u + GRID_SIZE}, &m_base[index]);
             ptr->setPosition({-1.f + SQUARE_SIZE * x + SQUARE_SIZE, 0.f, 

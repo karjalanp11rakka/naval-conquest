@@ -317,11 +317,14 @@ float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::siz
     static std::unique_ptr<GameObject> missileObject;
     if(!missileObject)
     {
-        missileObject = std::make_unique<GameObject>(constructObject<LitObject>(MODELS_MISSILE, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_MAT),
+        missileObject = std::make_unique<GameObject>(std::vector<GameObject::GameObjectLight> {}, 
+            constructObject<LitObject>(MODELS_MISSILE, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_MAT),
             constructObject<LitObject>(MODELS_MISSILE_STRIPES, assets::SHADERS_VBASIC_GLSL, assets::SHADERS_FBASIC_GLSL, MISSILE_STRIPES_MAT));
-        missileObject->setScale(glm::vec3(1.f / GRID_SIZE));
     }
     else missileObject->addToRenderEngine();
+    static constexpr float MIN_MISSILE_SIZE_MULTIPLIER = .7f, MAX_MISSILE_SIZE_MULTIPLIER = 1.3f;
+    //set the missile's scale based on how much damage it takes
+    missileObject->setScale(glm::vec3(1.f / GRID_SIZE) * (MIN_MISSILE_SIZE_MULTIPLIER + (Damage - 100) * ((MAX_MISSILE_SIZE_MULTIPLIER - MIN_MISSILE_SIZE_MULTIPLIER) / (250 - 100))));
     missileObject->setRotation(glm::angleAxis(glm::radians(-90.f), glm::vec3(0.f, .0f, 1.f)));
 
     GameGrid::Path moveAlongPath = gameGrid.findPath(selectedLocation, std::make_pair(x, y), false);
@@ -329,7 +332,8 @@ float AttackAction<Price, Radius, Damage>::callback(Game* gameInstance, std::siz
     static constexpr float MISSILE_FOLLOW_PATH_SPEED = .3f;
     float cooldown = UPWARDS_MOVEMENT_DURATION * 2 + moveAlongPath.size() * MISSILE_FOLLOW_PATH_SPEED;
 
-    auto moveMissile = [missile = missileObject.get(), path = std::move(moveAlongPath), currentTime = 0.f, movePathWaitTime = 0.f, goingUp = true, goingDown = false, x, y, gameInstance, selectedLocation, upStartPos, upTargetPos, downTargetPos, downStartPos](float deltaTime) mutable -> bool
+    auto moveMissile = [missile = missileObject.get(), path = std::move(moveAlongPath), currentTime = 0.f, movePathWaitTime = 0.f, 
+        goingUp = true, goingDown = false, x, y, gameInstance, selectedLocation, upStartPos, upTargetPos, downTargetPos, downStartPos](float deltaTime) mutable -> bool
     {
         GameGrid& gameGrid = gameInstance->getGameGrid();
     
@@ -403,27 +407,31 @@ void BaseUpgradeAction<Price, UpgradeClass, NewMaxMoves, NewTurnMoney>::upgrade(
     gameInstance->setTurnData(NewMaxMoves, NewTurnMoney);
 }
 
+// template class BuyActionInterface<600>;
+// template class BuyActionInterface<900>;
+// template class UpgradeActionInterface<600, BaseUpgrade1>;
+// template class UpgradeActionInterface<900, BaseUpgrade2>;
 
 // Generated with 'tools/templates_instantiations.py'
 // Do not add or modify anything after these comments
-template class AttackAction<20,3,100>;
-template class MoveAction<5>;
-template class BuyUnitAction<250,5,SubmarineUnit>;
-template class BuyUnitAction<450,5,AircraftCarrierUnit>;
-template class UpgradeAction<400,SubmarineUnitUpgrade1>;
-template class SellAction<125>;
-template class SellAction<100>;
-template class AttackAction<30,4,100>;
-template class AttackAction<40,7,200>;
-template class MoveAction<3,SelectOnGridTypes::cross>;
-template class AttackAction<20,4,150>;
-template class BuyUnitAction<350,5,ShipUnit>;
-template class SellAction<50>;
-template class UpgradeAction<600,AircraftCarrierUpgrade1>;
-template class AttackAction<40,6,150>;
-template class MoveAction<3>;
 template class BaseUpgradeAction<600,BaseUpgrade1,3,250>;
-template class MoveAction<6>;
-template class BaseUpgradeAction<900,BaseUpgrade2,4,300>;
+template class AttackAction<20,4,150>;
+template class AttackAction<40,7,250>;
+template class AttackAction<30,4,150>;
 template class SellAction<75>;
+template class UpgradeAction<350,SubmarineUnitUpgrade1>;
+template class MoveAction<3,SelectOnGridTypes::cross>;
+template class UpgradeAction<500,AircraftCarrierUpgrade1>;
+template class SellAction<50>;
+template class BuyUnitAction<250,5,SubmarineUnit>;
+template class MoveAction<5>;
+template class BuyUnitAction<350,5,ShipUnit>;
+template class BaseUpgradeAction<900,BaseUpgrade2,4,300>;
+template class AttackAction<40,6,200>;
+template class SellAction<125>;
 template class MoveAction<4,SelectOnGridTypes::cross>;
+template class MoveAction<3>;
+template class BuyUnitAction<450,5,AircraftCarrierUnit>;
+template class SellAction<100>;
+template class AttackAction<20,3,100>;
+template class MoveAction<6>;

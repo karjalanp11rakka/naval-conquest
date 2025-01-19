@@ -18,11 +18,6 @@ struct Mesh
     }
 };
 
-enum class MeshType
-{
-    cube,
-    tetrahedron
-};
 enum class NormalMode
 {
     none,
@@ -43,7 +38,6 @@ private:
         std::unique_ptr<Mesh> smoothNormalsMesh;
         std::unique_ptr<Mesh> flatNormalsMesh;
     };
-    std::unordered_map<MeshType, MeshVariations> m_meshes;
     std::unordered_map<int, MeshVariations> m_gridMeshes;
     std::unordered_map<const void*, Mesh> m_loadedMeshes;
 public:
@@ -62,6 +56,5 @@ public:
         }
         return m_loadedMeshes[&vertices];
     }
-    Mesh getMesh(MeshType meshType, NormalMode normalMode);
     Mesh getGrid(int size, NormalMode normals);
 };

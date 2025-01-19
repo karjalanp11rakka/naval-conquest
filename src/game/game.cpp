@@ -373,7 +373,7 @@ Game::Game() : m_grid(this)
     uiManagerInstance.disableGameActionButtons(true);
     updateStatusTexts();
     
-    auto basesRandomSeed = randomInstance.get<std::size_t>(0, (GRID_SIZE - 2) / 2) * 2;
+    auto basesRandomSeed = randomInstance.get<std::size_t>(2, (GRID_SIZE - 4) / 2) * 2;
     m_grid.initializeAt<Base>(0, basesRandomSeed, true);
     int otherBaseY = (GRID_SIZE - 2) - basesRandomSeed;
     m_grid.initializeAt<Base>(GRID_SIZE - 2, otherBaseY, false);

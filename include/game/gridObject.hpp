@@ -26,11 +26,14 @@ public:
 protected:
     Team m_team {};
     template<Object3DDelivered... ObjectParts>
-    GridObject(Team team, ObjectParts&&... parts)
-        :  m_team(team), GameObject(std::forward<ObjectParts>(parts)...)
+    GridObject(Team team, std::vector<GameObjectLight>&& lights, ObjectParts&&... parts)
+        :  m_team(team), GameObject(std::move(lights), std::forward<ObjectParts>(parts)...)
     {
         setScale(glm::vec3(1.f / GRID_SIZE));
     }
+    template<Object3DDelivered... ObjectParts>
+    GridObject(Team team, ObjectParts&&... parts)
+        :  GridObject(team, {}, std::forward<ObjectParts>(parts)...) {}
 public:
     auto getTeam() const noexcept {return m_team;}
 };
@@ -45,27 +48,33 @@ private:
     void initialize();
 protected:
     Game* m_gameInstance;
+    virtual void onDestroy() {}
 public:
     template<Object3DDelivered... ObjectParts>
-    UnitObject(Game* gameInstance, bool playerOne, int health, std::vector<Action*>&& actions, ObjectParts&&... parts)
+    UnitObject(Game* gameInstance, bool playerOne, int health, std::vector<Action*>&& actions, 
+        std::vector<GameObjectLight>&& lights, ObjectParts&&... parts)
         : m_gameInstance(gameInstance), m_health(health), m_maxHealth(health), m_actions(std::move(actions)), 
-        GridObject(playerOne ? Team::playerOne : Team::playerTwo, std::forward<ObjectParts>(parts)...)
+        GridObject(playerOne ? Team::playerOne : Team::playerTwo, std::move(lights), std::forward<ObjectParts>(parts)...)
     {
         initialize();
     }
-    void addHealth(int damage);
+    template<Object3DDelivered... ObjectParts>
+    UnitObject(Game* gameInstance, bool playerOne, int health, std::vector<Action*>&& actions, ObjectParts&&... parts)
+        : UnitObject(gameInstance, playerOne, health, std::move(actions), {}, std::forward<ObjectParts>(parts)...) {}
+    void addHealth(int health);
     std::pair<int, int> getHealth();
     void destroy();
     ActionTypes useAction(std::size_t actionIndex);
     const std::vector<ActionData>& getActionData();
 };
+constexpr int BASE_HEALTH = 800;
 class BaseInterface : public UnitObject
 {
 protected:
     template<Object3DDelivered... ObjectParts>
-    BaseInterface(Game* gameInstance, bool playerOne, int health, std::vector<Action*>&& actions, ObjectParts&&... parts)
-        : UnitObject(gameInstance, playerOne, health, std::move(actions), std::forward<ObjectParts>(parts)...) {}
-    ~BaseInterface();
+    BaseInterface(Game* gameInstance, bool playerOne, std::vector<Action*>&& actions, std::vector<GameObjectLight>&& lights, ObjectParts&&... parts)
+        : UnitObject(gameInstance, playerOne, BASE_HEALTH, std::move(actions), std::move(lights), std::forward<ObjectParts>(parts)...) {}
+    void onDestroy() override;
 public:
     using is_large = std::true_type;
 };

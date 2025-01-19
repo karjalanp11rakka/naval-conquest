@@ -25,7 +25,11 @@ file(GLOB_RECURSE SRC_FILES "src/*.cpp" "lib/glad.c")
 include(FetchContent)
 
 # GLFW
-option(FETCH_GLFW "Fetch GLFW and build it into the project" ON) #not recommended for Linux
+if(WIN32)
+    option(FETCH_GLFW "Fetch GLFW" ON)
+else()
+    option(FETCH_GLFW "Fetch GLFW" OFF)
+endif()
 if(FETCH_GLFW)
     FetchContent_Declare(
         glfw
@@ -36,6 +40,7 @@ if(FETCH_GLFW)
 else()
     find_package(glfw3 REQUIRED)
 endif()
+
 # GLM
 FetchContent_Declare(
     glm

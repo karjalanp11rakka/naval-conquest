@@ -2,9 +2,12 @@
 
 Naval Conquest is a simple two-player local strategy game powered by OpenGL, where the goal is to shoot down the other player's base.
 
+![screenshot 1](screenshots/naval-conquest-screenshot-1.png)
+![screenshot 2](screenshots/naval-conquest-screenshot-2.png)
+
 ## Compiling
 
-To build the project, you must have **CMake** installed and a compiler that supports **C++20**. Note: [GLFW might require additional dependencies](https://www.glfw.org/docs/3.3/compile.html).
+To build the project, you must have **CMake** installed and a compiler that supports **C++20**. On Linux, you need `glfw-devel` (might be called `libglfw-dev`) for compiling and `glfw` (might be called `libglfw3`) for running.
 
 Navigate to the project folder and run the following commands:
 
@@ -20,4 +23,4 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug -DUSE_TOOLS=On
 
 ## License
 
-This project is licensed under the MIT License, except for the `lib` folder. See the [LICENSE](LICENSE.txt) file for more details.
+This project is licensed under the MIT License, except for the `lib` folder. See the [LICENSE](LICENSE.txt) file for details.

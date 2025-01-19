@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Naval Conquest
+Comment=Simple two-player local strategy game
+Exec=naval-conquest
+Icon=${SNAP}/meta/gui/naval-conquest.png
+Type=Application
+Categories=Game;Graphics;co-op
