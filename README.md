@@ -1,9 +1,13 @@
 # Naval Conquest
 
+[![naval-conquest](https://snapcraft.io/naval-conquest/badge.svg)](https://snapcraft.io/naval-conquest)
+
 Naval Conquest is a simple two-player local strategy game powered by OpenGL, where the goal is to shoot down the other player's base.
 
 ![screenshot 1](screenshots/naval-conquest-screenshot-1.png)
 ![screenshot 2](screenshots/naval-conquest-screenshot-2.png)
+
+[![Get it from the Snap Store](https://snapcraft.io/en/dark/install.svg)](https://snapcraft.io/naval-conquest)
 
 ## Compiling
 
