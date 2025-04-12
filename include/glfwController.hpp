@@ -12,8 +12,8 @@ private:
     ~GLFWController();
     GLFWController(const GLFWController&) = delete;
     GLFWController& operator=(const GLFWController& other) = delete;
-
-    float m_deltaTime, m_currentTime {}, m_lastTime {}, m_timeToUpdateFPS {};
+    float m_deltaTime {};
+    double m_currentTime {}, m_lastTime {};
     GLFWwindow* m_window;
     bool m_isMaximised {true};
     int m_width, m_height;

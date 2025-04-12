@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <thread>
 
 #include <glad/glad.h> // GLAD must be included before GLFW. Even though glfwController.cpp does not directly use GLAD, it is included here for correct initialization order
 #include <GLFW/glfw3.h>
@@ -40,7 +41,8 @@ GLFWController::GLFWController()
     }
     glfwMakeContextCurrent(m_window);
     glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback);  
-
+    glfwSetWindowTitle(m_window, WINDOW_NAME);
+    
     glfwSwapInterval(0);
 
     glfwGetFramebufferSize(m_window, &m_width, &m_height);
@@ -54,17 +56,16 @@ GLFWController::~GLFWController()
 void GLFWController::update()
 {
     m_currentTime = glfwGetTime();
-    m_deltaTime = m_currentTime - m_lastTime;
-    m_timeToUpdateFPS -= m_deltaTime;
-    if(m_timeToUpdateFPS < 0)
+    double deltaTime = m_currentTime - m_lastTime;
+    constexpr float MAX_FRAME_RATE = 1.f / 160.f;
+    if(deltaTime < MAX_FRAME_RATE)
     {
-        m_timeToUpdateFPS = .2f;
-        float fps = 1.0f / m_deltaTime;
-        std::stringstream fpsText;
-        fpsText << std::fixed << std::setprecision(2) << fps;
-        std::string title = std::string(WINDOW_NAME) + ' ' + fpsText.str();
-        glfwSetWindowTitle(m_window, title.c_str());
+        std::this_thread::sleep_for(std::chrono::duration<double>(
+            MAX_FRAME_RATE - deltaTime));
+        m_currentTime = glfwGetTime();
+        deltaTime = m_currentTime - m_lastTime;
     }
+    m_deltaTime = deltaTime;
     m_lastTime = m_currentTime;
 
     glfwSwapBuffers(m_window);
